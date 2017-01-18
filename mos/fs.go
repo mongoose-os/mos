@@ -19,13 +19,7 @@ const (
 	chunkSize = 128
 )
 
-func listFiles() ([]string, error) {
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
+func listFiles(ctx context.Context, devConn *dev.DevConn) ([]string, error) {
 	// Get file list from the attached device
 	files, err := devConn.CFilesystem.List(ctx)
 	if err != nil {
@@ -34,8 +28,8 @@ func listFiles() ([]string, error) {
 	return files, err
 }
 
-func fsLs() error {
-	files, err := listFiles()
+func fsLs(ctx context.Context, devConn *dev.DevConn) error {
+	files, err := listFiles(ctx, devConn)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -45,14 +39,7 @@ func fsLs() error {
 	return nil
 }
 
-func getFile(name string) (string, error) {
-	// Connect to dev
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
+func getFile(ctx context.Context, devConn *dev.DevConn, name string) (string, error) {
 	// Get file
 	contents := []byte{}
 	var offset int64
@@ -86,7 +73,7 @@ func getFile(name string) (string, error) {
 	return string(contents), nil
 }
 
-func fsGet() error {
+func fsGet(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("filename is required")
@@ -95,7 +82,7 @@ func fsGet() error {
 		return errors.Errorf("extra arguments")
 	}
 	filename := args[1]
-	text, err := getFile(filename)
+	text, err := getFile(ctx, devConn, filename)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -103,7 +90,7 @@ func fsGet() error {
 	return nil
 }
 
-func fsPut() error {
+func fsPut(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("filename is required")
@@ -117,13 +104,6 @@ func fsPut() error {
 	// If device filename was given, use it.
 	if len(args) >= 3 {
 		devFilename = args[2]
-	}
-
-	// Connect to dev
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	return fsPutFile(ctx, devConn, hostFilename, devFilename)

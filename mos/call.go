@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/clubby/frame"
 	"cesanta.com/common/go/ourjson"
 
@@ -26,17 +27,12 @@ func isJSON(s string) bool {
 		json.Unmarshal([]byte(s), &str) == nil
 }
 
-func callDeviceService(method string, args string) (string, error) {
+func callDeviceService(
+	ctx context.Context, devConn *dev.DevConn, method string, args string,
+) (string, error) {
 	if args != "" && !isJSON(args) {
 		return "", errors.Errorf("Args [%s] is not a valid JSON string", args)
 	}
-
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-	// defer devConn.Disconnect(ctx)
 
 	cmd := &frame.Command{Cmd: method}
 	if args != "" {
@@ -57,7 +53,7 @@ func callDeviceService(method string, args string) (string, error) {
 	return string(str), nil
 }
 
-func call() error {
+func call(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()[1:]
 	if len(args) < 1 {
 		return errors.Errorf("method required")
@@ -68,7 +64,7 @@ func call() error {
 		params = args[1]
 	}
 
-	result, err := callDeviceService(args[0], params)
+	result, err := callDeviceService(ctx, devConn, args[0], params)
 	if err != nil {
 		return err
 	}

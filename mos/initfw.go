@@ -2,19 +2,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/common/ide"
 	"cesanta.com/cloud/util/archive"
 	"github.com/cesanta/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
-func initFW() error {
+func initFW(ctx context.Context, devConn *dev.DevConn) error {
 
 	// Make sure current directory is empty
 	empty, err := isDirEmpty(".")

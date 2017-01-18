@@ -387,7 +387,7 @@ func getCAForCert(certFile string) (string, error) {
 	return "", errors.New("unknown key algorithm")
 }
 
-func awsIoTSetup() error {
+func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	iotSvc, err := getSvc()
 	if err != nil {
 		return err
@@ -399,11 +399,6 @@ func awsIoTSetup() error {
 	}
 
 	reportf("Connecting to the device...")
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Annotatef(err, "failed to connect to device")
-	}
 	devConf, err := devConn.GetConfig(ctx)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")

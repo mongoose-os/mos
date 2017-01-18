@@ -3,10 +3,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/cmd/mgos/common/flash/cc3200"
 	"cesanta.com/cloud/cmd/mgos/common/flash/common"
 	"cesanta.com/cloud/cmd/mgos/common/flash/esp"
@@ -66,7 +68,7 @@ func init() {
 	})
 }
 
-func flash() error {
+func flash(ctx context.Context, devConn *dev.DevConn) error {
 	fw, err := common.NewZipFirmwareBundle(*firmware)
 	if err != nil {
 		return errors.Trace(err)

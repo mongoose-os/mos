@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/cmd/mgos/common/flash/common"
 	"cesanta.com/cloud/common/ide"
 	"cesanta.com/cloud/common/swmodule"
@@ -48,7 +50,7 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "docker_images")
 }
 
-func build() error {
+func build(ctx context.Context, devConn *dev.DevConn) error {
 	var err error
 	if *local {
 		err = buildLocal()

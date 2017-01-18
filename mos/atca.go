@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/atca"
 	"github.com/cesanta/errors"
@@ -49,18 +50,13 @@ func getFormat(f, fn string) string {
 	return f
 }
 
-func atcaGetConfig() error {
+func atcaGetConfig(ctx context.Context, dc *dev.DevConn) error {
 	fn := ""
 	args := flag.Args()
 	if len(args) == 2 {
 		fn = args[1]
 	}
 
-	ctx := context.Background()
-	dc, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
 	_, confData, cfg, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
@@ -93,7 +89,7 @@ func atcaGetConfig() error {
 	return nil
 }
 
-func atcaSetConfig() error {
+func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("config filename is required")
@@ -133,11 +129,6 @@ func atcaSetConfig() error {
 		return errors.Errorf("%s: expected %d bytes, got %d", fn, atca.ConfigSize, len(confData))
 	}
 
-	ctx := context.Background()
-	dc, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
 	cl, _, _, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
@@ -168,7 +159,7 @@ func atcaSetConfig() error {
 	return nil
 }
 
-func atcaLockZone() error {
+func atcaLockZone(ctx context.Context, dc *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) != 2 {
 		return errors.Errorf("lock zone name is required (config or data)")
@@ -184,11 +175,6 @@ func atcaLockZone() error {
 		return errors.Errorf("invalid zone '%s'", args[1])
 	}
 
-	ctx := context.Background()
-	dc, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
 	cl, _, _, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
@@ -280,7 +266,7 @@ func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atcaServi
 	return req, nil
 }
 
-func atcaSetKey() error {
+func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) != 3 {
 		return errors.Errorf("slot number and key filename are required")
@@ -297,11 +283,6 @@ func atcaSetKey() error {
 		return errors.Trace(err)
 	}
 
-	ctx := context.Background()
-	dc, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
 	cl, _, cfg, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
@@ -393,7 +374,7 @@ func genCSR(csrTemplateFile string, slot int, cl atcaService.Service) error {
 	return nil
 }
 
-func atcaGenKey() error {
+func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("slot number is required")
@@ -408,11 +389,6 @@ func atcaGenKey() error {
 		csrTemplate = args[2]
 	}
 
-	ctx := context.Background()
-	dc, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
 	cl, _, _, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
@@ -466,7 +442,7 @@ func atcaGenKey() error {
 	return nil
 }
 
-func atcaGetPubKey() error {
+func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("slot number is required")
@@ -481,11 +457,6 @@ func atcaGetPubKey() error {
 		csrTemplate = args[2]
 	}
 
-	ctx := context.Background()
-	dc, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
 	cl, _, _, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")

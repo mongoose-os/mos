@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/cmd/mgos/common/timestamp"
 
 	"github.com/cesanta/errors"
@@ -46,9 +47,12 @@ func init() {
 
 }
 
-func console() error {
+func console(ctx context.Context, devConn *dev.DevConn) error {
+	if err := devConn.Disconnect(ctx); err != nil {
+		return errors.Trace(err)
+	}
+
 	in, out := os.Stdin, os.Stdout
-	ctx := context.Background()
 
 	if tsfSpec != "" {
 		tsFormat = timestamp.ParseTimeStampFormatSpec(tsfSpec)
@@ -77,7 +81,7 @@ func console() error {
 			buf := make([]byte, 100)
 			n, err := s.Read(buf)
 			if n > 0 {
-				removeJunk(buf[:n])
+				removeNonText(buf[:n])
 				if tsfSpec != "" {
 					ts := time.Now()
 					for i, b := range buf[:n] {
@@ -118,7 +122,7 @@ func console() error {
 	return nil
 }
 
-func removeJunk(data []byte) {
+func removeNonText(data []byte) {
 	for i, c := range data {
 		if c < 0x20 && c != 0x0a && c != 0x0d && c != 0x1b /* Esc */ {
 			data[i] = 0x20

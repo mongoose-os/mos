@@ -5,11 +5,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/common/ide"
 	"cesanta.com/common/go/pflagenv"
 	"github.com/cesanta/errors"
@@ -82,22 +84,26 @@ type command struct {
 	optional []string
 }
 
-type handler func() error
+type handler func(ctx context.Context, devConn *dev.DevConn) error
+
+// channel of "junk" messages, which go to the console
+var consoleMsgs chan []byte
 
 func unimplemented() error {
 	fmt.Println("TODO")
 	return nil
 }
 
-func run() error {
+func run(ctx context.Context, devConn *dev.DevConn) error {
 	for _, c := range commands {
 		if c.name == flag.Arg(0) {
 			// check required flags
 			if err := checkFlags(c.required); err != nil {
 				return errors.Trace(err)
 			}
+
 			// run the handler
-			if err := c.handler(); err != nil {
+			if err := c.handler(ctx, devConn); err != nil {
 				return errors.Trace(err)
 			}
 			return nil
@@ -108,7 +114,18 @@ func run() error {
 	return nil
 }
 
+func consoleJunkHandler(data []byte) {
+	removeNonText(data)
+	select {
+	case consoleMsgs <- data:
+	default:
+		// Junk overflow; do nothing
+	}
+}
+
 func main() {
+	consoleMsgs = make(chan []byte, 10)
+
 	// -X, if given, must be the first arg.
 	if len(os.Args) > 1 && os.Args[1] == "-X" {
 		os.Args = append(os.Args[:1], os.Args[2:]...)
@@ -118,6 +135,11 @@ func main() {
 	initFlags()
 	flag.Parse()
 	pflagenv.Parse(envPrefix)
+
+	// in GUI mode, reconnect is always active
+	if *gui {
+		*reconnect = true
+	}
 
 	if *helpFull {
 		unhideFlags()
@@ -130,11 +152,18 @@ func main() {
 		return
 	}
 
-	if *gui == true {
-		startUI()
+	ctx := context.Background()
+	devConn, err := createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+	if err != nil {
+		fmt.Println(errors.Trace(err))
+		return
 	}
 
-	if err := run(); err != nil {
+	if *gui == true {
+		startUI(ctx, devConn)
+	}
+
+	if err := run(ctx, devConn); err != nil {
 		glog.Infof("Error: %+v", err)
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

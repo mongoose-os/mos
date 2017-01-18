@@ -28,19 +28,13 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "no-reboot", "no-save")
 }
 
-func configGet() error {
+func configGet(ctx context.Context, devConn *dev.DevConn) error {
 	path := ""
 
 	args := flag.Args()[1:]
 
 	if len(args) > 1 {
 		return errors.Errorf("only one path to value is allowed")
-	}
-
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	// If path is given, use it; otherwise, an empty string will be assumed,
@@ -66,19 +60,15 @@ func configGet() error {
 	return nil
 }
 
-func configSet() error {
-	return internalConfigSet(flag.Args()[1:])
+func configSet(ctx context.Context, devConn *dev.DevConn) error {
+	return internalConfigSet(ctx, devConn, flag.Args()[1:])
 }
 
-func internalConfigSet(args []string) error {
+func internalConfigSet(
+	ctx context.Context, devConn *dev.DevConn, args []string,
+) error {
 	if len(args) < 1 {
 		return errors.Errorf("at least one path.to.value=value pair should be given")
-	}
-
-	ctx := context.Background()
-	devConn, err := createDevConn(ctx)
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	// Get all config from the attached device

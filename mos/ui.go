@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,13 +11,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
+	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"github.com/cesanta/errors"
-	"github.com/cesanta/go-serial/serial"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
 	"github.com/skratchdot/open-golang/open"
@@ -25,11 +25,9 @@ import (
 )
 
 var (
-	httpPort    = 1992
-	wsClients   = make(map[*websocket.Conn]int)
-	consoleChan = make(chan bool)
-	consoleWg   sync.WaitGroup
-	wwwRoot     = ""
+	httpPort  = 1992
+	wsClients = make(map[*websocket.Conn]int)
+	wwwRoot   = ""
 )
 
 type wsmessage struct {
@@ -69,27 +67,6 @@ func wsHandler(ws *websocket.Conn) {
 	}
 }
 
-func openSerial(port string) (serial.Serial, error) {
-	glog.Infof("opening %s...", port)
-	s, err := serial.Open(serial.OpenOptions{
-		PortName:            port,
-		BaudRate:            115200,
-		HardwareFlowControl: false,
-		DataBits:            8,
-		ParityMode:          serial.PARITY_NONE,
-		StopBits:            1,
-		MinimumReadSize:     1,
-	})
-	glog.Infof("opened console: %v %v", s, err)
-	if err != nil {
-		glog.Errorf("failed to open %s: %v", port, err)
-		return nil, errors.Trace(err)
-	}
-	s.SetDTR(false)
-	s.SetRTS(false)
-	return s, err
-}
-
 func reportSerialPorts() {
 	for {
 		list := enumerateSerialPorts()
@@ -98,47 +75,10 @@ func reportSerialPorts() {
 	}
 }
 
-func interruptConsole() {
-	consoleWg.Add(1)
-	consoleChan <- true
-}
-
 func reportConsoleLogs() {
 	for {
-		glog.Infof("openSerial: waiting for commands to finish...")
-		consoleWg.Wait()
-		s, err := openSerial(*port)
-		if err != nil {
-			time.Sleep(time.Millisecond * 200)
-			select {
-			case <-consoleChan:
-			default:
-			}
-			continue
-		}
-
-	readLoop:
-		for {
-			buf := make([]byte, 100)
-			n, err := s.Read(buf)
-			if n > 0 {
-				removeJunk(buf[:n])
-				wsBroadcast(wsmessage{"console", string(buf[:n])})
-			}
-			if err != nil {
-				glog.Errorf("Error reading from %s: %v", *port, err)
-				break
-			}
-
-			select {
-			case <-consoleChan:
-				glog.Infof("INTERRUPT!!")
-				break readLoop
-			default:
-			}
-		}
-		glog.Infof("closing console")
-		s.Close()
+		data := <-consoleMsgs
+		wsBroadcast(wsmessage{"console", string(data)})
 	}
 }
 
@@ -172,7 +112,7 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "web-root")
 }
 
-func startUI() {
+func startUI(ctx context.Context, devConn *dev.DevConn) {
 
 	glog.CopyStandardLogTo("INFO")
 	go reportSerialPorts()
@@ -184,10 +124,7 @@ func startUI() {
 		r.ParseForm()
 		*firmware = r.FormValue("firmware")
 
-		interruptConsole()
-		defer consoleWg.Done()
-
-		err := flash()
+		err := flash(ctx, devConn)
 		httpReply(w, true, err)
 	})
 
@@ -201,15 +138,12 @@ func startUI() {
 			fmt.Sprintf("wifi.sta.pass=%s", r.FormValue("pass")),
 		}
 
-		interruptConsole()
-		defer consoleWg.Done()
-
-		err := internalConfigSet(args)
+		err := internalConfigSet(ctx, devConn, args)
 		result := "false"
 		if err == nil {
 			for {
 				time.Sleep(time.Millisecond * 500)
-				res2, _ := callDeviceService("Config.GetNetworkStatus", "")
+				res2, _ := callDeviceService(ctx, devConn, "Config.GetNetworkStatus", "")
 				if res2 != "" {
 					type Netcfg struct {
 						Wifi struct {
@@ -250,15 +184,9 @@ func startUI() {
 	http.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		interruptConsole()
-		defer consoleWg.Done()
+		// TODO(dfrank): shall we remove this handler?
 
-		// Open a port, and close it immediately. Report success.
-		*port = r.FormValue("port")
-		s, err := openSerial(*port)
-		if err == nil {
-			s.Close()
-		}
+		var err error
 		httpReply(w, true, err)
 	})
 
@@ -270,10 +198,7 @@ func startUI() {
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		interruptConsole()
-		defer consoleWg.Done()
-
-		text, err := getFile(r.FormValue("name"))
+		text, err := getFile(ctx, devConn, r.FormValue("name"))
 		if err == nil {
 			text2, err2 := json.Marshal(text)
 			if err2 == nil {
@@ -288,12 +213,9 @@ func startUI() {
 	http.HandleFunc("/aws-iot-setup", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		interruptConsole()
-		defer consoleWg.Done()
-
 		awsIoTPolicy = r.FormValue("policy")
 		awsRegion = r.FormValue("region")
-		err := awsIoTSetup()
+		err := awsIoTSetup(ctx, devConn)
 		httpReply(w, true, err)
 	})
 
@@ -332,15 +254,12 @@ func startUI() {
 		w.Header().Set("Content-Type", "application/json")
 		method := r.FormValue("method")
 
-		interruptConsole()
-		defer consoleWg.Done()
-
 		if method == "" {
 			httpReply(w, nil, errors.Errorf("Expecting method"))
 			return
 		}
 		args := r.FormValue("args")
-		result, err := callDeviceService(method, args)
+		result, err := callDeviceService(ctx, devConn, method, args)
 		httpReply(w, result, err)
 	})
 
