@@ -1,0 +1,49 @@
+namespace: http://cesanta.com/mg_rpc/service
+name: OTA
+doc: OTA service provides a way to update device's software.
+visibility: private
+methods:
+  ListSections:
+    doc: >-
+      Returns a list of components of the device's software. Each section is
+      updated individually.
+    result:
+      type: array
+      items:
+        type: object
+        properties:
+          section:
+            type: string
+          version:
+            type: string
+          writable:
+            type: boolean
+  Update:
+    doc: Instructs the device to update a given section.
+    args:
+      section:
+        type: string
+        doc: Name of the section to update.
+      version:
+        type: string
+        doc: Optional version of the new image.
+      blob:
+        type: string
+        doc: Image as a string, if appropriate.
+      blob_url:
+        type: string
+        doc: URL pointing to the image if it's too big to fit in the `blob`.
+      blob_type:
+        type: string
+        doc: >-
+          Type of the blob. Valid values: manifest, zip.
+      commit_timeout:
+        type: integer
+        doc: >-
+          Normally update is committed if firmware init succeeds,
+          If timeout is set and non-zero, the update will require an explicit commit.
+          If the specified time expires without a commit, update is rolled back.
+  Commit:
+    doc: Commit a previously initiated update.
+  Revert:
+    doc: Revert a previously initiated update.
