@@ -112,7 +112,7 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "web-root")
 }
 
-func startUI(ctx context.Context, devConn *dev.DevConn) {
+func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	glog.CopyStandardLogTo("INFO")
 	go reportSerialPorts()
@@ -278,4 +278,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) {
 	fmt.Printf("For advanced functionality, start mgos from the command line: mgos --ui=false\n")
 	open.Start(url)
 	log.Fatal(http.ListenAndServe(addr, nil))
+
+	// Unreacahble
+	return nil
 }

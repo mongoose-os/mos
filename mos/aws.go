@@ -135,7 +135,7 @@ func getSvc() (*iot.IoT, error) {
 	creds := credentials.NewSharedCredentials("", "")
 	if err := checkAwsCredentials(); err != nil {
 		// In UI mode, UI credentials are acquired in a different way.
-		if *gui {
+		if isGUI() {
 			return nil, errors.Trace(err)
 		}
 		creds, err = askForCreds()

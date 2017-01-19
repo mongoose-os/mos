@@ -41,7 +41,6 @@ var (
 	reconnect  = flag.Bool("reconnect", false, "Enable reconnection")
 	force      = flag.Bool("force", false, "Use the force")
 	verbose    = flag.Bool("verbose", false, "Verbose output")
-	gui        = flag.Bool("ui", false, "Start GUI")
 
 	versionFlag = flag.Bool("version", false, "Print version and exit")
 	helpFull    = flag.Bool("helpfull", false, "Show full help, including advanced flags")
@@ -52,6 +51,7 @@ var (
 var (
 	// put all commands here
 	commands = []command{
+		{"ui", startUI, `Start GUI`, []string{}, []string{}, true},
 		{"init", initFW, `Initialise firmware directory structure in the current directory`, []string{}, []string{"arch", "force"}, false},
 		{"build", build, `Build a firmware from the sources located in the current directory`, []string{}, []string{"arch", "local", "repo", "clean", "server"}, false},
 		{"flash", flash, `Flash firmware to the device`, []string{"port"}, []string{"firmware"}, false},
@@ -134,6 +134,10 @@ func consoleJunkHandler(data []byte) {
 	}
 }
 
+func isGUI() bool {
+	return flag.Arg(0) == "ui"
+}
+
 func main() {
 	consoleMsgs = make(chan []byte, 10)
 
@@ -148,7 +152,7 @@ func main() {
 	pflagenv.Parse(envPrefix)
 
 	// in GUI mode, reconnect is always active
-	if *gui {
+	if isGUI() {
 		*reconnect = true
 	}
 
@@ -166,27 +170,16 @@ func main() {
 	ctx := context.Background()
 	var devConn *dev.DevConn
 
-	// devConn is needed if either --ui flag is true, or if the given command
-	// needs it.
-	needDevConn := *gui
-
 	cmd := getCommand()
-	if !needDevConn && cmd != nil && cmd.needDevConn {
-		needDevConn = true
-	}
 
 	// If we need to create a devConn instance, do it
-	if needDevConn {
+	if cmd.needDevConn {
 		var err error
 		devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler)
 		if err != nil {
 			fmt.Println(errors.Trace(err))
 			return
 		}
-	}
-
-	if *gui == true {
-		startUI(ctx, devConn)
 	}
 
 	if err := run(cmd, ctx, devConn); err != nil {
