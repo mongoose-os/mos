@@ -19,10 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/clubby"
 	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/atca"
+	"cesanta.com/mos/dev"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/defaults"

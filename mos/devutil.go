@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 )
 

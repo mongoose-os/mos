@@ -15,7 +15,7 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
-	"cesanta.com/cloud/cmd/mgos/common/flash/cc3200"
-	"cesanta.com/cloud/cmd/mgos/common/flash/common"
-	"cesanta.com/cloud/cmd/mgos/common/flash/esp"
-	"cesanta.com/cloud/cmd/mgos/common/flash/stm32"
+	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flash/cc3200"
+	"cesanta.com/mos/flash/common"
+	"cesanta.com/mos/flash/esp"
+	"cesanta.com/mos/flash/stm32"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

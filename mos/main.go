@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/common/ide"
 	"cesanta.com/common/go/pflagenv"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"

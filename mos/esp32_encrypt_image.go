@@ -6,8 +6,8 @@ import (
 	"context"
 	"io/ioutil"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
-	"cesanta.com/cloud/cmd/mgos/common/flash/esp"
+	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flash/esp"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

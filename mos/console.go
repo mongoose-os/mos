@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
-	"cesanta.com/cloud/cmd/mgos/common/timestamp"
+	"cesanta.com/mos/dev"
+	"cesanta.com/mos/timestamp"
 
 	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"

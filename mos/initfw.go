@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/cloud/common/ide"
 	"cesanta.com/cloud/util/archive"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	yaml "gopkg.in/yaml.v2"
 )

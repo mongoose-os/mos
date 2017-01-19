@@ -8,9 +8,9 @@ import (
 	"os"
 	"path"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/clubby"
 	fwfilesystem "cesanta.com/fw/defs/fs"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

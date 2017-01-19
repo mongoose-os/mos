@@ -7,8 +7,8 @@ import (
 
 	"cesanta.com/clubby"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
 	fwconfig "cesanta.com/fw/defs/config"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

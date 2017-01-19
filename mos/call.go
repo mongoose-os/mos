@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cesanta.com/cloud/cmd/mgos/common/dev"
 	"cesanta.com/clubby/frame"
 	"cesanta.com/common/go/ourjson"
+	"cesanta.com/mos/dev"
 
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
