@@ -274,8 +274,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
 	url := fmt.Sprintf("http://%s", addr)
-	fmt.Printf("Web UI started. Point your browser at %s\n", url)
-	fmt.Printf("For advanced functionality, start mgos from the command line: mgos --ui=false\n")
+	fmt.Printf("To get a list of available commands, start with --help\n")
+	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
 	open.Start(url)
 	log.Fatal(http.ListenAndServe(addr, nil))
 

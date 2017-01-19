@@ -46,6 +46,7 @@ var (
 	helpFull    = flag.Bool("helpfull", false, "Show full help, including advanced flags")
 
 	extendedMode = false
+	isUI         = false
 )
 
 var (
@@ -117,6 +118,9 @@ func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
 // getCommand returns a pointer to the command which needs to run, or nil if
 // there's no such command
 func getCommand() *command {
+	if isUI {
+		return &commands[0]
+	}
 	for _, c := range commands {
 		if c.name == flag.Arg(0) {
 			return &c
@@ -134,11 +138,10 @@ func consoleJunkHandler(data []byte) {
 	}
 }
 
-func isGUI() bool {
-	return flag.Arg(0) == "ui"
-}
-
 func main() {
+	// If no arguments are given, show help and start UI
+	isUI = len(os.Args) == 1 || flag.Arg(0) == "ui"
+
 	consoleMsgs = make(chan []byte, 10)
 
 	// -X, if given, must be the first arg.
@@ -151,8 +154,7 @@ func main() {
 	flag.Parse()
 	pflagenv.Parse(envPrefix)
 
-	// in GUI mode, reconnect is always active
-	if isGUI() {
+	if isUI {
 		*reconnect = true
 	}
 
@@ -171,9 +173,7 @@ func main() {
 	var devConn *dev.DevConn
 
 	cmd := getCommand()
-
-	// If we need to create a devConn instance, do it
-	if cmd.needDevConn {
+	if cmd != nil && cmd.needDevConn {
 		var err error
 		devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler)
 		if err != nil {
