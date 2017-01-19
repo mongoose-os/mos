@@ -65,12 +65,48 @@
   };
 
   var schema, config;
-  $.ajax({url: '/call', data: {method: 'Config.Get'}}).then(function(json) {
-    config = json.result;
-    return $.ajax({url: '/get', data: {name: 'sys_config_schema.json'}});
-  }).then(function(json) {
-    var schema = JSON.parse(json.result);
-    renderConfig(schema, config, $('#config'));
+  var loadConfig = function() {
+    return $.ajax({url: '/call',
+      data: {method: 'Config.Get'}}).then(function(json) {
+      config = json.result;
+      return $.ajax({url: '/get', data: {name: 'sys_config_schema.json'}});
+    }).then(function(json) {
+      var schema = JSON.parse(json.result);
+      renderConfig(schema, config, $('#config'));
+    }).then(function() {
+      new PNotify({title: 'Configuration loaded', type: 'success' });
+    });
+  };
+  loadConfig();
+
+  function ev(id) {
+    var el = document.getElementById(id);
+    if (!el) return undefined;
+    if (el.type == 'checkbox') return el.checked ? true : false;
+    return el.value;
+  };
+
+  $(document).on('click', '#config-save-button', function() {
+    var walk = function(obj, prefix) {
+      for (var k in obj) {
+        var key = (prefix + '.' + k).replace(/^\./, '');
+        console.log(key);
+        if (typeof(obj[k]) === 'object') {
+          walk(obj[k], key);
+        } else {
+          obj[k] = ev(key);
+        }
+      }
+    };
+    walk(config, '');
+
+    $.ajax({url: '/call', data: {
+      method: 'Config.Set',
+      args: JSON.stringify({config: config})
+    }}).then(function() {
+      new PNotify({title: 'Configuration saved', type: 'success' });
+      return loadConfig();
+    });
   });
 
   //# sourceURL=page_configuration.js
