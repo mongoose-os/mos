@@ -140,7 +140,7 @@ func consoleJunkHandler(data []byte) {
 
 func main() {
 	// If no arguments are given, show help and start UI
-	isUI = len(os.Args) == 1 || flag.Arg(0) == "ui"
+	isUI = len(os.Args) == 1
 
 	consoleMsgs = make(chan []byte, 10)
 
@@ -153,6 +153,9 @@ func main() {
 	initFlags()
 	flag.Parse()
 	pflagenv.Parse(envPrefix)
+	if flag.Arg(0) == "ui" {
+		isUI = true
+	}
 
 	if isUI {
 		*reconnect = true

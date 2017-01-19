@@ -5,7 +5,7 @@
   </div>
   <div class="col-xs-9" style="height: 100%;">
     <div style="margin-top: 2px; ">
-      <button class="btn btn-sm btn-primary" id="copy-example-button"><i class="fa fa-clipboard"></i> Copy to clipboard</button>
+      <button class="btn btn-sm btn-warning" id="copy-example-button"><i class="fa fa-clipboard"></i> Use this example: copy it to init.js and reboot the device</button>
     </div>
     <div class="form-group upcontrol">
       <!--<textarea class="form-control" id="example-code" style="height: 100%"></textarea>-->
@@ -37,9 +37,20 @@
     });
   });
 
-  $(document).on('click', '#copy-example-button', function() {
-    $('#example-code textarea').select();
-    document.execCommand('copy');
+  $(document).on('click', '#copy-example-button', function () {
+    var text = $('#example-code textarea').val();
+    return $.ajax({
+      url: '/call',
+      data: {
+        method: 'FS.Put',
+        args: JSON.stringify({filename: 'init.js', data: b64enc(text)})
+      }
+    }).then(function() {
+      new PNotify({title: 'Example saved to init.js', type: 'success' });
+      return $.ajax({url: '/call', data: {method: 'Sys.Reboot'}});
+    }).then(function() {
+      new PNotify({title: 'Device reboot success', type: 'success' });
+    });
   });
 
 </script>
