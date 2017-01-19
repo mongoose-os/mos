@@ -52,36 +52,37 @@ var (
 var (
 	// put all commands here
 	commands = []command{
-		{"init", initFW, `Initialise firmware directory structure in the current directory`, []string{}, []string{"arch", "force"}},
-		{"build", build, `Build a firmware from the sources located in the current directory`, []string{}, []string{"arch", "local", "repo", "clean", "server"}},
-		{"flash", flash, `Flash firmware to the device`, []string{"port"}, []string{"firmware"}},
-		{"console", console, `Simple serial port console`, []string{"port"}, []string{}},
-		{"ls", fsLs, `List files at the local device's filesystem`, []string{"port"}, []string{}},
-		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, []string{"port"}, []string{}},
-		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, []string{"port"}, []string{}},
-		{"config-get", configGet, `Get config value from the locally attached device`, []string{"port"}, []string{}},
-		{"config-set", configSet, `Set config value at the locally attached device`, []string{"port"}, []string{}},
-		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, []string{"port"}, []string{}},
-		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, []string{"port"}, []string{"use-atca", "atca-slot", "aws-region"}},
+		{"init", initFW, `Initialise firmware directory structure in the current directory`, []string{}, []string{"arch", "force"}, false},
+		{"build", build, `Build a firmware from the sources located in the current directory`, []string{}, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"flash", flash, `Flash firmware to the device`, []string{"port"}, []string{"firmware"}, false},
+		{"console", console, `Simple serial port console`, []string{"port"}, []string{}, false}, //TODO: needDevConn
+		{"ls", fsLs, `List files at the local device's filesystem`, []string{"port"}, []string{}, true},
+		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, []string{"port"}, []string{}, true},
+		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, []string{"port"}, []string{}, true},
+		{"config-get", configGet, `Get config value from the locally attached device`, []string{"port"}, []string{}, true},
+		{"config-set", configSet, `Set config value at the locally attached device`, []string{"port"}, []string{}, true},
+		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, []string{"port"}, []string{}, true},
+		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, []string{"port"}, []string{"use-atca", "atca-slot", "aws-region"}, true},
 	}
 	// These commands are only available when invoked with -X
 	extendedCommands = []command{
-		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, []string{"port"}, []string{"format"}},
-		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, []string{"port"}, []string{"format", "dry-run"}},
-		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, []string{"port"}, []string{"dry-run"}},
-		{"atca-set-key", atcaSetKey, `Set key in a given slot`, []string{"port"}, []string{"dry-run", "write-key"}},
-		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, []string{"port"}, []string{"dry-run"}},
-		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, []string{"port"}, []string{}},
-		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, []string{}},
+		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, []string{"port"}, []string{"format"}, true},
+		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, []string{"port"}, []string{"format", "dry-run"}, true},
+		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, []string{"port"}, []string{"dry-run"}, true},
+		{"atca-set-key", atcaSetKey, `Set key in a given slot`, []string{"port"}, []string{"dry-run", "write-key"}, true},
+		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, []string{"port"}, []string{"dry-run"}, true},
+		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, []string{"port"}, []string{}, true},
+		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, []string{}, false},
 	}
 )
 
 type command struct {
-	name     string
-	handler  handler
-	short    string
-	required []string
-	optional []string
+	name        string
+	handler     handler
+	short       string
+	required    []string
+	optional    []string
+	needDevConn bool
 }
 
 type handler func(ctx context.Context, devConn *dev.DevConn) error
@@ -94,23 +95,33 @@ func unimplemented() error {
 	return nil
 }
 
-func run(ctx context.Context, devConn *dev.DevConn) error {
-	for _, c := range commands {
-		if c.name == flag.Arg(0) {
-			// check required flags
-			if err := checkFlags(c.required); err != nil {
-				return errors.Trace(err)
-			}
-
-			// run the handler
-			if err := c.handler(ctx, devConn); err != nil {
-				return errors.Trace(err)
-			}
-			return nil
+func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
+	if c != nil {
+		// check required flags
+		if err := checkFlags(c.required); err != nil {
+			return errors.Trace(err)
 		}
+
+		// run the handler
+		if err := c.handler(ctx, devConn); err != nil {
+			return errors.Trace(err)
+		}
+		return nil
 	}
+
 	// not found
 	usage()
+	return nil
+}
+
+// getCommand returns a pointer to the command which needs to run, or nil if
+// there's no such command
+func getCommand() *command {
+	for _, c := range commands {
+		if c.name == flag.Arg(0) {
+			return &c
+		}
+	}
 	return nil
 }
 
@@ -153,17 +164,32 @@ func main() {
 	}
 
 	ctx := context.Background()
-	devConn, err := createDevConnWithJunkHandler(ctx, consoleJunkHandler)
-	if err != nil {
-		fmt.Println(errors.Trace(err))
-		return
+	var devConn *dev.DevConn
+
+	// devConn is needed if either --ui flag is true, or if the given command
+	// needs it.
+	needDevConn := *gui
+
+	cmd := getCommand()
+	if !needDevConn && cmd != nil && cmd.needDevConn {
+		needDevConn = true
+	}
+
+	// If we need to create a devConn instance, do it
+	if needDevConn {
+		var err error
+		devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+		if err != nil {
+			fmt.Println(errors.Trace(err))
+			return
+		}
 	}
 
 	if *gui == true {
 		startUI(ctx, devConn)
 	}
 
-	if err := run(ctx, devConn); err != nil {
+	if err := run(cmd, ctx, devConn); err != nil {
 		glog.Infof("Error: %+v", err)
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

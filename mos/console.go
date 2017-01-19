@@ -48,10 +48,6 @@ func init() {
 }
 
 func console(ctx context.Context, devConn *dev.DevConn) error {
-	if err := devConn.Disconnect(ctx); err != nil {
-		return errors.Trace(err)
-	}
-
 	in, out := os.Stdin, os.Stdout
 
 	if tsfSpec != "" {
