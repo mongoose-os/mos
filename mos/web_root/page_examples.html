@@ -17,6 +17,7 @@
 <script>
   var prefix = 'https://raw.githubusercontent.com/cesanta/mongoose-os/master/fw/examples/mjs_hello/examples/';
 
+  $(document).off('click', '.example');
   $(document).on('click', '.example', function() {
     var name = $(this).text();
     var $t = $(this);
@@ -26,7 +27,7 @@
       $('#example-code').text(text || '');
       var flask = new CodeFlask;
       flask.run('#example-code', {language: 'javascript'});
-      new PNotify({title: 'Success loading file', text: 'File ' + name + ' loaded.', type: 'success' });
+      new PNotify({title: 'Loaded ' + name, type: 'success' });
     });
   });
 
@@ -37,6 +38,7 @@
     });
   });
 
+  $(document).off('click', '#copy-example-button');
   $(document).on('click', '#copy-example-button', function () {
     var text = $('#example-code textarea').val();
     return $.ajax({
@@ -49,7 +51,7 @@
       new PNotify({title: 'Example saved to init.js', type: 'success' });
       return $.ajax({url: '/call', data: {method: 'Sys.Reboot'}});
     }).then(function() {
-      new PNotify({title: 'Device reboot success', type: 'success' });
+      new PNotify({title: 'Device reboot successful', type: 'success' });
     });
   });
 

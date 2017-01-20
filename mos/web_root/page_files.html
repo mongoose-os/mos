@@ -15,20 +15,20 @@
 </div>
 
 <script>
-  $(document)
-      .on('click', '.file', function() {
-        var name = $(this).text();
-        var $t = $(this);
-        $.ajax({url: '/get', data: {name: name}}).done(function(json) {
-          $('.file').removeClass('selected');
-          $t.addClass('selected');
-          $('#file-textarea').text(json.result || '');
-          var flask = new CodeFlask;
-          flask.run('#file-textarea', {language: 'javascript'});
-          $('.file-control').toggleClass('disabled', false);
-          new PNotify({title: 'Success loading file', text: 'File ' + name + ' loaded.', type: 'success' });
-        });
-      });
+  $(document).off('click', '.file');
+  $(document).on('click', '.file', function() {
+    var name = $(this).text();
+    var $t = $(this);
+    $.ajax({url: '/get', data: {name: name}}).done(function(json) {
+      $('.file').removeClass('selected');
+      $t.addClass('selected');
+      $('#file-textarea').text(json.result || '');
+      var flask = new CodeFlask;
+      flask.run('#file-textarea', {language: 'javascript'});
+      $('.file-control').toggleClass('disabled', false);
+      new PNotify({title: 'Loaded ' + name, type: 'success' });
+    });
+  });
 
   // https://developer.mozilla.org/en/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
   function b64enc(str) {
@@ -48,16 +48,19 @@
         args: JSON.stringify({filename: fileName, data: b64enc(text)})
       }
     }).then(function() {
-      new PNotify({title: 'Success saving file', text: 'File ' + fileName + ' saved.', type: 'success' });
+      new PNotify({title: 'Saved ' + fileName, type: 'success' });
     });
   };
 
+  $(document).off('click', '#file-save-button');
   $(document).on('click', '#file-save-button', onSave);
+
+  $(document).off('click', '#file-savereboot-button');
   $(document).on('click', '#file-savereboot-button', function () {
     onSave().then(function() {
       return $.ajax({url: '/call', data: {method: 'Sys.Reboot'}});
     }).then(function() {
-      new PNotify({title: 'Device reboot success', type: 'success' });
+      new PNotify({title: 'Device reboot successful', type: 'success' });
     });
   });
 

@@ -114,6 +114,7 @@ func init() {
 
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
+	flag.Set("v", "4")
 	glog.CopyStandardLogTo("INFO")
 	go reportSerialPorts()
 	go reportConsoleLogs()
@@ -137,13 +138,15 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			fmt.Sprintf("wifi.sta.ssid=%s", r.FormValue("ssid")),
 			fmt.Sprintf("wifi.sta.pass=%s", r.FormValue("pass")),
 		}
+		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
 
-		err := internalConfigSet(ctx, devConn, args)
+		err := internalConfigSet(ctx2, devConn, args)
 		result := "false"
 		if err == nil {
 			for {
 				time.Sleep(time.Millisecond * 500)
-				res2, _ := callDeviceService(ctx, devConn, "Config.GetNetworkStatus", "")
+				res2, _ := callDeviceService(ctx2, devConn, "Config.GetNetworkStatus", "")
 				if res2 != "" {
 					type Netcfg struct {
 						Wifi struct {
@@ -197,8 +200,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-
-		text, err := getFile(ctx, devConn, r.FormValue("name"))
+		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		text, err := getFile(ctx2, devConn, r.FormValue("name"))
 		if err == nil {
 			text2, err2 := json.Marshal(text)
 			if err2 == nil {
@@ -215,7 +219,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		awsIoTPolicy = r.FormValue("policy")
 		awsRegion = r.FormValue("region")
-		err := awsIoTSetup(ctx, devConn)
+
+		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		err := awsIoTSetup(ctx2, devConn)
 		httpReply(w, true, err)
 	})
 
@@ -259,7 +267,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 		args := r.FormValue("args")
-		result, err := callDeviceService(ctx, devConn, method, args)
+
+		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		result, err := callDeviceService(ctx2, devConn, method, args)
 		httpReply(w, result, err)
 	})
 

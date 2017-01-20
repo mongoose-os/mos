@@ -69,19 +69,19 @@ func init() {
 }
 
 func flash(ctx context.Context, devConn *dev.DevConn) error {
-	// if given devConn is not nill, we should disconnect it while flashing is
-	// in progress
-	if devConn != nil {
-		devConn.Disconnect(ctx)
-		defer devConn.Connect(ctx, devConn.Reconnect)
-	}
-
 	fw, err := common.NewZipFirmwareBundle(*firmware)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
 	fmt.Printf("Loaded %s/%s version %s (%s)\n", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+
+	// if given devConn is not nill, we should disconnect it while flashing is
+	// in progress
+	if devConn != nil {
+		devConn.Disconnect(ctx)
+		defer devConn.Connect(ctx, devConn.Reconnect)
+	}
 
 	switch strings.ToLower(fw.Platform) {
 	case "cc3200":

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	chunkSize = 128
+	chunkSize = 512
 )
 
 func listFiles(ctx context.Context, devConn *dev.DevConn) ([]string, error) {
