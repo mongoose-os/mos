@@ -15,6 +15,13 @@
 </div>
 
 <script>
+  var guesslang = function(filename) {
+    if ((filename || '').match(/\.js$/)) return 'javascript';
+    if ((filename || '').match(/\.json$/)) return 'json';
+    if ((filename || '').match(/\.ya?ml$/)) return 'yaml';
+    return 'text';
+  };
+
   $(document).off('click', '.file');
   $(document).on('click', '.file', function() {
     var name = $(this).text();
@@ -24,7 +31,7 @@
       $t.addClass('selected');
       $('#file-textarea').text(json.result || '');
       var flask = new CodeFlask;
-      flask.run('#file-textarea', {language: 'javascript'});
+      flask.run('#file-textarea', {language: guesslang(name)});
       $('.file-control').toggleClass('disabled', false);
       new PNotify({title: 'Loaded ' + name, type: 'success' });
     });
