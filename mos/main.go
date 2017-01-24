@@ -52,7 +52,7 @@ var (
 var (
 	// put all commands here
 	commands = []command{
-		{"ui", startUI, `Start GUI`, []string{}, []string{}, true},
+		{"ui", startUI, `Start GUI`, []string{}, []string{}, false},
 		{"init", initFW, `Initialise firmware directory structure in the current directory`, []string{}, []string{"arch", "force"}, false},
 		{"build", build, `Build a firmware from the sources located in the current directory`, []string{}, []string{"arch", "local", "repo", "clean", "server"}, false},
 		{"flash", flash, `Flash firmware to the device`, []string{"port"}, []string{"firmware"}, false},

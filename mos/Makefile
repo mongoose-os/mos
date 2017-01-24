@@ -14,8 +14,6 @@ install:
 
 downloads: generate
 	# mkdir -p downloads/mos/win downloads/mos/mac downloads/mos/linux
-	GOOS=darwin go build -o downloads/mos/mac/mos
-	GOOS=windows GOARCH=386 go build -o downloads/mos/win/mos.exe
 	docker run -i --rm \
     -v $${GOPATH%%:*}/src:/go/src \
     -v $$(pwd):/out \
@@ -23,6 +21,8 @@ downloads: generate
     docker.cesanta.com/gobuild32 \
     -o /out/downloads/mos/linux/mos --ldflags '-extldflags "-static"' \
     cesanta.com/mos
+	GOOS=darwin go build -o downloads/mos/mac/mos
+	GOOS=windows GOARCH=386 go build -o downloads/mos/win/mos.exe
 	cp version.json downloads/mos/
 
 deploy:
