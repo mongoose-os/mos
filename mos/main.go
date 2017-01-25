@@ -140,7 +140,9 @@ func consoleJunkHandler(data []byte) {
 
 func main() {
 	// If no arguments are given, show help and start UI
-	isUI = len(os.Args) == 1
+	// isUI = len(os.Args) == 1
+	// TODO(lsm): temporarily disable UI until it works.
+	isUI = false
 
 	consoleMsgs = make(chan []byte, 10)
 
