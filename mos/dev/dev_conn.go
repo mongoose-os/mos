@@ -3,7 +3,7 @@ package dev
 import (
 	"context"
 
-	"cesanta.com/clubby"
+	"cesanta.com/common/go/mgrpc"
 	"cesanta.com/common/go/ourjson"
 	fwconfig "cesanta.com/fw/defs/config"
 	fwfilesystem "cesanta.com/fw/defs/fs"
@@ -20,7 +20,7 @@ const (
 type DevConn struct {
 	c           *Client
 	ClubbyAddr  string
-	Instance    *clubby.Instance
+	RPC         *mgrpc.MgRPC
 	Dest        string
 	JunkHandler func(junk []byte)
 	Reconnect   bool
@@ -75,6 +75,7 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 	}
 
 	return &devConf, nil
+	return nil, nil
 }
 
 func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
@@ -89,9 +90,7 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 }
 
 func (dc *DevConn) Disconnect(ctx context.Context) error {
-	dc.Instance.Dispatcher.RemoveDefault(ctx, nil)
-	dc.Instance = nil
-	return nil
+	return dc.RPC.Disconnect(ctx)
 }
 
 func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {
@@ -104,40 +103,22 @@ func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {
 func (dc *DevConn) ConnectWithJunkHandler(
 	ctx context.Context, junkHandler func(junk []byte), reconnect bool,
 ) error {
-	if dc.Instance != nil {
+	var err error
+
+	if dc.RPC != nil {
 		return nil
 	}
 
 	dc.JunkHandler = junkHandler
 	dc.Reconnect = reconnect
 
-	// create a separate clubby instance for talking to the device over uart,
-	// since we're going to use an empty destination id, so that we can't add
-	// a channel to the existing clubby instance for that
-	dci := clubby.New(ctx, "mos", "")
-	opts := []clubby.ConnectOption{
-		clubby.SendHello(false),
-		clubby.ConnectTo(dc.ClubbyAddr),
-		clubby.DefaultRoute(),
-		clubby.JunkHandler(junkHandler),
-		clubby.Reconnect(reconnect),
-	}
-
-	// Connection to the device also includes sending of '\x04"""' until we
-	// receive '"""' in reply, so it needs to be guarded by timeout.
-	err := dc.c.RunWithTimeout(ctx, func(ctx context.Context) error {
-		// we have to use `dummy_id` because otherwise Connect complains, but this
-		// id won't be actually used since we're going to use empty destination
-		// instead
-		err := dci.Connect(ctx, "dummy_id", opts...)
-		return errors.Annotatef(err, "error connecting to the device via %s", dc.ClubbyAddr)
-	})
+	dc.RPC, err = mgrpc.New(ctx, "mos", dc.ClubbyAddr, junkHandler, reconnect)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	dc.Instance = dci
-	dc.CConf = fwconfig.NewClient(dci, debugDevId)
-	dc.CVars = fwvars.NewClient(dci, debugDevId)
-	dc.CFilesystem = fwfilesystem.NewClient(dci, debugDevId)
+
+	dc.CConf = fwconfig.NewClient(dc.RPC, debugDevId)
+	dc.CVars = fwvars.NewClient(dc.RPC, debugDevId)
+	dc.CFilesystem = fwfilesystem.NewClient(dc.RPC, debugDevId)
 	return nil
 }

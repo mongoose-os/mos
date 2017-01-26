@@ -21,7 +21,7 @@ const (
 )
 
 func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte, *Config, error) {
-	cl := atcaService.NewClient(dc.Instance, "")
+	cl := atcaService.NewClient(dc.RPC, "")
 
 	r, err := cl.GetConfig(ctx)
 	if err != nil {

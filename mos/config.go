@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"cesanta.com/clubby"
-
 	fwconfig "cesanta.com/fw/defs/config"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"

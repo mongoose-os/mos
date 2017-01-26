@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cesanta.com/clubby/frame"
+	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/mos/dev"
 
@@ -39,7 +39,7 @@ func callDeviceService(
 		cmd.Args = ourjson.RawJSON([]byte(args))
 	}
 
-	resp, err := devConn.Instance.Call(ctx, devConn.Dest, cmd)
+	resp, err := devConn.RPC.Call(ctx, devConn.Dest, cmd)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
