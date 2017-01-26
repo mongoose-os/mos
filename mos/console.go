@@ -55,7 +55,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	s, err := serial.Open(serial.OpenOptions{
-		PortName:            *port,
+		PortName:            getPort(),
 		BaudRate:            baudRate,
 		HardwareFlowControl: hwFC,
 		DataBits:            8,
@@ -64,7 +64,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		MinimumReadSize:     1,
 	})
 	if err != nil {
-		return errors.Annotatef(err, "failed to open %s", *port)
+		return errors.Annotatef(err, "failed to open %s", getPort())
 	}
 	// Explicitly deactivate DTR and RTS.
 	// Some converters/drivers activate them which, in case of ESP, amy put device in reset mode.

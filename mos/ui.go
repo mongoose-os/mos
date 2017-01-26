@@ -237,7 +237,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		myPort := r.FormValue("port")
 		if myPort != "" {
-			*port = myPort
+			*portFlag = myPort
 		}
 		httpReply(w, true, nil)
 	})

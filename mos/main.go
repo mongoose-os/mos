@@ -36,11 +36,12 @@ var (
 	deviceID   = flag.String("device-id", "", "Device ID")
 	devicePass = flag.String("device-pass", "", "Device pass/key")
 	firmware   = flag.String("firmware", filepath.Join(buildDir, ide.FirmwareFileName), "Firmware .zip file location (file of HTTP URL)")
-	port       = flag.String("port", "", "Serial port where the device is connected")
-	timeout    = flag.Duration("timeout", 10*time.Second, "Timeout for the device connection")
-	reconnect  = flag.Bool("reconnect", false, "Enable reconnection")
-	force      = flag.Bool("force", false, "Use the force")
-	verbose    = flag.Bool("verbose", false, "Verbose output")
+	portFlag   = flag.String("port", "auto", "Serial port where the device is connected. "+
+		"If set to 'auto', ports on the system will be enumerated and the first will be used.")
+	timeout   = flag.Duration("timeout", 10*time.Second, "Timeout for the device connection")
+	reconnect = flag.Bool("reconnect", false, "Enable reconnection")
+	force     = flag.Bool("force", false, "Use the force")
+	verbose   = flag.Bool("verbose", false, "Verbose output")
 
 	versionFlag = flag.Bool("version", false, "Print version and exit")
 	helpFull    = flag.Bool("helpfull", false, "Show full help, including advanced flags")
@@ -52,28 +53,28 @@ var (
 var (
 	// put all commands here
 	commands = []command{
-		{"ui", startUI, `Start GUI`, []string{}, []string{}, false},
-		{"init", initFW, `Initialise firmware directory structure in the current directory`, []string{}, []string{"arch", "force"}, false},
-		{"build", build, `Build a firmware from the sources located in the current directory`, []string{}, []string{"arch", "local", "repo", "clean", "server"}, false},
-		{"flash", flash, `Flash firmware to the device`, []string{"port"}, []string{"firmware"}, false},
-		{"console", console, `Simple serial port console`, []string{"port"}, []string{}, false}, //TODO: needDevConn
-		{"ls", fsLs, `List files at the local device's filesystem`, []string{"port"}, []string{}, true},
-		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, []string{"port"}, []string{}, true},
-		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, []string{"port"}, []string{}, true},
-		{"config-get", configGet, `Get config value from the locally attached device`, []string{"port"}, []string{}, true},
-		{"config-set", configSet, `Set config value at the locally attached device`, []string{"port"}, []string{}, true},
-		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, []string{"port"}, []string{}, true},
-		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, []string{"port"}, []string{"use-atca", "atca-slot", "aws-region"}, true},
+		{"ui", startUI, `Start GUI`, nil, nil, false},
+		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
+		{"build", build, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
+		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
+		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},
+		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
+		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
+		{"config-get", configGet, `Get config value from the locally attached device`, nil, []string{"port"}, true},
+		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
+		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
+		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
 	}
 	// These commands are only available when invoked with -X
 	extendedCommands = []command{
-		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, []string{"port"}, []string{"format"}, true},
-		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, []string{"port"}, []string{"format", "dry-run"}, true},
-		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, []string{"port"}, []string{"dry-run"}, true},
-		{"atca-set-key", atcaSetKey, `Set key in a given slot`, []string{"port"}, []string{"dry-run", "write-key"}, true},
-		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, []string{"port"}, []string{"dry-run"}, true},
-		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, []string{"port"}, []string{}, true},
-		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, []string{}, false},
+		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, nil, []string{"format", "port"}, true},
+		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, nil, []string{"format", "dry-run", "port"}, true},
+		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, nil, []string{"dry-run", "port"}, true},
+		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, true},
+		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, true},
+		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, true},
+		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false},
 	}
 )
 
