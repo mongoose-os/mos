@@ -20,7 +20,7 @@ const (
 type DevConn struct {
 	c           *Client
 	ClubbyAddr  string
-	RPC         *mgrpc.MgRPC
+	RPC         mgrpc.MgRPC
 	Dest        string
 	JunkHandler func(junk []byte)
 	Reconnect   bool
