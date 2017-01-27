@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -58,8 +59,14 @@ func init() {
 		"Data port speed during flashing")
 
 	// STM32
-	flag.DurationVar(&stm32FlashOpts.Timeout, "flash-timeout", 30*time.Second, "Maximum flashing time")
-
+	if runtime.GOOS == "windows" {
+		// STM32 Windows driver _sometimes_ removes .bin file quite unhurriedly,
+		// and flasher prints an error even if flashing itself was successfull
+		// For the rest of OSes use smaller timeout though
+		flag.DurationVar(&stm32FlashOpts.Timeout, "flash-timeout", 60*time.Second, "Maximum flashing time")
+	} else {
+		flag.DurationVar(&stm32FlashOpts.Timeout, "flash-timeout", 30*time.Second, "Maximum flashing time")
+	}
 	// add these flags to the hiddenFlags list so that they can be hidden and shown again with --helpfull
 	flag.VisitAll(func(f *flag.Flag) {
 		if strings.HasPrefix(f.Name, "cc3200-") || strings.HasPrefix(f.Name, "esp-") || strings.HasPrefix(f.Name, "esp32-") {
