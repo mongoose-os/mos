@@ -9,11 +9,10 @@ generate version.go version.json:
 	@cat version.json
 	@echo
 
-install:
+install: generate
 	go install
 
 downloads: generate
-	# mkdir -p downloads/mos/win downloads/mos/mac downloads/mos/linux
 	docker run -i --rm \
     -v $${GOPATH%%:*}/src:/go/src \
     -v $$(pwd):/out \
