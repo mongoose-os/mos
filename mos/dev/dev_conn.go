@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"time"
 
 	"cesanta.com/common/go/mgrpc"
 	"cesanta.com/common/go/ourjson"
@@ -9,6 +10,7 @@ import (
 	fwfilesystem "cesanta.com/fw/defs/fs"
 	fwvars "cesanta.com/fw/defs/vars"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 )
 
 const (
@@ -90,7 +92,15 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 }
 
 func (dc *DevConn) Disconnect(ctx context.Context) error {
-	return dc.RPC.Disconnect(ctx)
+	glog.V(2).Infof("Disconnecting from %s", dc.ConnectAddr)
+	err := dc.RPC.Disconnect(ctx)
+	// On Windows, closing a port and immediately opening it back is not going to
+	// work, so here we just use a random 500ms timeout which seems to solve the
+	// problem.
+	//
+	// Just in case though, we sleep not only on Windows, but on all platforms.
+	time.Sleep(500 * time.Millisecond)
+	return err
 }
 
 func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {

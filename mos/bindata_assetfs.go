@@ -4400,7 +4400,7 @@ var _web_rootJsDashJs = []byte(`(function($) {
   });
 
   // Let tool know the port we want to use
-  $.ajax({url: '/setenv', data: {port: getCookie('port')}});
+  $.ajax({url: '/connect', data: {port: getCookie('port')}});
 
   $('#app_view').resizable({
     handleSelector: ".splitter-horizontal",
@@ -4537,7 +4537,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5456, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5457, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5079,7 +5079,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   }, 1000);
 
   // Let the tool know the port we want to use
-  $.ajax({url: '/setenv', data: {port: getCookie('port')}});
+  $.ajax({url: '/connect', data: {port: getCookie('port')}});
 
   $.ajax({url: '/version'}).done(function(json) {
     if (!json.result) return;
@@ -5105,7 +5105,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9260, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9261, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

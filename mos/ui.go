@@ -120,8 +120,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		*firmware = r.FormValue("firmware")
 		if devConn != nil {
 			devConn.Disconnect(ctx)
+			devConn = nil
 		}
-		// defer reconnectToDevice(ctx, devConn)
+		defer func() {
+			devConn, _ = reconnectToDevice(ctx)
+		}()
 		err := flash(ctx, devConn)
 		httpReply(w, true, err)
 	})
@@ -185,6 +188,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		if devConn != nil {
 			devConn.Disconnect(ctx)
+			devConn = nil
+		}
+		portArg := r.FormValue("port")
+		if portArg != "" {
+			*portFlag = portArg
 		}
 		var err error
 		devConn, err = reconnectToDevice(ctx)
@@ -229,15 +237,6 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := storeCreds(r.FormValue("key"), r.FormValue("secret"))
 		httpReply(w, true, err)
-	})
-
-	http.HandleFunc("/setenv", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		myPort := r.FormValue("port")
-		if myPort != "" {
-			*portFlag = myPort
-		}
-		httpReply(w, true, nil)
 	})
 
 	http.HandleFunc("/check-aws-credentials", func(w http.ResponseWriter, r *http.Request) {
