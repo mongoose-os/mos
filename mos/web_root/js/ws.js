@@ -22,16 +22,6 @@
             el.scrollTop = el.scrollHeight;
           });
           break;
-        case 'ports':
-          var ports = (m.data || '').split(',');
-          $('#dropdown-ports').empty();
-          $.each(ports, function(i, v) {
-            $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
-          });
-          if (!$('#input-serial').val() && ports.length > 0) {
-            $('#input-serial').val(ports[0]);
-          }
-          break;
         default:
           break;
       }

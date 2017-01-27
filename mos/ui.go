@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -67,14 +66,6 @@ func wsHandler(ws *websocket.Conn) {
 	}
 }
 
-func reportSerialPorts() {
-	for {
-		list := enumerateSerialPorts()
-		wsBroadcast(wsmessage{"ports", strings.Join(list, ",")})
-		time.Sleep(time.Second)
-	}
-}
-
 func reportConsoleLogs() {
 	for {
 		data := <-consoleMsgs
@@ -112,11 +103,14 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "web-root")
 }
 
+func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
+	return createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+}
+
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	flag.Set("v", "4")
 	glog.CopyStandardLogTo("INFO")
-	go reportSerialPorts()
 	go reportConsoleLogs()
 	http.Handle("/ws", websocket.Handler(wsHandler))
 
@@ -124,7 +118,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		r.ParseForm()
 		*firmware = r.FormValue("firmware")
-
+		if devConn != nil {
+			devConn.Disconnect(ctx)
+		}
+		// defer reconnectToDevice(ctx, devConn)
 		err := flash(ctx, devConn)
 		httpReply(w, true, err)
 	})
@@ -186,10 +183,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-
-		// TODO(dfrank): shall we remove this handler?
-
+		if devConn != nil {
+			devConn.Disconnect(ctx)
+		}
 		var err error
+		devConn, err = reconnectToDevice(ctx)
 		httpReply(w, true, err)
 	})
 
@@ -246,6 +244,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		err := checkAwsCredentials()
 		httpReply(w, err == nil, nil)
+	})
+
+	http.HandleFunc("/getports", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		httpReply(w, enumerateSerialPorts(), nil)
 	})
 
 	http.HandleFunc("/infolog", func(w http.ResponseWriter, r *http.Request) {

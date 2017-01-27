@@ -213,7 +213,27 @@
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
 
-  // Let tool know the port we want to use
+  // Repeatedly pull list of serial ports when we're on the first tab
+  setInterval(function() {
+    var thisPane = $('.tab-pane.active').attr('id');
+    if (thisPane != 'tab1') return;
+    $.ajax({url: '/getports'}).then(function(json) {
+      $('#dropdown-ports').empty();
+      if (json.result && json.result.length > 0) {
+        $.each(json.result, function(i, v) {
+          $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
+        });
+        if (!$('#input-serial').val()) {
+          $('#input-serial').val(json.result[0]);
+        }
+        $('#noports-warning').fadeOut();
+      } else {
+        $('#noports-warning').fadeIn();
+      }
+    });
+  }, 1000);
+
+  // Let the tool know the port we want to use
   $.ajax({url: '/setenv', data: {port: getCookie('port')}});
 
   $.ajax({url: '/version'}).done(function(json) {
