@@ -3783,6 +3783,19 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                       for details.
                     </div>
 
+                    <div class="alert alert-warning" id="noports-warning"
+                      style="display: none;">
+                      Cannot detect any suitable serial port on your system!
+                      This could be either because:
+                      <ol>
+                        <li>You did not plug your device into the USB slot.
+                          Please plug it in. The ports dropdown should
+                          update automatically.
+                        </li>
+                        <li>You do not have USB-to-Serial driver installed.</li>
+                      </ol>
+                    </div>
+
                   </div>
                 </div>
 
@@ -4025,7 +4038,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 14458, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 15096, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5044,7 +5057,27 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
 
-  // Let tool know the port we want to use
+  // Repeatedly pull list of serial ports when we're on the first tab
+  setInterval(function() {
+    var thisPane = $('.tab-pane.active').attr('id');
+    if (thisPane != 'tab1') return;
+    $.ajax({url: '/getports'}).then(function(json) {
+      $('#dropdown-ports').empty();
+      if (json.result && json.result.length > 0) {
+        $.each(json.result, function(i, v) {
+          $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
+        });
+        if (!$('#input-serial').val()) {
+          $('#input-serial').val(json.result[0]);
+        }
+        $('#noports-warning').fadeOut();
+      } else {
+        $('#noports-warning').fadeIn();
+      }
+    });
+  }, 1000);
+
+  // Let the tool know the port we want to use
   $.ajax({url: '/setenv', data: {port: getCookie('port')}});
 
   $.ajax({url: '/version'}).done(function(json) {
@@ -5071,7 +5104,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 8568, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9260, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5100,16 +5133,6 @@ var _web_rootJsWsJs = []byte(`(function($) {
             el.scrollTop = el.scrollHeight;
           });
           break;
-        case 'ports':
-          var ports = (m.data || '').split(',');
-          $('#dropdown-ports').empty();
-          $.each(ports, function(i, v) {
-            $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
-          });
-          if (!$('#input-serial').val() && ports.length > 0) {
-            $('#input-serial').val(ports[0]);
-          }
-          break;
         default:
           break;
       }
@@ -5134,7 +5157,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 1242, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 857, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
