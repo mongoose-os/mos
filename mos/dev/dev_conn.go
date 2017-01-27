@@ -19,7 +19,7 @@ const (
 
 type DevConn struct {
 	c           *Client
-	ClubbyAddr  string
+	ConnectAddr string
 	RPC         mgrpc.MgRPC
 	Dest        string
 	JunkHandler func(junk []byte)
@@ -34,10 +34,10 @@ type DevConn struct {
 // which could be e.g. "serial:///dev/ttyUSB0", "serial://COM7",
 // "tcp://192.168.0.10", etc.
 func (c *Client) CreateDevConn(
-	ctx context.Context, clubbyAddr string, reconnect bool,
+	ctx context.Context, connectAddr string, reconnect bool,
 ) (*DevConn, error) {
 
-	dc := &DevConn{c: c, ClubbyAddr: clubbyAddr, Dest: debugDevId}
+	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId}
 
 	err := dc.Connect(ctx, reconnect)
 	if err != nil {
@@ -48,10 +48,10 @@ func (c *Client) CreateDevConn(
 }
 
 func (c *Client) CreateDevConnWithJunkHandler(
-	ctx context.Context, clubbyAddr string, junkHandler func(junk []byte), reconnect bool,
+	ctx context.Context, connectAddr string, junkHandler func(junk []byte), reconnect bool,
 ) (*DevConn, error) {
 
-	dc := &DevConn{c: c, ClubbyAddr: clubbyAddr, Dest: debugDevId}
+	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId}
 
 	err := dc.ConnectWithJunkHandler(ctx, junkHandler, reconnect)
 	if err != nil {
@@ -112,7 +112,13 @@ func (dc *DevConn) ConnectWithJunkHandler(
 	dc.JunkHandler = junkHandler
 	dc.Reconnect = reconnect
 
-	dc.RPC, err = mgrpc.New(ctx, "mos", dc.ClubbyAddr, junkHandler, reconnect)
+	opts := []mgrpc.ConnectOption{
+		mgrpc.LocalID("mos"),
+		mgrpc.JunkHandler(junkHandler),
+		mgrpc.Reconnect(reconnect),
+	}
+
+	dc.RPC, err = mgrpc.New(ctx, dc.ConnectAddr, opts...)
 	if err != nil {
 		return errors.Trace(err)
 	}
