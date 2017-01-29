@@ -28,4 +28,4 @@ deploy:
 	cd ../prod && ansible-playbook website.yml -t mos
 
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads version*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version*
