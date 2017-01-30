@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -108,6 +109,7 @@ func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
 }
 
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
+	var devConnMtx sync.Mutex
 
 	flag.Set("v", "4")
 	glog.CopyStandardLogTo("INFO")
@@ -117,6 +119,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	http.HandleFunc("/flash", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		r.ParseForm()
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
 		*firmware = r.FormValue("firmware")
 		if devConn != nil {
 			devConn.Disconnect(ctx)
@@ -140,6 +144,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
+
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
 
 		err := internalConfigSet(ctx2, devConn, args)
 		result := "false"
@@ -189,6 +196,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		portArg := r.FormValue("port")
 		reconnect := r.FormValue("reconnect")
 
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
+
 		// If we're already connected to the given port, and the caller didn't
 		// explicitly ask to reconnect in any case, don't do anything and just
 		// report success
@@ -218,6 +228,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
+
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
+
 		text, err := getFile(ctx2, devConn, r.FormValue("name"))
 		if err == nil {
 			text2, err2 := json.Marshal(text)
@@ -238,6 +252,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
+
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
 
 		err := awsIoTSetup(ctx2, devConn)
 		httpReply(w, true, err)
@@ -282,6 +299,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
+
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
 
 		result, err := callDeviceService(ctx2, devConn, method, args)
 		httpReply(w, result, err)
