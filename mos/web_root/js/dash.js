@@ -44,6 +44,11 @@
     new PNotify({title: 'Console cleared', type: 'success'});
   });
 
+  var connected = false;
+
+  // A page which needs to be loaded once serial port connection is established
+  var deferredLoadPage = undefined;
+
   var loadPage = function(page) {
     var doit = function(html) {
       $('#app_view').html(html);
@@ -61,7 +66,11 @@
 
   $(document).on('click', 'a[tab]', function() {
     var page = $(this).attr('tab');
-    loadPage(page);
+    if (connected) {
+      loadPage(page);
+    } else {
+      deferredLoadPage = page;
+    }
   });
 
   $(document).ready(function() {
@@ -69,7 +78,19 @@
   });
 
   // Let tool know the port we want to use
-  $.ajax({url: '/connect', data: {port: getCookie('port')}});
+  $.ajax({
+    url: '/connect',
+    data: {port: getCookie('port')},
+    success: function() {
+      connected = true;
+
+      // If there is a deferred page to load, load it
+      if (deferredLoadPage !== undefined) {
+        loadPage(deferredLoadPage);
+        deferredLoadPage = undefined;
+      }
+    },
+  });
 
   $('#app_view').resizable({
     handleSelector: ".splitter-horizontal",
