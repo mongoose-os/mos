@@ -25,9 +25,10 @@ import (
 )
 
 var (
-	httpPort  = 1992
-	wsClients = make(map[*websocket.Conn]int)
-	wwwRoot   = ""
+	httpPort     = 1992
+	wsClients    = make(map[*websocket.Conn]int)
+	wsClientsMtx = sync.Mutex{}
+	wwwRoot      = ""
 )
 
 type wsmessage struct {
@@ -41,6 +42,9 @@ func wsSend(ws *websocket.Conn, m wsmessage) {
 }
 
 func wsBroadcast(m wsmessage) {
+	wsClientsMtx.Lock()
+	defer wsClientsMtx.Unlock()
+
 	for ws := range wsClients {
 		wsSend(ws, m)
 	}
@@ -51,8 +55,10 @@ type errmessage struct {
 }
 
 func wsHandler(ws *websocket.Conn) {
+	wsClientsMtx.Lock()
 	defer func() {
 		delete(wsClients, ws)
+		wsClientsMtx.Unlock()
 		ws.Close()
 	}()
 	wsClients[ws] = 1
