@@ -151,3 +151,21 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 
 	return nil
 }
+
+func fsRemoveFile(ctx context.Context, devConn *dev.DevConn, devFilename string) error {
+	return errors.Trace(devConn.CFilesystem.Remove(ctx, &fwfilesystem.RemoveArgs{
+		Filename: &devFilename,
+	}))
+}
+
+func fsRm(ctx context.Context, devConn *dev.DevConn) error {
+	args := flag.Args()
+	if len(args) < 2 {
+		return errors.Errorf("filename is required")
+	}
+	if len(args) > 2 {
+		return errors.Errorf("extra arguments")
+	}
+	filename := args[1]
+	return errors.Trace(fsRemoveFile(ctx, devConn, filename))
+}

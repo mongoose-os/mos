@@ -61,6 +61,7 @@ var (
 		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},
 		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
 		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
+		{"rm", fsRm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
 		{"config-get", configGet, `Get config value from the locally attached device`, nil, []string{"port"}, true},
 		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
