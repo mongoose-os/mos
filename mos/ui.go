@@ -55,13 +55,15 @@ type errmessage struct {
 }
 
 func wsHandler(ws *websocket.Conn) {
-	wsClientsMtx.Lock()
 	defer func() {
+		wsClientsMtx.Lock()
+		defer wsClientsMtx.Unlock()
 		delete(wsClients, ws)
-		wsClientsMtx.Unlock()
 		ws.Close()
 	}()
+	wsClientsMtx.Lock()
 	wsClients[ws] = 1
+	wsClientsMtx.Unlock()
 
 	for {
 		var text string
