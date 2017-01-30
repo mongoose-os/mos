@@ -186,11 +186,21 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		portArg := r.FormValue("port")
+		reconnect := r.FormValue("reconnect")
+
+		// If we're already connected to the given port, and the caller didn't
+		// explicitly ask to reconnect in any case, don't do anything and just
+		// report success
+		if portArg == *portFlag && devConn != nil && reconnect == "" {
+			httpReply(w, true, nil)
+			return
+		}
+
 		if devConn != nil {
 			devConn.Disconnect(ctx)
 			devConn = nil
 		}
-		portArg := r.FormValue("port")
 		if portArg != "" {
 			*portFlag = portArg
 		}

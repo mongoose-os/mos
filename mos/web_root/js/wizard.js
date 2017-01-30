@@ -89,7 +89,7 @@
 
   tabHandlers.tab1 = function() {
     var port = $('#input-serial').val();
-    return $.ajax({url: '/connect', data: {port: port}}).done(function(json) {
+    return $.ajax({url: '/connect', data: {port: port, reconnect: true}}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
       document.cookie = 'port=' + port;
     }).fail(function(err) {

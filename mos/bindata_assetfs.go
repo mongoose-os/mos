@@ -4934,7 +4934,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
 
   tabHandlers.tab1 = function() {
     var port = $('#input-serial').val();
-    return $.ajax({url: '/connect', data: {port: port}}).done(function(json) {
+    return $.ajax({url: '/connect', data: {port: port, reconnect: true}}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
       document.cookie = 'port=' + port;
     }).fail(function(err) {
@@ -5105,7 +5105,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9261, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9278, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
