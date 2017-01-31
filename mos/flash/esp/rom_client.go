@@ -37,6 +37,8 @@ const (
 	cmdMemWriteFinish        = 0x06
 	cmdMemWriteBlock         = 0x07
 	cmdSync                  = 0x08
+	cmdWriteReg              = 0x09
+	cmdReadReg               = 0x0a
 )
 
 type ROMClient struct {
@@ -147,26 +149,31 @@ func (rc *ROMClient) recvResponse() (*romResponse, error) {
 	return r, nil
 }
 
-func (rc *ROMClient) simpleCmd(cmd romCmd, arg []byte, csum uint8, timeout time.Duration) error {
+func (rc *ROMClient) simpleCmdResponse(cmd romCmd, arg []byte, csum uint8, timeout time.Duration) (*romResponse, error) {
 	if !rc.connected {
-		return errors.New("not connected")
+		return nil, errors.New("not connected")
 	}
 	rc.sd.SetReadTimeout(timeout)
 	err := rc.sendCommand(cmd, arg, csum)
 	if err != nil {
-		return errors.Annotatef(err, "error sending cmd %d", cmd)
+		return nil, errors.Annotatef(err, "error sending cmd %d", cmd)
 	}
 	r, err := rc.recvResponse()
 	if err != nil {
-		return errors.Annotatef(err, "error reading response to cmd %d", cmd)
+		return nil, errors.Annotatef(err, "error reading response to cmd %d", cmd)
 	}
 	if r.cmd != cmd {
-		return errors.Errorf("command mismatch: %d vs %d", r.cmd, cmd)
+		return nil, errors.Errorf("command mismatch: %d vs %d", r.cmd, cmd)
 	}
 	if !r.ok {
-		return errors.Errorf("command %d failure: error code %d", cmd, r.lastError)
+		return nil, errors.Errorf("command %d failure: error code %d", cmd, r.lastError)
 	}
-	return nil
+	return r, nil
+}
+
+func (rc *ROMClient) simpleCmd(cmd romCmd, arg []byte, csum uint8, timeout time.Duration) error {
+	_, err := rc.simpleCmdResponse(cmd, arg, csum, timeout)
+	return err
 }
 
 func (rc *ROMClient) sync() error {
@@ -333,6 +340,29 @@ func (rc *ROMClient) BootFirmware() error {
 	return nil
 }
 
+func (rc *ROMClient) ReadReg(reg uint32) (uint32, error) {
+	argBuf := bytes.NewBuffer(nil)
+	binary.Write(argBuf, binary.LittleEndian, reg)
+	r, err := rc.simpleCmdResponse(cmdReadReg, argBuf.Bytes(), 0, 100*time.Millisecond)
+	if err != nil {
+		return 0, errors.Annotatef(err, "failed to read reg 0x%08x", reg)
+	}
+	return r.value, nil
+}
+
+func (rc *ROMClient) WriteReg(reg, value uint32) error {
+	argBuf := bytes.NewBuffer(nil)
+	binary.Write(argBuf, binary.LittleEndian, reg)
+	binary.Write(argBuf, binary.LittleEndian, value)
+	binary.Write(argBuf, binary.LittleEndian, uint32(0xffffffff)) // mask
+	binary.Write(argBuf, binary.LittleEndian, uint32(0))          // delayMicros
+	err := rc.simpleCmd(cmdWriteReg, argBuf.Bytes(), 0, 100*time.Millisecond)
+	if err != nil {
+		return errors.Annotatef(err, "failed to write reg 0x%08x", reg)
+	}
+	return nil
+}
+
 // TODO(rojer): Use stringer when it actually works.
 func (cmd romCmd) String() string {
 	switch cmd {
@@ -344,6 +374,10 @@ func (cmd romCmd) String() string {
 		return fmt.Sprintf("MemWriteBlock(%d)", cmd)
 	case cmdSync:
 		return fmt.Sprintf("Sync(%d)", cmd)
+	case cmdWriteReg:
+		return fmt.Sprintf("WriteReg(%d)", cmd)
+	case cmdReadReg:
+		return fmt.Sprintf("ReadReg(%d)", cmd)
 	default:
 		return fmt.Sprintf("?(%d)", cmd)
 	}
