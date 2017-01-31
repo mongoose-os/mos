@@ -150,7 +150,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			fmt.Sprintf("wifi.sta.ssid=%s", r.FormValue("ssid")),
 			fmt.Sprintf("wifi.sta.pass=%s", r.FormValue("pass")),
 		}
-		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+		// We need 15-seconds timeout in order for the bad password to be detected
+		// properly. Previously we had 10 seconds, and the context was timing out
+		// before the bad password result was returned.
+		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
 		devConnMtx.Lock()
@@ -161,7 +164,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		if err == nil {
 			for {
 				time.Sleep(time.Millisecond * 500)
-				res2, _ := callDeviceService(ctx2, devConn, "Config.GetNetworkStatus", "")
+				var res2 string
+				res2, err = callDeviceService(ctx2, devConn, "Config.GetNetworkStatus", "")
+				if err != nil {
+					httpReply(w, result, err)
+					return
+				}
 				if res2 != "" {
 					type Netcfg struct {
 						Wifi struct {
