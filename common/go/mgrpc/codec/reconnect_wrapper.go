@@ -126,7 +126,7 @@ func (rwc *reconnectWrapperCodec) closeConn() {
 	}
 }
 
-func (rwc *reconnectWrapperCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
+func (rwc *reconnectWrapperCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 	for {
 		conn, err := rwc.getConn(ctx)
 		if err != nil {
@@ -134,7 +134,7 @@ func (rwc *reconnectWrapperCodec) Recv(ctx context.Context) (*frame.FrameV1V2, e
 		}
 		frame, err := conn.Recv(ctx)
 		if err != nil {
-			glog.V(1).Infof("%s recv error: %s, eof? %T", rwc, err, IsEOF(err))
+			glog.V(1).Infof("%s recv error: %s, eof? %v", rwc, err, IsEOF(err))
 		}
 		switch {
 		case err == nil:
@@ -147,7 +147,7 @@ func (rwc *reconnectWrapperCodec) Recv(ctx context.Context) (*frame.FrameV1V2, e
 	}
 }
 
-func (rwc *reconnectWrapperCodec) Send(ctx context.Context, frame *frame.FrameV1V2) error {
+func (rwc *reconnectWrapperCodec) Send(ctx context.Context, frame *frame.Frame) error {
 	for {
 		conn, err := rwc.getConn(ctx)
 		if err != nil {
