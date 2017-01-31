@@ -1,22 +1,19 @@
 package main
 
-import (
-	"os"
-)
+import "github.com/cesanta/errors"
 
 var defaultPort string
 
-func getPort() string {
+func getPort() (string, error) {
 	if *portFlag != "auto" {
-		return *portFlag
+		return *portFlag, nil
 	}
 	if defaultPort == "" {
 		defaultPort = getDefaultPort()
 		if defaultPort == "" {
-			reportf("--port not specified and none were found")
-			os.Exit(1)
+			return "", errors.Errorf("--port not specified and none were found")
 		}
 		reportf("Using port %s", defaultPort)
 	}
-	return defaultPort
+	return defaultPort, nil
 }

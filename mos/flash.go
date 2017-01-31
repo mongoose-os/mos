@@ -90,24 +90,29 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		defer devConn.Connect(ctx, devConn.Reconnect)
 	}
 
+	port, err := getPort()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	switch strings.ToLower(fw.Platform) {
 	case "cc3200":
-		cc3200FlashOpts.Port = getPort()
+		cc3200FlashOpts.Port = port
 		err = cc3200.Flash(fw, &cc3200FlashOpts)
 	case "esp32":
-		espFlashOpts.ControlPort = getPort()
+		espFlashOpts.ControlPort = port
 		if espFlashOpts.DataPort == "" {
-			espFlashOpts.DataPort = getPort()
+			espFlashOpts.DataPort = port
 		}
 		err = esp.Flash(esp.ChipESP32, fw, &espFlashOpts)
 	case "esp8266":
-		espFlashOpts.ControlPort = getPort()
+		espFlashOpts.ControlPort = port
 		if espFlashOpts.DataPort == "" {
-			espFlashOpts.DataPort = getPort()
+			espFlashOpts.DataPort = port
 		}
 		err = esp.Flash(esp.ChipESP8266, fw, &espFlashOpts)
 	case "stm32":
-		stm32FlashOpts.ShareName = getPort()
+		stm32FlashOpts.ShareName = port
 		err = stm32.Flash(fw, &stm32FlashOpts)
 	default:
 		err = errors.Errorf("%s: unsupported platform '%s'", *firmware, fw.Platform)
