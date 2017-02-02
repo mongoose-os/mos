@@ -237,7 +237,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		httpReply(w, Version, nil)
+		httpReply(w, BuildId, nil)
 	})
 
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {

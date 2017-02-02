@@ -4004,7 +4004,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       </div>
 
       <div class="panel-footer">
-        <small class="text-muted">&copy; Cesanta 2013-2016
+        <small class="text-muted">&copy; Cesanta 2017
           | Version: <span id="version"></span>
           <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-iot.com/software.html">Update here</a></span>
           | <a href="/infolog" target="_blank">show device logs</a>
@@ -4044,7 +4044,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 15394, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 15389, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
