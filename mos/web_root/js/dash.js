@@ -25,11 +25,11 @@
   }).ajaxComplete(function(event, xhr) {
     // $('#top_nav').removeClass('spinner');
     if (xhr.status == 200) return;
-    new PNotify({
-      title: 'Server Error',
-      text: 'Reason: ' + (xhr.responseText || 'connection error'),
-      type: 'error'
-    });
+    var errStr = xhr.responseText || 'connection errStror';
+    if (errStr.match(/deadline exceeded/)) {
+      errStr = 'Lost connection with your board. Please restart mos tool from terminal';
+    }
+    new PNotify({ title: 'Server Error', text: 'Reason: ' + errStr, type: 'error' });
   });
 
   $(document)
@@ -110,7 +110,7 @@
       element: '#device-logs',
       title: 'See device logs',
       placement: 'top',
-      content: 'This panel shows device logs produced by the ' +
+      content: 'This panel shows device logs produced by ' +
         'JavaScript code in <code>init.js</code>.'
     },
     {
@@ -121,7 +121,7 @@
       content: 'You can resize panels by dragging this resize handle.'
     },
     {
-      element: '#file-list',
+      element: '#file-list .is_init',
       title: 'Edit init.js',
       reflex: true,
       content: 'Click on <code>init.js</code> to edit it.'
@@ -137,14 +137,14 @@
       title: 'Save File',
       placement: 'bottom',
       reflex: true,
-      content: 'Click "Save selected file" button to save the modified file back to the device.'
+      content: 'Click "Save selected file" button to save modified file.'
     },
     {
       element: '#reboot-button',
       title: 'Reboot device',
       placement: 'top',
       reflex: true,
-      content: 'Click on "Reboot device" button to re-evaluate <code>init.js</code>.'
+      content: 'Click on "Reboot device" button for device to read the new code.'
     },
     {
       element: '#device-logs',
@@ -162,50 +162,11 @@
       'together to demonstrate the power and simplicity of Mongoose OS.'
     },
     {
-      element: '#example-list',
+      element: '.list-group',
       title: 'Click on button_mqtt.js',
       reflex: true,
-      content: 'Click on <code>button_mqtt.js</code>.'
+      content: 'Click on <code>button_mqtt.js</code>. Click on the orange button to use that example.'
     },
-    {
-      element: '#example-textarea',
-      title: 'Copy the code',
-      reflex: true,
-      content: 'Select the example code with your mouse and type Ctrl-C to copy it into clipboard.'
-    },
-    {
-      element: '[tab=files]',
-      title: 'Switch to device files',
-      reflex: true,
-      content: 'Click on file manager tab to see device files again.'
-    },
-    {
-      element: '#file-list',
-      title: 'Edit init.js',
-      content: 'Click on <code>init.js</code>, paste example code.'
-    },
-    {
-      element: '#file-save-button',
-      title: 'Save File',
-      placement: 'bottom',
-      reflex: true,
-      content: 'Click "Save selected file" to save the file.'
-    },
-    {
-      element: '#reboot-button',
-      title: 'Reboot device',
-      placement: 'top',
-      reflex: true,
-      content: 'Click on "Reboot device" button to re-evaluate <code>init.js</code>.'
-    },
-    {
-      element: '#file-textarea',
-      title: 'Login to MQTT client',
-      placement: 'left',
-      content: 'Follow the instructions written in code comments to log in ' +
-      'to the MQTT client and send commands to your device over the network.'
-    },
-
   ]});
   tour.init();
   tour.start();

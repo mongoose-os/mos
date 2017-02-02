@@ -392,6 +392,7 @@ body { color: #666;  background-color: #eee; }
 #wizard-button-next.spinner, #wizard-button-prev.spinner { color: transparent; }
 #main-title { margin-bottom: 0.5em; }
 .link { cursor: pointer; }
+#version-update { font-weight: bold; color: red; }
 
 /* COMMON STUFF */
 @keyframes spinner {
@@ -567,7 +568,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5187, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5238, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3693,7 +3694,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Cache-control" content="no-cache">
-    <title>Mongoose Firmware</title>
+    <title>Mongoose OS</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/font-awesome.min.css" rel="stylesheet">
     <link href="css/pnotify.min.css" rel="stylesheet">
@@ -3738,7 +3739,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
               </li>
               <li>
                 <a href="#tab4" data-toggle="tab"> <span class="step">4</span>
-                  <span class="title">Connect to the Cloud</span> </a>
+                  <span class="title">Connect to Cloud</span> </a>
               </li>
               <li>
                 <a href="#tab5" data-toggle="tab"> <span class="step">5</span>
@@ -3785,14 +3786,13 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                     <div class="alert alert-warning" id="noports-warning"
                       style="display: none;">
                       Cannot detect any suitable serial port on your system!
-                      This could be either because:
+                      To fix it:
                       <ol>
-                        <li>You did not plug your device into the USB slot.
-                          Please plug it in. The ports dropdown should
-                          update automatically.
+                        <li>Plug the device into the USB slot now.
+                          The ports dropdown should update automatically.
                         </li>
-                        <li>You do not have USB-to-Serial driver installed.
-                          Install from here:
+                        <li>If the ports dropdown still does not populate,
+                          install USB-to-Serial driver:
                           <ul>
                             <li><a href="http://www.ftdichip.com/Drivers/VCP.htm">FTDI drivers</a> for CC3200</li>
                             <li><a href="https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx">SiLabs drivers</a> for Espressif boards</li>
@@ -3875,7 +3875,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
 
               <div class="tab-pane" id="tab4" data-next="#tab5" data-prev="#tab3">
 
-                <h3><strong>Step 4</strong> - Connect to the cloud</h3>
+                <h3><strong>Step 4</strong> - Connect to cloud</h3>
 
                 <div class="row">
                   <div class="col-sm-6 step-image-div">
@@ -3979,16 +3979,17 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                   Mongoose OS is installed</strong></h1>
                 <br />
 
-                <p>MGOS utility provides advanced functionality like building
+                <p>MOS utility provides advanced functionality like building
                   firmware in C, working with device filesystem and
                   configuration. You can quit this wizard now and switch to the
-                  command line mode, see
+                  command line mode to continue with this option. See
                   <a href="https://mongoose-iot.com/docs/#/quickstart/">documentation</a>
-                  for the reference and examples.
+                  for the references and examples.
                 </p>
                 <p>
                   Alternatively, continue using this simple Web UI to
-                  prototype firmware functionality in JavaScript:
+                  prototype firmware functionality in JavaScript. Click
+                  "Start Prototyping" button to proceed with it.
                 </p>
                 <br>
                 <center>
@@ -4006,7 +4007,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
         <small class="text-muted">&copy; Cesanta 2013-2016
           | Version: <span id="version"></span>
           <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-iot.com/software.html">Update here</a></span>
-          | <a href="/infolog" target="_blank">show debug log</a>
+          | <a href="/infolog" target="_blank">show device logs</a>
       </small>
 
         <div class="pull-right">
@@ -4043,7 +4044,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 15369, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 15394, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4360,11 +4361,11 @@ var _web_rootJsDashJs = []byte(`(function($) {
   }).ajaxComplete(function(event, xhr) {
     // $('#top_nav').removeClass('spinner');
     if (xhr.status == 200) return;
-    new PNotify({
-      title: 'Server Error',
-      text: 'Reason: ' + (xhr.responseText || 'connection error'),
-      type: 'error'
-    });
+    var errStr = xhr.responseText || 'connection errStror';
+    if (errStr.match(/deadline exceeded/)) {
+      errStr = 'Lost connection with your board. Please restart mos tool from terminal';
+    }
+    new PNotify({ title: 'Server Error', text: 'Reason: ' + errStr, type: 'error' });
   });
 
   $(document)
@@ -4445,7 +4446,7 @@ var _web_rootJsDashJs = []byte(`(function($) {
       element: '#device-logs',
       title: 'See device logs',
       placement: 'top',
-      content: 'This panel shows device logs produced by the ' +
+      content: 'This panel shows device logs produced by ' +
         'JavaScript code in <code>init.js</code>.'
     },
     {
@@ -4456,7 +4457,7 @@ var _web_rootJsDashJs = []byte(`(function($) {
       content: 'You can resize panels by dragging this resize handle.'
     },
     {
-      element: '#file-list',
+      element: '#file-list .is_init',
       title: 'Edit init.js',
       reflex: true,
       content: 'Click on <code>init.js</code> to edit it.'
@@ -4472,14 +4473,14 @@ var _web_rootJsDashJs = []byte(`(function($) {
       title: 'Save File',
       placement: 'bottom',
       reflex: true,
-      content: 'Click "Save selected file" button to save the modified file back to the device.'
+      content: 'Click "Save selected file" button to save modified file.'
     },
     {
       element: '#reboot-button',
       title: 'Reboot device',
       placement: 'top',
       reflex: true,
-      content: 'Click on "Reboot device" button to re-evaluate <code>init.js</code>.'
+      content: 'Click on "Reboot device" button for device to read the new code.'
     },
     {
       element: '#device-logs',
@@ -4497,50 +4498,11 @@ var _web_rootJsDashJs = []byte(`(function($) {
       'together to demonstrate the power and simplicity of Mongoose OS.'
     },
     {
-      element: '#example-list',
+      element: '.list-group',
       title: 'Click on button_mqtt.js',
       reflex: true,
-      content: 'Click on <code>button_mqtt.js</code>.'
+      content: 'Click on <code>button_mqtt.js</code>. Click on the orange button to use that example.'
     },
-    {
-      element: '#example-textarea',
-      title: 'Copy the code',
-      reflex: true,
-      content: 'Select the example code with your mouse and type Ctrl-C to copy it into clipboard.'
-    },
-    {
-      element: '[tab=files]',
-      title: 'Switch to device files',
-      reflex: true,
-      content: 'Click on file manager tab to see device files again.'
-    },
-    {
-      element: '#file-list',
-      title: 'Edit init.js',
-      content: 'Click on <code>init.js</code>, paste example code.'
-    },
-    {
-      element: '#file-save-button',
-      title: 'Save File',
-      placement: 'bottom',
-      reflex: true,
-      content: 'Click "Save selected file" to save the file.'
-    },
-    {
-      element: '#reboot-button',
-      title: 'Reboot device',
-      placement: 'top',
-      reflex: true,
-      content: 'Click on "Reboot device" button to re-evaluate <code>init.js</code>.'
-    },
-    {
-      element: '#file-textarea',
-      title: 'Login to MQTT client',
-      placement: 'left',
-      content: 'Follow the instructions written in code comments to log in ' +
-      'to the MQTT client and send commands to your device over the network.'
-    },
-
   ]});
   tour.init();
   tour.start();
@@ -4562,7 +4524,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5924, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 4926, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5112,7 +5074,6 @@ var _web_rootJsWizardJs = []byte(`(function($) {
     $.get('https://mongoose-iot.com/downloads/mos/version.json', function(data) {
       if (!data.build_id) return;
       if (data.build_id != json.result) {
-        $('#version').addClass('red');
         $('#version-update').removeClass('hidden');
       }
     });
@@ -5130,7 +5091,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9278, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9239, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5325,7 +5286,9 @@ var _web_rootPage_examplesHtml = []byte(`<div data-title="Code Examples" style="
   </div>
   <div class="col-xs-9" style="height: 100%;">
     <div style="margin-top: 2px; ">
-      <button class="btn btn-sm btn-warning" id="copy-example-button"><i class="fa fa-clipboard"></i> Use this example: copy it to init.js and reboot the device</button>
+      <button class="btn btn-sm btn-warning" id="copy-example-button"><i class="fa fa-clipboard"></i> 
+      Click to replace device's init.js with this example
+      and reboot the device</button>
     </div>
     <div class="form-group upcontrol">
       <!--<textarea class="form-control" id="example-code" style="height: 100%"></textarea>-->
@@ -5388,7 +5351,7 @@ func web_rootPage_examplesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2127, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2155, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5470,8 +5433,9 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
     var $tbody = $('#file-list').empty();
     json.result.sort();
     $.each(json.result, function(i, v) {
-      $('<a href="#" class="list-group-item file"/>')
+      var link = $('<a href="#" class="list-group-item file"/>')
           .text(v)
+          .addClass(v == 'init.js' ? 'is_init' : '')
           .appendTo($tbody);
     });
   });
@@ -5489,7 +5453,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 2985, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 3049, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -75,8 +75,9 @@
     var $tbody = $('#file-list').empty();
     json.result.sort();
     $.each(json.result, function(i, v) {
-      $('<a href="#" class="list-group-item file"/>')
+      var link = $('<a href="#" class="list-group-item file"/>')
           .text(v)
+          .addClass(v == 'init.js' ? 'is_init' : '')
           .appendTo($tbody);
     });
   });

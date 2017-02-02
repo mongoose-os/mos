@@ -242,7 +242,6 @@
     $.get('https://mongoose-iot.com/downloads/mos/version.json', function(data) {
       if (!data.build_id) return;
       if (data.build_id != json.result) {
-        $('#version').addClass('red');
         $('#version-update').removeClass('hidden');
       }
     });
