@@ -2,20 +2,28 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"flag"
+	"io/ioutil"
 	"strings"
 
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 )
 
+var (
+	// NOTE(lsm): we're reusing cert-file and key-file flags from aws.go
+	caFile = ""
+)
+
+func init() {
+	flag.StringVar(&caFile, "ca-cert-file", "", "CA cert for TLS server verification")
+	hiddenFlags = append(hiddenFlags, "ca-cert-file")
+}
+
 func createDevConn(ctx context.Context) (*dev.DevConn, error) {
-	port, err := getPort()
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	c := dev.Client{Port: port, Timeout: *timeout, Reconnect: *reconnect}
-	devConn, err := c.CreateDevConn(ctx, "serial://"+port, *reconnect)
-	return devConn, errors.Trace(err)
+	return createDevConnWithJunkHandler(ctx, func(junk []byte) {})
 }
 
 func createDevConnWithJunkHandler(
@@ -31,6 +39,35 @@ func createDevConnWithJunkHandler(
 		prefix = ""
 	}
 	addr := prefix + port
-	devConn, err := c.CreateDevConnWithJunkHandler(ctx, addr, junkHandler, *reconnect)
+
+	// Init and pass TLS config if --cert-file and --key-file are specified
+	var tlsConfig *tls.Config = nil
+	if certFile != "" {
+		if keyFile == "" {
+			return nil, errors.Errorf("Please specify --key-file")
+		}
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		var caCerts *x509.CertPool = nil
+		if caFile != "" {
+			caCert, err := ioutil.ReadFile(caFile)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+			caCerts = x509.NewCertPool()
+			caCerts.AppendCertsFromPEM(caCert)
+		}
+
+		tlsConfig = &tls.Config{
+			RootCAs:            caCerts,
+			InsecureSkipVerify: caFile == "",
+			Certificates:       []tls.Certificate{cert},
+			Renegotiation:      tls.RenegotiateNever,
+		}
+	}
+
+	devConn, err := c.CreateDevConnWithJunkHandler(ctx, addr, junkHandler, *reconnect, tlsConfig)
 	return devConn, errors.Trace(err)
 }

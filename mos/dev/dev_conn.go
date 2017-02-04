@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"crypto/tls"
 	"time"
 
 	"cesanta.com/common/go/mgrpc"
@@ -49,13 +50,11 @@ func (c *Client) CreateDevConn(
 	return dc, nil
 }
 
-func (c *Client) CreateDevConnWithJunkHandler(
-	ctx context.Context, connectAddr string, junkHandler func(junk []byte), reconnect bool,
-) (*DevConn, error) {
+func (c *Client) CreateDevConnWithJunkHandler(ctx context.Context, connectAddr string, junkHandler func(junk []byte), reconnect bool, tlsConfig *tls.Config) (*DevConn, error) {
 
 	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId}
 
-	err := dc.ConnectWithJunkHandler(ctx, junkHandler, reconnect)
+	err := dc.ConnectWithJunkHandler(ctx, junkHandler, reconnect, tlsConfig)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -107,12 +106,10 @@ func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {
 	if dc.JunkHandler == nil {
 		dc.JunkHandler = func(junk []byte) {}
 	}
-	return dc.ConnectWithJunkHandler(ctx, dc.JunkHandler, reconnect)
+	return dc.ConnectWithJunkHandler(ctx, dc.JunkHandler, reconnect, nil)
 }
 
-func (dc *DevConn) ConnectWithJunkHandler(
-	ctx context.Context, junkHandler func(junk []byte), reconnect bool,
-) error {
+func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(junk []byte), reconnect bool, tlsConfig *tls.Config) error {
 	var err error
 
 	if dc.RPC != nil {
@@ -126,6 +123,7 @@ func (dc *DevConn) ConnectWithJunkHandler(
 		mgrpc.LocalID("mos"),
 		mgrpc.JunkHandler(junkHandler),
 		mgrpc.Reconnect(reconnect),
+		mgrpc.TlsConfig(tlsConfig),
 	}
 
 	dc.RPC, err = mgrpc.New(ctx, dc.ConnectAddr, opts...)
