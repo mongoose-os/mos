@@ -266,7 +266,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		awsIoTPolicy = r.FormValue("policy")
 		awsRegion = r.FormValue("region")
 
-		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+		ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
 		devConnMtx.Lock()
