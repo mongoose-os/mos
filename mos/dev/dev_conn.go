@@ -99,6 +99,10 @@ func (dc *DevConn) Disconnect(ctx context.Context) error {
 	//
 	// Just in case though, we sleep not only on Windows, but on all platforms.
 	time.Sleep(500 * time.Millisecond)
+
+	// We need to set RPC to nil, in order for the subsequent call to Connect()
+	// to work
+	dc.RPC = nil
 	return err
 }
 
