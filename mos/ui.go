@@ -313,6 +313,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		args := r.FormValue("args")
 
+		fmt.Println("Calling", method, args)
+
 		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 

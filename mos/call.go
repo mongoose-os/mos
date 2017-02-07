@@ -48,6 +48,12 @@ func callDeviceService(
 		return "", errors.Errorf("remote error: %s", resp.StatusMsg)
 	}
 
+	// TODO(dfrank): instead of that, we should probably add a separate function
+	// for rebooting
+	if method == "Sys.Reboot" {
+		waitForReboot()
+	}
+
 	// Ignoring errors here, cause response could be empty which is a success
 	str, _ := json.MarshalIndent(resp.Response, "", "  ")
 	return string(str), nil

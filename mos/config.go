@@ -113,6 +113,10 @@ func configSetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.De
 		if err != nil {
 			return errors.Trace(err)
 		}
+
+		if !noReboot {
+			waitForReboot()
+		}
 	}
 
 	return nil

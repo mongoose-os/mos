@@ -429,7 +429,6 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
 	}
-	defer devConn.Disconnect(ctx)
 	mqttConf, err := devConf.Get("mqtt")
 	if err != nil {
 		return errors.Annotatef(err, "failed to get device MQTT config")
@@ -497,5 +496,10 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	mqttConf, _ = devConf.Get("mqtt")
 	reportf("New config: %+v", mqttConf)
 
-	return configSetAndSave(ctx, devConn, devConf)
+	err = configSetAndSave(ctx, devConn, devConf)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }

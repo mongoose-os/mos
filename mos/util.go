@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -30,4 +31,14 @@ func getCommandOutput(command string, args ...string) (string, error) {
 		return "", errors.Annotatef(err, "failed to run %s %s", command, args)
 	}
 	return string(output), nil
+}
+
+// If some command causes the device to reboot, the reboot actually happens
+// after 100ms, so that the device is able to respond to the RPC request
+// which causes the reboot.
+//
+// We shouldn't issue the next RPC request until the reboot happens, so
+// waitForReboot should be called after each request which causes the reboot.
+func waitForReboot() {
+	time.Sleep(200 * time.Millisecond)
 }
