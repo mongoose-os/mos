@@ -390,7 +390,7 @@ body { color: #666;  background-color: #eee; }
 .red { color: #f66 !important; }
 #wizard-button-next, #wizard-button-prev { position: relative; }
 #wizard-button-next.spinner, #wizard-button-prev.spinner { color: transparent; }
-#main-title { margin-bottom: 0.5em; }
+#main-title { margin: 0.5em 0; font-size: 30px; font-weight: 300; }
 .link { cursor: pointer; }
 #version-update { font-weight: bold; color: red; }
 
@@ -568,7 +568,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5238, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5268, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -805,7 +805,11 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
             <a href="#" id="link-tour"><i class="fa fa-lightbulb-o"></i> start tour</a> &nbsp;|&nbsp;
             <a href="/"><i class="fa fa-magic"></i> wizard mode</a> &nbsp;|&nbsp;
             <a target="_blank" href="http://forum.cesanta.com"><i class="fa fa-comments-o"></i> developer forum</a> &nbsp;|&nbsp;
-            <a target="_blank" href="https://mongoose-iot.com/docs/#/overview/"><i class="fa fa-map-o"></i> documentation</a>
+            <a target="_blank" href="https://mongoose-iot.com/docs/#/overview/"><i class="fa fa-map-o"></i> documentation</a> &nbsp;|&nbsp;
+
+            <a target="_blank" href="https://mongoose-iot.com">
+              <img src="/images/logo_blue.png" height="24px">
+            </a>
           </div>
         </div>
 
@@ -857,7 +861,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3574, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3732, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3713,7 +3717,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       </nav>
 
       <center>
-        <h1 id="main-title">Mongoose OS Installer</h1>
+        <div id="main-title"><img src="/images/logo_blue.png" height="50px"> installer</div>
       </center>
 
  <div class="row wizard">
@@ -4004,7 +4008,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       </div>
 
       <div class="panel-footer">
-        <small class="text-muted">&copy; Cesanta 2017
+        <small class="text-muted">&copy; <a href="https://mongoose-os.com">Cesanta 2017</a>
           | Version: <span id="version"></span>
           <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-iot.com/software.html">Update here</a></span>
           | <a href="/infolog" target="_blank">show device logs</a>
@@ -4044,7 +4048,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 15389, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 15465, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
