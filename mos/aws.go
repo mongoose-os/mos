@@ -42,7 +42,10 @@ const (
 	ecCACert         = "data/ca-verisign-ecc-g2.crt.pem"
 	i2cEnableOption  = "i2c.enable"
 	atcaEnableOption = "sys.atca.enable"
-	awsIoTPolicyNone = "-"
+
+	awsIoTPolicyNone        = "-"
+	awsIoTPolicyMOS         = "mos-default"
+	awsIoTPolicyMOSDocument = `{"Statement": [{"Effect": "Allow", "Action": "iot:*", "Resource": "*"}], "Version": "2012-10-17"}`
 )
 
 var (
@@ -193,8 +196,8 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 			return "", "", errors.Trace(err)
 		}
 		return "", "", errors.Errorf("--aws-iot-policy is not set. Please choose a security policy to attach "+
-			"to the new certificate or specify --aws-iot-policy=%s to not attach any. Existing policies: %s",
-			awsIoTPolicyNone, strings.Join(policies, " "))
+			"to the new certificate. --aws-iot-policy=%s will create a default permissive policy; or set --aws-iot-policy=%s to not attach any.\nExisting policies: %s",
+			awsIoTPolicyMOS, awsIoTPolicyNone, strings.Join(policies, " "))
 	}
 
 	reportf("Generating certificate request, CN: %s", cn)
@@ -294,6 +297,29 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 	reportf("Wrote certificate to %s", certFile)
 
 	if awsIoTPolicy != awsIoTPolicyNone {
+		if awsIoTPolicy == awsIoTPolicyMOS {
+			policies, err := getAWSIoTPolicyNames()
+			if err != nil {
+				return "", "", errors.Trace(err)
+			}
+			found := false
+			for _, p := range policies {
+				if p == awsIoTPolicyMOS {
+					found = true
+					break
+				}
+			}
+			if !found {
+				reportf("Creating policy %q (%s)...", awsIoTPolicy, awsIoTPolicyMOSDocument)
+				_, err := iotSvc.CreatePolicy(&iot.CreatePolicyInput{
+					PolicyName:     aws.String(awsIoTPolicy),
+					PolicyDocument: aws.String(awsIoTPolicyMOSDocument),
+				})
+				if err != nil {
+					return "", "", errors.Annotatef(err, "failed to create policy")
+				}
+			}
+		}
 		reportf("Attaching policy %q to the certificate...", awsIoTPolicy)
 		_, err := iotSvc.AttachPrincipalPolicy(&iot.AttachPrincipalPolicyInput{
 			PolicyName: aws.String(awsIoTPolicy),
