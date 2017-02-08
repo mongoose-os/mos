@@ -1,6 +1,6 @@
 (function($) {
   var ws, tabHandlers = {};
-  var defaultMqttServer = 'broker.mqttdashboard.com:1883';
+  var defaultMqttServer = 'test.mosquitto.org:1883';
   var wssend = function(o) {
     ws.send(JSON.stringify(o));
   };
@@ -235,6 +235,15 @@
 
   // Let the tool know the port we want to use
   $.ajax({url: '/connect', data: {port: getCookie('port')}});
+
+  $.get('https://mongoose-os.com/downloads/builds.json', function(data) {
+    if (!data || !data.builds || !data.builds.length) return;
+    console.log('JEEY', data);
+    $('#dropdown-firmware').empty();
+    $.each(data.builds, function(i, v) {
+      $('<li><a href="#">https://mongoose-os.com/downloads/' + v + '</a></li>').appendTo('#dropdown-firmware');
+    });
+  });
 
   $.ajax({url: '/version'}).done(function(json) {
     if (!json.result) return;
