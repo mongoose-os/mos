@@ -789,7 +789,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
                 <li><a tab="files"><i class="fa fa-file-text-o"></i> Files on device </a></li>
                 <li><a tab="examples"><i class="fa fa-archive"></i> Code examples </a></li>
                 <li><a tab="configuration"><i class="fa fa-gears"></i> Device configuration </a></li>
-                <li><a tab="info"><i class="fa fa-info"></i> Device Info</a></li> 
+                <li><a tab="info"><i class="fa fa-info"></i> Device Info</a></li>
                 <!-- <li><a tab="mqtt"><i class="fa fa-sitemap"></i> MQTT client </a></li> -->
               </ul>
             </div>
@@ -805,9 +805,9 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
             <a href="#" id="link-tour"><i class="fa fa-lightbulb-o"></i> start tour</a> &nbsp;|&nbsp;
             <a href="/"><i class="fa fa-magic"></i> wizard mode</a> &nbsp;|&nbsp;
             <a target="_blank" href="http://forum.cesanta.com"><i class="fa fa-comments-o"></i> developer forum</a> &nbsp;|&nbsp;
-            <a target="_blank" href="https://mongoose-iot.com/docs/#/overview/"><i class="fa fa-map-o"></i> documentation</a> &nbsp;|&nbsp;
+            <a target="_blank" href="https://mongoose-os.com/docs/#/overview/"><i class="fa fa-map-o"></i> documentation</a> &nbsp;|&nbsp;
 
-            <a target="_blank" href="https://mongoose-iot.com">
+            <a target="_blank" href="https://mongoose-os.com">
               <img src="/images/logo_blue.png" height="24px">
             </a>
           </div>
@@ -861,7 +861,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3732, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3729, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3831,9 +3831,9 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                               <span class="sr-only">Toggle Dropdown</span>
                             </button>
                             <ul class="dropdown-menu" id="dropdown-firmware">
-                              <li><a href="#">https://mongoose-iot.com/downloads/fw-esp32.zip</a></li>
-                              <li><a href="#">https://mongoose-iot.com/downloads/fw-esp8266.zip</a></li>
-                              <li><a href="#">https://mongoose-iot.com/downloads/fw-cc3200.zip</a></li>
+                              <li><a href="#">https://mongoose-os.com/downloads/fw-esp32.zip</a></li>
+                              <li><a href="#">https://mongoose-os.com/downloads/fw-esp8266.zip</a></li>
+                              <li><a href="#">https://mongoose-os.com/downloads/fw-cc3200.zip</a></li>
                             </ul>
                           </div>
                         </span>
@@ -3899,7 +3899,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                             </button>
                             <ul class="dropdown-menu" id="dropdown-firmware">
                               <li><a href="#">MQTT server</a></li>
-                               <li><a href="#">AWS IoT</a></li> 
+                               <li><a href="#">AWS IoT</a></li>
                             </ul>
                           </div>
                         </span>
@@ -3987,7 +3987,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                   firmware in C, working with device filesystem and
                   configuration. You can quit this wizard now and switch to the
                   command line mode to continue with this option. See
-                  <a href="https://mongoose-iot.com/docs/#/quickstart/">documentation</a>
+                  <a href="https://mongoose-os.com/docs/#/quickstart/">documentation</a>
                   for the references and examples.
                 </p>
                 <p>
@@ -4010,7 +4010,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       <div class="panel-footer">
         <small class="text-muted">&copy; <a href="https://mongoose-os.com">Cesanta 2017</a>
           | Version: <span id="version"></span>
-          <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-iot.com/software.html">Update here</a></span>
+          <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-os.com/software.html">Update here</a></span>
           | <a href="/infolog" target="_blank">show device logs</a>
       </small>
 
@@ -4048,7 +4048,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 15465, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 15459, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5075,7 +5075,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   $.ajax({url: '/version'}).done(function(json) {
     if (!json.result) return;
     $('#version').text(json.result);
-    $.get('https://mongoose-iot.com/downloads/mos/version.json', function(data) {
+    $.get('https://mongoose-os.com/downloads/mos/version.json', function(data) {
       if (!data.build_id) return;
       if (data.build_id != json.result) {
         $('#version-update').removeClass('hidden');
@@ -5095,7 +5095,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9239, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9238, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
