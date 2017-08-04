@@ -1,2 +1,3 @@
 mgos*
-version.*
+version/version.json
+version/version.go
