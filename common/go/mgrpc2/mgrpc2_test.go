@@ -152,3 +152,21 @@ func TestRPC(t *testing.T) {
 		t.Error("wrong result")
 	}
 }
+
+func TestConcurrency(t *testing.T) {
+	dispatcher, rpcAddr, done := mkdispatcher(t)
+	defer done()
+	dispatcher.AddHandler("Foo", func(d Dispatcher, c Channel, req *Frame) *Frame {
+		return &Frame{Result: json.RawMessage(`"Bar"`)}
+	})
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			dispatcher.Call(context.Background(), &Frame{Method: "Foo", Dst: rpcAddr})
+		}()
+	}
+	wg.Wait()
+}

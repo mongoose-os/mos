@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/context"
@@ -63,24 +64,24 @@ type dispImpl struct {
 	handlers map[string]Handler
 	calls    map[int64]chan *Frame
 	address  string
-	nextId   int64
+	nextID   int64
 	logf     LogFunc
 }
 
 func (d *dispImpl) Connect(address string) (Channel, error) {
-	if strings.HasPrefix(address, "ws://") || strings.HasPrefix(address, "wss://") {
-		ws, err := websocket.Dial(address, "", "http://localhost")
-		if err != nil {
-			d.logf("Error connecting: %v", err)
-			return nil, err
-		} else {
-			d.addrMap[address] = ws
-			go d.AddChannel(ws)
-			return ws, err
-		}
-	} else {
+	if !strings.HasPrefix(address, "ws://") && !strings.HasPrefix(address, "wss://") {
 		return nil, fmt.Errorf("Unknown address type: %s", address)
 	}
+	ws, err := websocket.Dial(address, "", "http://localhost")
+	if err != nil {
+		d.logf("Error connecting: %v", err)
+		return nil, err
+	}
+	d.lock.Lock()
+	d.addrMap[address] = ws
+	d.lock.Unlock()
+	go d.AddChannel(ws)
+	return ws, err
 }
 
 func (d *dispImpl) AddHandler(method string, handler Handler) {
@@ -91,8 +92,8 @@ func (d *dispImpl) AddHandler(method string, handler Handler) {
 
 func (d *dispImpl) lookupChannel(address string) Channel {
 	d.lock.Lock()
-	defer d.lock.Unlock()
 	c := d.addrMap[address]
+	d.lock.Unlock()
 	if c == nil && address != "" {
 		c, _ = d.Connect(address)
 	}
@@ -101,8 +102,8 @@ func (d *dispImpl) lookupChannel(address string) Channel {
 
 func (d *dispImpl) Dispatch(frame *Frame) bool {
 	d.lock.Lock()
-	defer d.lock.Unlock()
 	ch, ok := d.calls[frame.ID]
+	d.lock.Unlock()
 	if ok {
 		str, _ := json.Marshal(frame)
 		d.logf("Response (ch): [%s]", string(str))
@@ -173,7 +174,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 
 	// Channel is closing, delete all associated addresses
 	d.lock.Lock()
-	for address, _ := range addrMap {
+	for address := range addrMap {
 		delete(d.addrMap, address)
 	}
 	d.lock.Unlock()
@@ -185,12 +186,23 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		return nil, fmt.Errorf("No channel for %s", request.Dst)
 	}
 	if request.ID == 0 {
-		d.nextId++
-		request.ID = d.nextId
+		request.ID = atomic.AddInt64(&d.nextID, 1)
 	}
 	if request.Src == "" {
 		request.Src = d.address
 	}
+	ch := make(chan *Frame)
+
+	d.lock.Lock()
+	d.calls[request.ID] = ch
+	d.lock.Unlock()
+
+	defer func() {
+		d.lock.Lock()
+		delete(d.calls, request.ID)
+		d.lock.Unlock()
+	}()
+
 	s, _ := json.Marshal(request)
 	d.logf("Sending: [%s]", string(s))
 	n, err := c.Write(s)
@@ -201,17 +213,6 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		return nil, nil
 	}
 	d.logf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
-
-	ch := make(chan *Frame)
-	d.lock.Lock()
-	d.calls[request.ID] = ch
-	d.lock.Unlock()
-
-	defer func() {
-		d.lock.Lock()
-		delete(d.calls, request.ID)
-		d.lock.Unlock()
-	}()
 
 	d.logf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 	select {
@@ -231,7 +232,7 @@ func CreateDispatcher(logf LogFunc) Dispatcher {
 		addrMap:  make(map[string]Channel),
 		handlers: make(map[string]Handler),
 		address:  fmt.Sprintf("rpc_%.4d", r.Int31()),
-		nextId:   int64(r.Int31()),
+		nextID:   int64(r.Int31()),
 		calls:    make(map[int64]chan *Frame),
 		logf:     logf,
 	}
