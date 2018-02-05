@@ -189,7 +189,11 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		request.ID = atomic.AddInt64(&d.nextID, 1)
 	}
 	if request.Src == "" {
-		request.Src = d.address
+		if len(request.Key) >= 8 {
+			request.Src = request.Key[:8] + "-" + d.address
+		} else {
+			request.Src = d.address
+		}
 	}
 	ch := make(chan *Frame)
 
