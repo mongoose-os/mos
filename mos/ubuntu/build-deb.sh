@@ -26,10 +26,10 @@ fi
 
 set -x -e
 
-# Make sure the script is called from the mongoose-os repo
+# Make sure the script is called from the mos-tool repo
 ORIGIN="$(git --work-tree $(dirname 0) remote get-url origin)"
-if ! [[ "${ORIGIN}" =~ mongoose-os(.git)?$ ]]; then
-  echo "You should run this script from mongoose-os repository, not from ${ORIGIN}"; exit 1;
+if ! [[ "${ORIGIN}" =~ mos-tool(.git)?$ ]]; then
+  echo "You should run this script from mos-tool repository, not from ${ORIGIN}"; exit 1;
 fi
 
 IMAGE=docker.cesanta.com/ubuntu-golang:${DISTR}
