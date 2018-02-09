@@ -86,6 +86,9 @@ func Update(ctx context.Context, devConn *dev.DevConn) error {
 	} else if version.LooksLikeBrewBuildId(version.BuildId) {
 		ourutil.Reportf("Please use brew to update mos.")
 		return nil
+	} else if version.LooksLikeDistrBuildId(version.BuildId) {
+		ourutil.Reportf("Mos was installed via some package manager, please use it to update.")
+		return nil
 	}
 
 	args := flag.Args()
