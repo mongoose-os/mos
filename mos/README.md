@@ -1,7 +1,47 @@
 The Mongoose OS command line tool
 =================================
 
-## Building
+## Installing on Windows
+
+Download and run [pre-built mos.exe](https://mongoose-os.com/downloads/mos-release/win/mos.exe).
+
+## Installing on Ubuntu Linux
+
+Use PPA:
+
+```bash
+$ sudo add-apt-repository ppa:mongoose-os/mos
+$ sudo apt-get update
+$ sudo apt-get install mos
+```
+
+Note: to use the very latest version instead of the released one, the last
+command should be `sudo apt-get install mos-latest`
+
+## Installing on Arch Linux
+
+Use PKGBUILD:
+
+```bash
+$ git clone https://github.com/cesanta/mos-tool
+$ cd mos-tool/mos/archlinux_pkgbuild/mos
+$ makepkg
+$ pacman -U ./mos-*.tar.xz
+```
+
+Note: to use the very latest version from the git repo, instead of the released
+one, invoke `makepkg` from `mos-tool/mos/archlinux_pkgbuild/mos-latest`.
+
+## Installing Mac OS
+
+Use homebrew:
+
+```bash
+$ brew tap cesanta/mos
+$ brew install mos
+```
+
+## Building manually
 
 Minimal required Go version is 1.8.
 
