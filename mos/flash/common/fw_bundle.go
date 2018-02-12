@@ -46,8 +46,9 @@ type FirmwarePart struct {
 	FSPageSize  uint32 `json:"fs_page_size,omitempty"`
 	// Platform-specific stuff:
 	// ESP32, ESP8266
-	ESPFlashAddress uint32 `json:"addr,omitempty"`
-	ESP32Encrypt    bool   `json:"encrypt,omitempty"`
+	ESPFlashAddress    uint32 `json:"addr,omitempty"`
+	ESP32Encrypt       bool   `json:"encrypt,omitempty"`
+	ESP32PartitionName string `json:"ptn,omitempty"`
 	// CC32xx
 	CC32XXFileAllocSize    int    `json:"falloc,omitempty"`
 	CC32XXFileSignatureOld string `json:"sign,omitempty"` // Deprecated since 2017/08/22

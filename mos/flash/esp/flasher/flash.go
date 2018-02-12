@@ -38,6 +38,7 @@ func (pp imagesByAddr) Less(i, j int) bool {
 }
 
 func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) error {
+
 	cfr, err := ConnectToFlasherClient(ct, opts)
 	if err != nil {
 		return errors.Trace(err)
@@ -60,6 +61,15 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 		data, err := fw.GetPartData(p.Name)
 		if err != nil {
 			return errors.Annotatef(err, "%s: failed to get data", p.Name)
+		}
+		// For ESP32, resolve partition name to address
+		if p.ESP32PartitionName != "" {
+			pti, err := esp32.GetPartitionInfo(fw, p.ESP32PartitionName)
+			if err != nil {
+				return errors.Annotatef(err, "%s: failed to get respolve partition %q", p.Name, p.ESP32PartitionName)
+			}
+			glog.V(1).Infof("%s -> %s -> 0x%x", p.Name, p.ESP32PartitionName, pti.Pos.Offset)
+			p.ESPFlashAddress = pti.Pos.Offset
 		}
 		im := &image{addr: p.ESPFlashAddress, data: data, part: p}
 		if im.addr == 0 || im.addr == 0x1000 && len(data) >= 4 && data[0] == 0xe9 {
