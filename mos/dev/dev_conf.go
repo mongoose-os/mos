@@ -11,6 +11,7 @@ import (
 // DevConf represents configuration of a device
 type DevConf struct {
 	data map[string]interface{}
+	diff map[string]interface{}
 }
 
 // Get takes a path like "wifi.sta.ssid" and tries to get config value at the
@@ -22,7 +23,12 @@ func (c *DevConf) Get(path string) (string, error) {
 		if m == nil {
 			return "", errors.Errorf("no config value at path %q", path)
 		}
-		v = m[key]
+		dm, dkey := getMapKey(path, c.diff)
+		if dm != nil {
+			v = dm[dkey]
+		} else {
+			v = m[key]
+		}
 	} else {
 		// We have to special-case empty path since getMapKey returns map and a
 		// key, since we cannot take address of a map element.
@@ -59,28 +65,27 @@ func (c *DevConf) Set(path, value string) error {
 		return errors.Errorf("no config value at path %q", path)
 	}
 
+	var v interface{}
 	switch m[key].(type) {
 	case string:
-		m[key] = value
+		v = value
 	case float64:
 		valueFloat, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		m[key] = valueFloat
+		v = valueFloat
 	case json.Number:
 		_, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		m[key] = json.Number(value)
+		v = json.Number(value)
 	case bool:
 		if value == "true" {
-			m[key] = true
-			return nil
+			v = true
 		} else if value == "false" {
-			m[key] = false
-			return nil
+			v = false
 		} else {
 			return errors.Errorf("can't convert %q to a boolean", value)
 		}
@@ -89,6 +94,11 @@ func (c *DevConf) Set(path, value string) error {
 	default:
 		return errors.Errorf("unknown value type: %T", m[key])
 	}
+
+	if c.diff == nil {
+		c.diff = make(map[string]interface{})
+	}
+	setMapKey(c.diff, path, v)
 
 	return nil
 }
@@ -116,4 +126,19 @@ func getMapKey(path string, data map[string]interface{}) (m map[string]interface
 		}
 		return getMapKey(parts[1], valMap)
 	}
+}
+
+func setMapKey(data map[string]interface{}, path string, value interface{}) {
+	dm := data
+	keyParts := strings.Split(path, ".")
+	for i := 0; i < len(keyParts)-1; i++ {
+		kp := keyParts[i]
+		pm, ok := dm[kp]
+		if !ok {
+			dm[kp] = make(map[string]interface{})
+			pm = dm[kp]
+		}
+		dm = pm.(map[string]interface{})
+	}
+	dm[keyParts[len(keyParts)-1]] = value
 }

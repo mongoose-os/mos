@@ -103,7 +103,7 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 		ctx2, cancel := context.WithTimeout(ctx, confOpTimeout)
 		defer cancel()
 		err := dc.CConf.Set(ctx2, &fwconfig.SetArgs{
-			Config: ourjson.DelayMarshaling(devConf.data),
+			Config: ourjson.DelayMarshaling(devConf.diff),
 		})
 		if err != nil {
 			attempts -= 1
