@@ -1233,6 +1233,10 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 
 	tplData := libsInitData{}
 	for _, v := range manifest.LibsHandled {
+		if len(v.Sources) == 0 {
+			// This library has no sources, nothing to init.
+			continue
+		}
 		tplData.Libs = append(tplData.Libs, libsInitDataItem{
 			Name: moscommon.IdentifierFromString(v.Name),
 			Deps: v.Deps,
@@ -1240,7 +1244,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	}
 
 	tpl := template.Must(template.New("depsInit").Parse(
-		string(MustAsset("data/deps_init.c.tmpl")),
+		string(MustAsset("data/mgos_deps_init.c.tmpl")),
 	))
 
 	var c bytes.Buffer

@@ -78,7 +78,7 @@ func GetMosFinalFilePath(buildDir string) string {
 }
 
 func GetDepsInitCFilePath(buildDir string) string {
-	return filepath.Join(GetGeneratedFilesDir(buildDir), "deps_init.c")
+	return filepath.Join(GetGeneratedFilesDir(buildDir), "mgos_deps_init.c")
 }
 
 func GetConfSchemaFilePath(buildDir string) string {
