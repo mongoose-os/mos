@@ -43,25 +43,18 @@ func GetChipDescr(rrw esp.RegReaderWriter) (string, error) {
 		chip_ver = "ESP32D0WDQ5"
 	case 2:
 		chip_ver = "ESP32D2WDQ5"
+	case 4:
+		chip_ver = "ESP32-PICO-D2"
 	case 5:
 		chip_ver = "ESP32-PICO-D4"
 	default:
 		chip_ver = fmt.Sprintf("ESP32?%d", cver.Uint64())
 	}
 
-	crev, err := fusesByName["chip_version"].Value(false)
+	crev, err := fusesByName["chip_ver_rev1"].Value(false)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
-	chip_rev := ""
-	switch crev.Uint64() {
-	case 0:
-		chip_rev = "R0"
-	case 8:
-		chip_rev = "R1"
-	default:
-		chip_rev = fmt.Sprintf("R?%d", crev.Uint64())
-	}
 
-	return fmt.Sprintf("%s %s", chip_ver, chip_rev), nil
+	return fmt.Sprintf("%s R%d", chip_ver, crev), nil
 }

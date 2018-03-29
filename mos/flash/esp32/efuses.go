@@ -66,7 +66,10 @@ var (
 		// 3, 3, 0 - ?
 		{name: "SPI_pad_config_hd", block: 0, fields: []bitField{{3, 8, 4}}, wdBit: 3, rdBit: -1},
 		{name: "chip_package", block: 0, fields: []bitField{{3, 11, 9}}, wdBit: 3, rdBit: -1},
-		{name: "chip_version", block: 0, fields: []bitField{{3, 15, 12}}, wdBit: 3, rdBit: -1},
+		{name: "cpu_freq_low", block: 0, fields: []bitField{{3, 12, 12}}, wdBit: 3, rdBit: -1},
+		{name: "cpu_freq_rated", block: 0, fields: []bitField{{3, 13, 13}}, wdBit: 3, rdBit: -1},
+		{name: "blk3_part_reserve", block: 0, fields: []bitField{{3, 14, 14}}, wdBit: 3, rdBit: -1},
+		{name: "chip_ver_rev1", block: 0, fields: []bitField{{3, 15, 15}}, wdBit: 3, rdBit: -1},
 		// 3, 31, 15 - ?
 		// 4, 13, 0 - ?
 		{name: "XPD_SDIO_REG", block: 0, fields: []bitField{{4, 14, 14}}, wdBit: 5, rdBit: -1},
