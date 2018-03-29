@@ -18,6 +18,10 @@ filesystem:
 binary_libs:
 - __APP_ROOT__/libs/mylib2/lib/esp8266/libmylib2.a
 - __APP_ROOT__/libs/mylib3/lib/esp8266/libmylib3.a
+libs:
+- origin: https://github.com/mongoose-os-libs/mongoose
+  location: https://github.com/mongoose-os-libs/mongoose
+  suffixtpl: ""
 config_schema:
 - - mylib1
   - o

@@ -17,6 +17,10 @@ filesystem:
 - __APP_ROOT__/libs/mylib1/fs/mylib1_file1
 - __APP_ROOT__/libs/mylib2/fs/mylib2_file1
 - __APP_ROOT__/libs/mylib3/fs/mylib3_file1
+libs:
+- origin: https://github.com/mongoose-os-libs/mongoose
+  location: https://github.com/mongoose-os-libs/mongoose
+  suffixtpl: ""
 config_schema:
 - - mylib1
   - o

@@ -9,6 +9,10 @@ sources:
 - __APP_ROOT__/app/src/app_src1.c
 - __APP_ROOT__/app/src/app_src2.c
 - __APP_ROOT__/app/src/app_src3.c
+libs:
+- origin: https://github.com/mongoose-os-libs/mongoose
+  location: https://github.com/mongoose-os-libs/mongoose
+  suffixtpl: ""
 libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"

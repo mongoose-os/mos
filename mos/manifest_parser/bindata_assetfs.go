@@ -104,6 +104,9 @@ func dataMgos_deps_initCTmpl() (*asset, error) {
 var _dataRoot_manifestYml = []byte(`
 manifest_version: 2017-06-16
 
+libs:
+  - origin: https://github.com/mongoose-os-libs/mongoose
+
 conds:
   - when: mos.platform == "esp32"
     apply:
@@ -122,7 +125,7 @@ func dataRoot_manifestYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/root_manifest.yml", size: 167, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/root_manifest.yml", size: 231, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
