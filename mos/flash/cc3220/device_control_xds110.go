@@ -24,6 +24,10 @@ func NewCC3220DeviceControl(port string) (cc32xx.DeviceControl, error) {
 		return nil, errors.Annotatef(err, "failed to open XDS110")
 	}
 	vi, err := xc.GetVersionInfo()
+	for i := 0; err != nil && i < 5; i++ {
+		time.Sleep(200 * time.Millisecond)
+		vi, err = xc.GetVersionInfo()
+	}
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to get version")
 	}
