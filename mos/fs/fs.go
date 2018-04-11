@@ -9,7 +9,6 @@ import (
 	"path"
 	"sort"
 	"strings"
-	"time"
 
 	"cesanta.com/common/go/lptr"
 	fwfs "cesanta.com/fw/defs/fs"
@@ -24,7 +23,6 @@ const (
 )
 
 var (
-	fsOpTimeout  = 7 * time.Second
 	fsOpAttempts = 3
 	longFormat   = flag.BoolP("long", "l", false, "Long output format.")
 )
@@ -81,7 +79,7 @@ func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 	attempts := fsOpAttempts
 	for {
 		// Get the next chunk of data
-		ctx2, cancel := context.WithTimeout(ctx, fsOpTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 		defer cancel()
 		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, chunkSize, offset, attempts)
 		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfs.GetArgs{
@@ -173,7 +171,7 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 		n, readErr := r.Read(data)
 		if n > 0 {
 			for attempts > 0 {
-				ctx2, cancel := context.WithTimeout(ctx, fsOpTimeout)
+				ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 				defer cancel()
 				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
 				err := devConn.CFilesystem.Put(ctx2, &fwfs.PutArgs{

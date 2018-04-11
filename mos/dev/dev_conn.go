@@ -22,7 +22,6 @@ const (
 	// and handle it
 	debugDevId = ""
 
-	confOpTimeout  = 10 * time.Second
 	confOpAttempts = 3
 )
 
@@ -73,7 +72,7 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 	var err error
 	attempts := confOpAttempts
 	for {
-		ctx2, cancel := context.WithTimeout(ctx, confOpTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, dc.GetTimeout())
 		defer cancel()
 		devConfRaw, err = dc.CConf.Get(ctx2, &fwconfig.GetArgs{})
 		if err != nil {
@@ -100,7 +99,7 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 	attempts := confOpAttempts
 	for {
-		ctx2, cancel := context.WithTimeout(ctx, confOpTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, dc.GetTimeout())
 		defer cancel()
 		err := dc.CConf.Set(ctx2, &fwconfig.SetArgs{
 			Config: ourjson.DelayMarshaling(devConf.diff),
@@ -175,4 +174,8 @@ func (dc *DevConn) ConnectWithOpts(ctx context.Context, reconnect bool, tlsConfi
 	dc.CSys = fwsys.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
 	dc.CFilesystem = fwfilesystem.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
 	return nil
+}
+
+func (dc *DevConn) GetTimeout() time.Duration {
+	return dc.c.Timeout
 }
