@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,11 +15,12 @@ import (
 	"sync"
 	"time"
 
-	"context"
-
 	"cesanta.com/common/go/ourutil"
+	"cesanta.com/mos/aws"
 	"cesanta.com/mos/build"
+	"cesanta.com/mos/config"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/fs"
 	"cesanta.com/mos/update"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
@@ -308,7 +310,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 
-		err := internalConfigSet(ctx2, devConn, args)
+		err := config.SetWithArgs(ctx2, devConn, args)
 		result := "false"
 		if err == nil {
 			for {
@@ -335,13 +337,13 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/policies", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		awsRegion = r.FormValue("region")
-		arr, err := getAWSIoTPolicyNames()
+		aws.AWSRegion = r.FormValue("region")
+		arr, err := aws.GetAWSIoTPolicyNames()
 		if err == nil {
 			sort.Strings(arr)
 			// Include the default policy, even if not present - it will be created.
-			if sort.SearchStrings(arr, awsIoTPolicyMOS) >= len(arr) {
-				arr = append(arr, awsIoTPolicyMOS)
+			if sort.SearchStrings(arr, aws.AWSIoTPolicyMOS) >= len(arr) {
+				arr = append(arr, aws.AWSIoTPolicyMOS)
 				sort.Strings(arr)
 			}
 		}
@@ -350,7 +352,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/regions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		httpReply(w, getAWSRegions(), nil)
+		httpReply(w, aws.GetRegions(), nil)
 	})
 
 	http.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
@@ -431,7 +433,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 
-		err := fsPutData(ctx2, devConn, bytes.NewReader([]byte(data)), path)
+		err := fs.PutData(ctx2, devConn, bytes.NewReader([]byte(data)), path)
 		httpReply(w, err == nil, err)
 	})
 
@@ -448,7 +450,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 
-		text, err := getFile(ctx2, devConn, r.FormValue("name"))
+		text, err := fs.GetFile(ctx2, devConn, r.FormValue("name"))
 		if err == nil {
 			text2, err2 := json.Marshal(text)
 			if err2 == nil {
@@ -463,8 +465,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	http.HandleFunc("/aws-iot-setup", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		awsIoTPolicy = r.FormValue("policy")
-		awsRegion = r.FormValue("region")
+		aws.AWSIoTPolicy = r.FormValue("policy")
+		aws.AWSRegion = r.FormValue("region")
 
 		ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
@@ -472,19 +474,19 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		devlock(devConn)
 		defer devunlock()
 
-		err := awsIoTSetup(ctx2, devConn)
+		err := aws.AWSIoTSetup(ctx2, devConn)
 		httpReply(w, true, err)
 	})
 
 	http.HandleFunc("/aws-store-creds", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, err := storeCreds(r.FormValue("key"), r.FormValue("secret"))
+		_, err := aws.StoreCreds(r.FormValue("key"), r.FormValue("secret"))
 		httpReply(w, true, err)
 	})
 
 	http.HandleFunc("/check-aws-credentials", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, err := getAwsCredentials()
+		_, err := aws.GetCredentials()
 		httpReply(w, err == nil, nil)
 	})
 
@@ -511,7 +513,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/list_aws_things", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		reply, err := getAWSIoTThings()
+		reply, err := aws.GetIoTThings()
 		httpReply(w, reply, err)
 	})
 

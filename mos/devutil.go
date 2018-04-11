@@ -16,11 +16,14 @@ import (
 )
 
 var (
-	// NOTE(lsm): we're reusing cert-file and key-file flags from aws.go
-	caFile = ""
+	certFile = ""
+	keyFile  = ""
+	caFile   = ""
 )
 
 func init() {
+	flag.StringVar(&certFile, "cert-file", "", "Certificate file name")
+	flag.StringVar(&keyFile, "key-file", "", "Key file name")
 	flag.StringVar(&caFile, "ca-cert-file", "", "CA cert for TLS server verification")
 	hiddenFlags = append(hiddenFlags, "ca-cert-file")
 }

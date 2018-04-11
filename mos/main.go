@@ -1,5 +1,4 @@
-//go:generate go-bindata -pkg main -nocompress -modtime 1 -mode 420 data/
-//go:generate go-bindata-assetfs -pkg main -nocompress -modtime 1 -mode 420 data/ web_root/...
+//go:generate go-bindata-assetfs -pkg main -nocompress -modtime 1 -mode 420 web_root/...
 
 package main
 
@@ -16,10 +15,15 @@ import (
 	"context"
 
 	"cesanta.com/common/go/pflagenv"
+	"cesanta.com/mos/aws"
+	"cesanta.com/mos/azure"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/common/state"
+	"cesanta.com/mos/config"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/fs"
+	"cesanta.com/mos/gcp"
 	"cesanta.com/mos/update"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
@@ -42,7 +46,6 @@ var (
 	pass       = flag.String("pass", "", "Cloud password or token")
 	server     = flag.String("server", "https://mongoose.cloud", "FWBuild server")
 	local      = flag.Bool("local", false, "Local build.")
-	longFormat = flag.BoolP("long", "l", false, "Long output format.")
 	mosRepo    = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")
 	deviceID   = flag.String("device-id", "", "Device ID")
 	devicePass = flag.String("device-pass", "", "Device pass/key")
@@ -111,15 +114,16 @@ func init() {
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
 		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
-		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},
-		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
-		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
-		{"rm", fsRm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
-		{"config-get", configGet, `Get config value from the locally attached device`, nil, []string{"port"}, true},
-		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
+		{"ls", fs.Ls, `List files at the local device's filesystem`, nil, []string{"port"}, true},
+		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
+		{"put", fs.Put, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
+		{"rm", fs.Rm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
+		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true},
+		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
-		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
-		{"gcp-iot-setup", gcpIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true},
+		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
+		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, true},
+		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true},
 		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false},
 		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true},
 	}
@@ -207,6 +211,7 @@ func main() {
 
 	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
 		isUI = true
+		aws.IsUI = true
 	}
 
 	if *helpFull {
