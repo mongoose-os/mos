@@ -234,7 +234,7 @@ func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atcaServi
 		keyData = keyData[1:]
 	}
 
-	if len(keyData) != atca.PrivateKeySize {
+	if len(keyData) > atca.PrivateKeySize {
 		return nil, errors.Errorf("expected %d bytes, got %d", atca.PrivateKeySize, len(keyData))
 	}
 
