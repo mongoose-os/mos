@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 var (
 	azureDeviceID         = ""
 	azureIoTHubName       = ""
+	azureIoTHubHostName   = ""
 	azureIoTAuthMethod    = ""
 	azureIoTDeviceStatus  = ""
 	azureIoTResourceGroup = ""
@@ -31,6 +33,7 @@ var (
 func init() {
 	flag.StringVar(&azureDeviceID, "azure-device-id", "", "Azure IoT device ID. If not set, taken from the device itself.")
 	flag.StringVar(&azureIoTHubName, "azure-hub-name", "", "Azure IoT hub name")
+	flag.StringVar(&azureIoTHubHostName, "azure-hub-host-name", "", "Azure IoT hub host name")
 	flag.StringVar(&azureIoTAuthMethod, "azure-auth-method", "x509_thumbprint",
 		"Azure IoT Device authentication method: x509_thumbprint, x509_ca, shared_private_key")
 	flag.StringVar(&azureIoTDeviceStatus, "azure-device-status", "enabled", "Azure IoT Device status upon creation")
@@ -40,10 +43,14 @@ func init() {
 	flag.StringVar(&azureKeyFile, "azure-key-file", "", "Private key file")
 }
 
+type azureIoTHubInfo struct {
+	Name       string `json:"name"`
+	Properties struct {
+		HostName string `json:"hostName"`
+	} `json:"properties"`
+}
+
 func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
-	if azureIoTHubName == "" {
-		return errors.Errorf("--azure-hub-name is required")
-	}
 	// Perform Azure CLI sanity checks
 	if !azureIoTSkipCLICheck {
 		// Make sure that Azure CLI is installed and logged in.
@@ -62,11 +69,41 @@ func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 				return errors.Annotatef(err, "Azure CLI is not logged in and 'az login' failed. Please login manually.")
 			}
 		}
-		// Check that the specified hub exists.
-		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "az", "iot", "hub", "show", "--name", azureIoTHubName); err != nil {
-			return errors.Errorf("Azure IoT Hub %q does not exist, please create it as described here: https://mongoose-os.com/docs/cloud_integrations/azure.html", azureIoTHubName)
-		}
 	}
+	if azureIoTHubName == "" {
+		output, err := ourutil.GetCommandOutput("az", "iot", "hub", "list")
+		if err != nil {
+			return errors.Annotatef(err, "--azure-hub-name not specified and list command failed")
+		}
+		var hubsInfo []azureIoTHubInfo
+		if err = json.Unmarshal([]byte(output), &hubsInfo); err != nil {
+			return errors.Annotatef(err, "invalist az iot hub list output format")
+		}
+		switch len(hubsInfo) {
+		case 0:
+			return errors.Errorf("there are no Azure IoT hubs present, please create one " +
+				"as described here: https://mongoose-os.com/docs/cloud_integrations/azure.html")
+		case 1:
+			azureIoTHubName = hubsInfo[0].Name
+			azureIoTHubHostName = hubsInfo[0].Properties.HostName
+		default:
+			return errors.Errorf("there is more than one Azure IoT hub, please specify --azure-hub-name")
+		}
+	} else if azureIoTHubHostName == "" {
+		// Check that the specified hub exists.
+		output, err := ourutil.GetCommandOutput("az", "iot", "hub", "show", "--name", azureIoTHubName)
+		if err != nil {
+			return errors.Errorf("Azure IoT Hub %q does not exist, please create it "+
+				"as described here: https://mongoose-os.com/docs/cloud_integrations/azure.html", azureIoTHubName)
+		}
+		var hubInfo azureIoTHubInfo
+		if err = json.Unmarshal([]byte(output), &hubInfo); err != nil {
+			return errors.Annotatef(err, "invalist az iot hub list output format")
+		}
+		azureIoTHubHostName = hubInfo.Properties.HostName
+	}
+
+	ourutil.Reportf("Using IoT hub %s (%s)", azureIoTHubName, azureIoTHubHostName)
 
 	ourutil.Reportf("Connecting to the device...")
 	devInfo, err := devConn.GetInfo(ctx)
@@ -170,7 +207,7 @@ func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	case "x509_thumbprint":
 		fileNameSuffix := ourutil.FirstN(certCN, 16)
 		newConf["azure.cs"] = ""
-		newConf["azure.host_name"] = fmt.Sprintf("%s.azure-devices.net", azureIoTHubName)
+		newConf["azure.host_name"] = azureIoTHubHostName
 		newConf["azure.device_id"] = devID
 		if certPEMBytes != nil {
 			certFileName := fmt.Sprintf("azure-%s.crt.pem", fileNameSuffix)

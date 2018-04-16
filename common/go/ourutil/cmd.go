@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 )
 
 type CmdOutMode int
@@ -59,7 +58,7 @@ func RunCmd(outMode CmdOutMode, args ...string) error {
 }
 
 func GetCommandOutput(command string, args ...string) (string, error) {
-	glog.Infof("Running %s %s", command, args)
+	Reportf("Running %s", strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
 	output, err := cmd.Output()
 	if err != nil {
