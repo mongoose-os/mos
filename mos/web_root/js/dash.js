@@ -511,23 +511,19 @@ $('.arch-input, .app-input').on('keyup change', function() {
 
 $('.arch-dropdown a').on('click', function(ev) {
   var el = $(ev.target);
-  var v = el.attr('rel');
-  $('.arch-input').val(v);
+  var arch = el.attr('rel');
+  $('.arch-input').val(arch);
   $('.app-input').val('').trigger('change');
   $('#app-info').hide();
   el.closest('.dropdown').removeClass('open');
 
   // In the apps dropdown, enable only apps that supported by the selected arch.
   // TODO(lsm): fetch that information automatically by traversing github repos.
-  var apps = { 'cc3200': ['demo-c'], '': ['demo-js', 'demo-c'] };
-  for (var k in apps) {
-    if (v != k && k) continue;
-    $('.app-dropdown li').addClass('hidden');
-    $.each(apps[k], function(i, v) {
-      $('.app-dropdown [rel="' + v + '"]').parent().removeClass('hidden');
-    });
-    break;
-  }
+  $('.app-dropdown a').each(function(i, v) {
+    var re = new RegExp($(v).attr('for'));
+    var matched = arch.match(re);
+    $(v).parent().toggleClass('hidden', !matched);
+  });
 
   return false;
 });
