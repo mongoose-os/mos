@@ -2,10 +2,10 @@ package codec
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"net/http"
 	"sync"
@@ -31,9 +31,8 @@ func OutboundHTTP(url string, tlsConfig *tls.Config) Codec {
 	r := &outboundHttpCodec{
 		closeNotifier: make(chan struct{}),
 		url:           url,
+		client:        &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}},
 	}
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	r.client = &http.Client{Transport: transport}
 	r.cond = sync.NewCond(r)
 	return r
 }

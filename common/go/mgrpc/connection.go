@@ -98,6 +98,8 @@ func connectTo(connectURL string) ConnectOption {
 		// it might look like "serial:///dev/ttyUSB0" or "serial://COM7", so the
 		// actual payload will be either in url.Host or url.Path.
 		t, a = tSerial, url.Host+url.Path
+	case url.Scheme == codec.AzureDMURLScheme:
+		t, a = tAzureDM, url.String()
 	default:
 		return badConnectOption(errors.Errorf("invalid ConnectTo protocol %q", url.Scheme))
 	}

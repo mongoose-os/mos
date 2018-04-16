@@ -197,6 +197,7 @@ func (r *mgRPCImpl) serialConnect(
 }
 
 func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
+	var err error
 	r.opts = &connectOptions{}
 
 	for _, opt := range opts {
@@ -246,6 +247,11 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 				return errors.Trace(err)
 			}
 			r.codec = serialCodec
+		}
+	case tAzureDM:
+		if r.codec, err = codec.NewAzureDMCodec(
+			r.opts.connectAddress, &r.opts.codecOptions.AzureDM); err != nil {
+			return errors.Trace(err)
 		}
 
 	default:

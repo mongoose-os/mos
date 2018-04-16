@@ -16,12 +16,14 @@ import (
 )
 
 var (
-	certFile = ""
-	keyFile  = ""
-	caFile   = ""
+	azureConnectionString = ""
+	certFile              = ""
+	keyFile               = ""
+	caFile                = ""
 )
 
 func init() {
+	flag.StringVar(&azureConnectionString, "azure-connection-string", "", "Azure connection string")
 	flag.StringVar(&certFile, "cert-file", "", "Certificate file name")
 	flag.StringVar(&keyFile, "key-file", "", "Key file name")
 	flag.StringVar(&caFile, "ca-cert-file", "", "CA cert for TLS server verification")
@@ -78,6 +80,9 @@ func createDevConnWithJunkHandler(
 	}
 
 	codecOpts := &codec.Options{
+		AzureDM: codec.AzureDMCodecOptions{
+			ConnectionString: azureConnectionString,
+		},
 		MQTT: codec.MQTTCodecOptions{
 			LogCallback: logHandler,
 		},

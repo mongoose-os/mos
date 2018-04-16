@@ -31,8 +31,9 @@ type Codec interface {
 }
 
 type Options struct {
-	Serial SerialCodecOptions
-	MQTT   MQTTCodecOptions
+	AzureDM AzureDMCodecOptions
+	MQTT    MQTTCodecOptions
+	Serial  SerialCodecOptions
 }
 
 // ConnectionInfo provides information about the connection.
