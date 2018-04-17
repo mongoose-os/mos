@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,8 +10,6 @@ import (
 	"log"
 	"os"
 	"strings"
-
-	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/mgrpc2"
 )

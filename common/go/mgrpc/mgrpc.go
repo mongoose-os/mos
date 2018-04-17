@@ -1,6 +1,7 @@
 package mgrpc
 
 import (
+	"context"
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/tls"
@@ -11,8 +12,6 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"golang.org/x/net/websocket"
 
