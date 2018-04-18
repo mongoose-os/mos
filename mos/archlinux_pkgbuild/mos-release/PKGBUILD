@@ -1,11 +1,11 @@
-MOS_TAG=2.0
+MOS_TAG=2.1
 
 pkgname=mos
 pkgver=${MOS_TAG}
 pkgrel=2
 pkgdesc="Mongoose-OS build tool (latest)"
 arch=('i686' 'x86_64')
-license=('GPL')
+license=('Apache')
 url="https://mongoose-os.com/software.html"
 depends=('libftdi-compat' 'libusb')
 makedepends=(
