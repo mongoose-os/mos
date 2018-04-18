@@ -166,9 +166,11 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
+	// GCP does not support bi-di MQTT comms, RPC won't work.
+	// Turn off if it's present, don't fail if it isn't.
+	devConf.Set("rpc.mqtt.enable", "false")
+
 	newConf := map[string]string{
-		// GCP does not support bi-di MQTT comms, RPC won't work.
-		"rpc.mqtt.enable":  "false",
 		"sntp.enable":      "true",
 		"mqtt.enable":      "true",
 		"mqtt.server":      "mqtt.googleapis.com:8883",
