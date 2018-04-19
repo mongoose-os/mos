@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"time"
 
+	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/timestamp"
 
@@ -21,6 +26,7 @@ var (
 	hwFC            bool
 	setControlLines bool
 	tsfSpec         string
+	catchCoreDumps  bool
 )
 
 var (
@@ -33,6 +39,7 @@ func init() {
 		"Do not read from stdin, only print device's output to stdout")
 	flag.BoolVar(&hwFC, "hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
 	flag.BoolVar(&setControlLines, "set-control-lines", true, "Set RTS and DTR explicitly when in console/RPC mode")
+	flag.BoolVar(&catchCoreDumps, "catch-core-dumps", true, "Catch and save core dumps")
 
 	flag.StringVar(&tsfSpec, "timestamp", "StampMilli",
 		"Prepend each line with a timestamp in the specified format. A number of specifications are supported:"+
@@ -60,6 +67,41 @@ func FormatTimestampNow() string {
 		ts = fmt.Sprintf("[%s] ", timestamp.FormatTimestamp(time.Now(), tsFormat))
 	}
 	return ts
+}
+
+func printConsoleLine(out io.Writer, line []byte) {
+	if tsfSpec != "" {
+		fmt.Printf("%s", FormatTimestampNow())
+	}
+	removeNonText(line)
+	out.Write(line)
+}
+
+func analyzeCoreDump(out io.Writer, cd []byte) error {
+	arch := debug_core_dump.GetArchFromCoreDump(cd)
+	cdj := map[string]interface{}{}
+	if jerr := json.Unmarshal(cd, &cdj); jerr == nil {
+		if a, ok := cdj["arch"]; ok {
+			arch = a.(string)
+		}
+	}
+	tf, err := ioutil.TempFile("", fmt.Sprintf("mos-core-%s-%s", arch, time.Now().Format("20060102-150405.")))
+	if err != nil {
+		return errors.Annotatef(err, "failed open core dump file")
+	}
+	tfn := tf.Name()
+	tf.Write([]byte(debug_core_dump.CoreDumpStart))
+	tf.Write([]byte("\r\n"))
+	printConsoleLine(out, []byte(fmt.Sprintf("mos: wrote to %s (%d bytes)\n", tfn, len(cd))))
+	if _, err := tf.Write(cd); err != nil {
+		tf.Close()
+		return errors.Annotatef(err, "failed to write core dump to %s", tfn)
+	}
+	tf.Write([]byte("\r\n"))
+	tf.Write([]byte(debug_core_dump.CoreDumpEnd))
+	tf.Close()
+	printConsoleLine(out, []byte("mos: analyzing core dump\n"))
+	return debug_core_dump.DebugCoreDumpF(tfn, "", arch, true)
 }
 
 func console(ctx context.Context, devConn *dev.DevConn) error {
@@ -90,29 +132,63 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 
 	cctx, cancel := context.WithCancel(ctx)
 	go func() { // Serial -> Stdout
-		lineStart := true
+		var curLine []byte
+		var coreDump []byte
+		coreDumping := false
+
 		for {
 			buf := make([]byte, 100)
 			n, err := s.Read(buf)
-			if n > 0 {
-				removeNonText(buf[:n])
-				if tsfSpec != "" {
-					for i, b := range buf[:n] {
-						if lineStart {
-							fmt.Printf("%s", FormatTimestampNow())
-						}
-						out.Write(buf[i : i+1])
-						lineStart = (b == '\n')
-					}
-				} else {
-					out.Write(buf[:n])
-				}
-			}
 			if err != nil {
 				reportf("read err %s", err)
 				cancel()
 				return
 			}
+			if n <= 0 {
+				continue
+			}
+			buf = buf[:n]
+			for {
+				lf := bytes.IndexAny(buf, "\n")
+				if lf < 0 {
+					break
+				}
+				curLine = append(curLine, buf[:lf+1]...)
+				if catchCoreDumps {
+					tsl := bytes.TrimSpace(curLine)
+					if !coreDumping && bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpStart)) == 0 {
+						printConsoleLine(out, curLine)
+						printConsoleLine(out, []byte("mos: catching core dump\n"))
+						coreDumping = true
+						coreDump = nil
+					} else if coreDumping {
+						if bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpEnd)) == 0 {
+							coreDumping = false
+							printConsoleLine(out, curLine)
+							curLine = nil
+							if err := analyzeCoreDump(out, coreDump); err != nil {
+								printConsoleLine(out, []byte(fmt.Sprintf("mos: %s\n", err)))
+							}
+						} else {
+							// There should be no empty lines in the CD body.
+							// If we encounter an empty line, this meand device rebooted without finishing the CD.
+							if len(tsl) == 0 {
+								printConsoleLine(out, []byte("mos: core dump aborted\n"))
+								coreDumping = false
+								coreDump = nil
+							} else {
+								coreDump = append(coreDump, curLine...)
+							}
+						}
+					}
+				}
+				if !coreDumping && curLine != nil {
+					printConsoleLine(out, curLine)
+				}
+				curLine = nil
+				buf = buf[lf+1:]
+			}
+			curLine = append(curLine, buf...)
 		}
 	}()
 	go func() { // Stdin -> Serial

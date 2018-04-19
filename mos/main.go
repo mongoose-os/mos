@@ -21,6 +21,7 @@ import (
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/common/state"
 	"cesanta.com/mos/config"
+	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/fs"
 	"cesanta.com/mos/gcp"
@@ -121,6 +122,7 @@ func init() {
 		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true},
 		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
+		{"debug-core-dump", debug_core_dump.DebugCoreDump, `Debug a core dump`, nil, nil, false},
 		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
 		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, true},
 		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true},

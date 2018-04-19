@@ -20,10 +20,11 @@ const (
 
 // RunCmd prints the command it's about to execute, and executes it, with
 // stdout and stderr set to those of the current process.
-func RunCmd(outMode CmdOutMode, args ...string) error {
+func RunCmdWithInput(input io.Reader, outMode CmdOutMode, args ...string) error {
 	Reportf("Running %s", strings.Join(args, " "))
 
 	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdin = input
 	var so, se io.ReadCloser
 	switch outMode {
 	case CmdOutNever:
@@ -55,6 +56,10 @@ func RunCmd(outMode CmdOutMode, args ...string) error {
 	}
 
 	return nil
+}
+
+func RunCmd(outMode CmdOutMode, args ...string) error {
+	return RunCmdWithInput(nil, outMode, args...)
 }
 
 func GetCommandOutput(command string, args ...string) (string, error) {
