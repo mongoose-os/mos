@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -78,14 +77,8 @@ func printConsoleLine(out io.Writer, line []byte) {
 }
 
 func analyzeCoreDump(out io.Writer, cd []byte) error {
-	arch := debug_core_dump.GetArchFromCoreDump(cd)
-	cdj := map[string]interface{}{}
-	if jerr := json.Unmarshal(cd, &cdj); jerr == nil {
-		if a, ok := cdj["arch"]; ok {
-			arch = a.(string)
-		}
-	}
-	tf, err := ioutil.TempFile("", fmt.Sprintf("mos-core-%s-%s", arch, time.Now().Format("20060102-150405.")))
+	info, err := debug_core_dump.GetInfoFromCoreDump(cd)
+	tf, err := ioutil.TempFile("", fmt.Sprintf("core-%s-%s-%s", info.App, info.Platform, time.Now().Format("20060102-150405.")))
 	if err != nil {
 		return errors.Annotatef(err, "failed open core dump file")
 	}
@@ -101,7 +94,7 @@ func analyzeCoreDump(out io.Writer, cd []byte) error {
 	tf.Write([]byte(debug_core_dump.CoreDumpEnd))
 	tf.Close()
 	printConsoleLine(out, []byte("mos: analyzing core dump\n"))
-	return debug_core_dump.DebugCoreDumpF(tfn, "", arch, true)
+	return debug_core_dump.DebugCoreDumpF(tfn, "", true)
 }
 
 func console(ctx context.Context, devConn *dev.DevConn) error {

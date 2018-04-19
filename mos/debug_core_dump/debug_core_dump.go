@@ -120,7 +120,15 @@ func getFwELFFile() string {
 	return ""
 }
 
-func GetArchFromCoreDump(data []byte) string {
+type CoreDumpInfo struct {
+	App        string `json:"app"`
+	Platform   string `json:"arch"`
+	Version    string `json:"version"`
+	BuildID    string `json:"build_id"`
+	BuildImage string `json:"build_image"`
+}
+
+func GetInfoFromCoreDump(data []byte) (CoreDumpInfo, error) {
 	if cs := bytes.LastIndex(data, []byte(CoreDumpStart)); cs >= 0 {
 		data = data[cs+len(CoreDumpStart):]
 	}
@@ -129,37 +137,35 @@ func GetArchFromCoreDump(data []byte) string {
 	}
 	data = bytes.Replace(data, []byte("\r"), nil, -1)
 	data = bytes.Replace(data, []byte("\n"), nil, -1)
-	cdj := map[string]interface{}{}
-	if jerr := json.Unmarshal(data, &cdj); jerr == nil {
-		if a, ok := cdj["arch"]; ok {
-			return a.(string)
-		}
+	var info CoreDumpInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return info, errors.Annotatef(err, "core dump is not valid JSON object")
 	}
-	return ""
+	return info, nil
 }
 
-func getArchFromCoreDumpFile(cdFile string) string {
+func GetInfoFromCoreDumpFile(cdFile string) (CoreDumpInfo, error) {
 	data, err := ioutil.ReadFile(cdFile)
 	if err != nil {
-		return ""
+		return CoreDumpInfo{}, errors.Annotatef(err, "error reading file")
 	}
-	return GetArchFromCoreDump(data)
+	return GetInfoFromCoreDump(data)
 }
 
-func DebugCoreDumpF(cdFile, elfFile, platform string, traceOnly bool) error {
+func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	if cdFile == "" {
 		return errors.Errorf("cdFile is required")
 	}
-	if platform == "" {
-		platform = getArchFromCoreDumpFile(cdFile)
-		if platform == "" {
-			return errors.Errorf("--platform is not set and could not be guessed")
-		}
+	info, err := GetInfoFromCoreDumpFile(cdFile)
+	if err != nil {
+		return errors.Annotatef(err, "unable to parse %s", cdFile)
 	}
-	ourutil.Reportf("Using platform: %s", platform)
-	dp, ok := debugParams[strings.ToLower(platform)]
+	if info.App != "" {
+		ourutil.Reportf("Core dump by %s/%s %s %s", info.App, info.Platform, info.Version, info.BuildID)
+	}
+	dp, ok := debugParams[strings.ToLower(info.Platform)]
 	if !ok {
-		return errors.Errorf("don't know how to handle %q", platform)
+		return errors.Errorf("don't know how to handle %q", info.Platform)
 	}
 	if elfFile == "" {
 		elfFile = getFwELFFile()
@@ -168,7 +174,10 @@ func DebugCoreDumpF(cdFile, elfFile, platform string, traceOnly bool) error {
 		}
 	}
 	ourutil.Reportf("Using ELF file at: %s", elfFile)
-	dockerImage := dp.image
+	dockerImage := info.BuildImage
+	if dockerImage == "" {
+		dockerImage = dp.image
+	}
 	ourutil.Reportf("Using Docker image: %s", dockerImage)
 	cmd := []string{"docker", "run", "--rm"}
 	if !traceOnly {
@@ -217,5 +226,5 @@ func DebugCoreDump(ctx context.Context, _ *dev.DevConn) error {
 	if len(args) > 2 {
 		elfFile = args[2]
 	}
-	return DebugCoreDumpF(coreFile, elfFile, "", false /* traceOnly */)
+	return DebugCoreDumpF(coreFile, elfFile, false /* traceOnly */)
 }
