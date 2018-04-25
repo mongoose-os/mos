@@ -26,8 +26,8 @@ const (
 )
 
 var (
-	watsonAPIKeyFlag            = ""
-	watsonAPIAuthTokenFlag      = ""
+	WatsonAPIKeyFlag            = ""
+	WatsonAPIAuthTokenFlag      = ""
 	watsonOrgIDFlag             = ""
 	watsonDeviceTypeFlag        = ""
 	watsonDeviceIDFlag          = ""
@@ -37,8 +37,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&watsonAPIKeyFlag, "watson-api-key", "", "IBM cloud API key")
-	flag.StringVar(&watsonAPIAuthTokenFlag, "watson-api-auth-token", "", "IBM cloud API auth token")
+	flag.StringVar(&WatsonAPIKeyFlag, "watson-api-key", "", "IBM cloud API key")
+	flag.StringVar(&WatsonAPIAuthTokenFlag, "watson-api-auth-token", "", "IBM cloud API auth token")
 	flag.StringVar(&watsonOrgIDFlag, "watson-org-id", quickStartOrgID, "IBM cloud organization ID")
 	flag.StringVar(&watsonDeviceTypeFlag, "watson-device-type", mosDeviceType, "IBM cloud device type")
 	flag.StringVar(&watsonDeviceIDFlag, "watson-device-id", "", "IBM cloud device ID")
@@ -51,8 +51,8 @@ func getOrgID() string {
 	if watsonOrgIDFlag != quickStartOrgID {
 		return watsonOrgIDFlag
 	}
-	if watsonAPIKeyFlag != "" {
-		parts := strings.Split(watsonAPIKeyFlag, "-")
+	if WatsonAPIKeyFlag != "" {
+		parts := strings.Split(WatsonAPIKeyFlag, "-")
 		if len(parts) == 3 {
 			return parts[1]
 		}
@@ -146,7 +146,7 @@ func checkDeviceType(hostName, devType, apiKey, apiToken string) error {
 func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	var err error
 	orgID := getOrgID()
-	if orgID != quickStartOrgID && (watsonAPIKeyFlag == "" || watsonAPIAuthTokenFlag == "") {
+	if orgID != quickStartOrgID && (WatsonAPIKeyFlag == "" || WatsonAPIAuthTokenFlag == "") {
 		return errors.Errorf("Org ID is provided but API key and auth token are not set")
 	}
 
@@ -189,7 +189,7 @@ func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	devType := watsonDeviceTypeFlag
 	authToken := watsonDeviceAuthTokenFlag
 	if orgID != quickStartOrgID {
-		if err := checkDeviceType(apiHostName, devType, watsonAPIKeyFlag, watsonAPIAuthTokenFlag); err != nil {
+		if err := checkDeviceType(apiHostName, devType, WatsonAPIKeyFlag, WatsonAPIAuthTokenFlag); err != nil {
 			return errors.Trace(err)
 		}
 		kb := make([]byte, 16)
@@ -204,18 +204,18 @@ func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 				DeviceClass: "Device",
 			},
 		}
-		code, err := watsonAPICall("POST", apiHostName, watsonAPIKeyFlag, watsonAPIAuthTokenFlag,
+		code, err := watsonAPICall("POST", apiHostName, WatsonAPIKeyFlag, WatsonAPIAuthTokenFlag,
 			fmt.Sprintf("/device/types/%s/devices", devType), &dcr, nil)
 		if err != nil && code != 409 {
 			return errors.Annotatef(err, "failed to create device %q", devID)
 		} else if code == 409 {
-			ourutil.Reportf("  Already exists, deleting...", devID)
-			if _, err := watsonAPICall("DELETE", apiHostName, watsonAPIKeyFlag, watsonAPIAuthTokenFlag,
+			ourutil.Reportf("  Already exists, deleting...")
+			if _, err := watsonAPICall("DELETE", apiHostName, WatsonAPIKeyFlag, WatsonAPIAuthTokenFlag,
 				fmt.Sprintf("/device/types/%s/devices/%s", devType, devID), nil, nil); err != nil {
 				return errors.Annotatef(err, "failed to delete device %q", devID)
 			}
 			ourutil.Reportf("  Re-creating...")
-			if _, err := watsonAPICall("POST", apiHostName, watsonAPIKeyFlag, watsonAPIAuthTokenFlag,
+			if _, err := watsonAPICall("POST", apiHostName, WatsonAPIKeyFlag, WatsonAPIAuthTokenFlag,
 				fmt.Sprintf("/device/types/%s/devices", devType), &dcr, nil); err != nil {
 				return errors.Annotatef(err, "failed to re-create the device %q", devID)
 			}
@@ -230,6 +230,13 @@ func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	if authToken != "" {
 		newConf["watson.token"] = authToken
+	}
+
+	// If the firmware is compiler with RPC over MQTT support, configure it to work with Watson.
+	if _, err := devConf.Get("rpc.mqtt"); err == nil {
+		newConf["rpc.mqtt.pub_topic"] = "iot-2/evt/mgrpc-%.*s/fmt/json"
+		newConf["rpc.mqtt.sub_topic"] = "iot-2/cmd/mgrpc-%.*s/fmt/json"
+		newConf["rpc.mqtt.sub_wc"] = "false"
 	}
 
 	if err = config.ApplyDiff(devConf, newConf); err != nil {

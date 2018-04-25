@@ -4,9 +4,9 @@ package mgrpc
 
 import "fmt"
 
-const _transport_name = "tHTTP_POSTtWebSockettPlainTCPtSerialtMQTTtAzureDM"
+const _transport_name = "tHTTP_POSTtWebSockettPlainTCPtSerialtMQTTtAzureDMtWatson"
 
-var _transport_index = [...]uint8{0, 10, 20, 29, 36, 41, 49}
+var _transport_index = [...]uint8{0, 10, 20, 29, 36, 41, 49, 56}
 
 func (i transport) String() string {
 	if i < 0 || i >= transport(len(_transport_index)-1) {

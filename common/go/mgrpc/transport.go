@@ -18,4 +18,5 @@ const (
 	tSerial
 	tMQTT
 	tAzureDM
+	tWatson
 )

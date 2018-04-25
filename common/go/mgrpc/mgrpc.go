@@ -158,6 +158,10 @@ func (r *mgRPCImpl) mqttConnect(dst string, opts *connectOptions) (codec.Codec, 
 	return codec.MQTT(dst, opts.tlsConfig, &opts.codecOptions.MQTT)
 }
 
+func (r *mgRPCImpl) watsonConnect(dst string, opts *connectOptions) (codec.Codec, error) {
+	return codec.NewWatsonCodec(dst, opts.tlsConfig, &opts.codecOptions.Watson)
+}
+
 func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, error) {
 	// TODO(imax): figure out what we should use as origin and what to check on the server side.
 	const origin = "https://api.cesanta.com/"
@@ -252,6 +256,14 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 			r.opts.connectAddress, &r.opts.codecOptions.AzureDM); err != nil {
 			return errors.Trace(err)
 		}
+
+	case tWatson:
+		r.codec = codec.NewReconnectWrapperCodec(
+			r.opts.connectAddress,
+			func(url string) (codec.Codec, error) {
+				c, err := r.watsonConnect(url, r.opts)
+				return c, errors.Trace(err)
+			})
 
 	default:
 		return fmt.Errorf("unknown transport %q", r.opts.proto)

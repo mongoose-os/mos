@@ -12,6 +12,7 @@ import (
 
 	"cesanta.com/common/go/mgrpc/codec"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/watson"
 	"github.com/cesanta/errors"
 )
 
@@ -93,6 +94,10 @@ func createDevConnWithJunkHandler(
 			SendChunkDelay:       5 * time.Millisecond,
 			SetControlLines:      setControlLines,
 			InvertedControlLines: *invertedControlLines,
+		},
+		Watson: codec.WatsonCodecOptions{
+			APIKey:       watson.WatsonAPIKeyFlag,
+			APIAuthToken: watson.WatsonAPIAuthTokenFlag,
 		},
 	}
 	devConn, err := c.CreateDevConnWithOpts(ctx, addr, *reconnect, tlsConfig, codecOpts)

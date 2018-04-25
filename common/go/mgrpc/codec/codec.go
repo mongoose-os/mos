@@ -34,6 +34,7 @@ type Options struct {
 	AzureDM AzureDMCodecOptions
 	MQTT    MQTTCodecOptions
 	Serial  SerialCodecOptions
+	Watson  WatsonCodecOptions
 }
 
 // ConnectionInfo provides information about the connection.

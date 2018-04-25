@@ -18,18 +18,26 @@ import (
 )
 
 type MQTTCodecOptions struct {
+	// Note: user:password in the connect URL, if set, will take precedence over these.
+	User        string
+	Password    string
+	ClientID    string
+	PubTopic    string
+	SubTopic    string
+	Src         string
 	LogCallback func(topic string, data []byte)
 }
 
 type mqttCodec struct {
+	src         string
 	dst         string
 	closeNotify chan struct{}
 	ready       chan struct{}
 	rchan       chan frame.Frame
-	clientID    string
 	cli         mqtt.Client
 	closeOnce   sync.Once
 	isTLS       bool
+	pubTopic    string
 }
 
 func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error) {
@@ -38,23 +46,36 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 		return nil, errors.Trace(err)
 	}
 
-	clientID := fmt.Sprintf("mos-%v", time.Now().Unix())
+	clientID := co.ClientID
+	if clientID == "" {
+		clientID = fmt.Sprintf("mos-%v", time.Now().Unix())
+	}
 
 	c := &mqttCodec{
 		dst:         u.Path[1:],
 		closeNotify: make(chan struct{}),
 		ready:       make(chan struct{}),
 		rchan:       make(chan frame.Frame),
-		clientID:    clientID,
+		src:         co.Src,
+		pubTopic:    co.PubTopic,
+	}
+	if c.src == "" {
+		c.src = clientID
 	}
 
 	u.Path = ""
 	if u.Scheme == "mqtts" {
 		u.Scheme = "tcps"
 		c.isTLS = true
+		if u.Port() == "" {
+			u.Host = fmt.Sprintf("%s:%d", u.Host, 8883)
+		}
 	} else {
 		u.Scheme = "tcp"
 		c.isTLS = false
+		if u.Port() == "" {
+			u.Host = fmt.Sprintf("%s:%d", u.Host, 1883)
+		}
 	}
 	broker := u.String()
 	glog.V(1).Infof("Connecting %s to %s", clientID, broker)
@@ -62,13 +83,17 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(broker)
 	opts.SetClientID(clientID)
+	user := co.User
+	pass := co.Password
 	if u.User != nil {
-		opts.SetUsername(u.User.Username())
+		user = u.User.Username()
 		passwd, isset := u.User.Password()
 		if isset {
-			opts.SetPassword(passwd)
+			pass = passwd
 		}
 	}
+	opts.SetUsername(user)
+	opts.SetPassword(pass)
 	if tlsConfig != nil {
 		opts.SetTLSConfig(tlsConfig)
 	}
@@ -81,18 +106,21 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 		return nil, errors.Annotatef(err, "MQTT connect error")
 	}
 
-	topic := fmt.Sprintf("%s/rpc", clientID)
-	glog.V(1).Infof("Subscribing to [%s]", topic)
-	token = c.cli.Subscribe(topic, 1 /* qos */, c.onMessage)
+	subTopic := co.SubTopic
+	if subTopic == "" {
+		subTopic = fmt.Sprintf("%s/rpc", clientID)
+	}
+	glog.V(1).Infof("Subscribing to [%s]", subTopic)
+	token = c.cli.Subscribe(subTopic, 1 /* qos */, c.onMessage)
 	token.Wait()
 	if err := token.Error(); err != nil {
 		return nil, errors.Annotatef(err, "MQTT subscribe error")
 	}
 
 	if co.LogCallback != nil {
-		topic = fmt.Sprintf("%s/log", c.dst)
-		glog.V(1).Infof("Subscribing to [%s]", topic)
-		token = c.cli.Subscribe(topic, 1 /* qos */, func(cli mqtt.Client, msg mqtt.Message) {
+		logTopic := fmt.Sprintf("%s/log", c.dst)
+		glog.V(1).Infof("Subscribing to [%s]", logTopic)
+		token = c.cli.Subscribe(logTopic, 1 /* qos */, func(cli mqtt.Client, msg mqtt.Message) {
 			glog.V(4).Infof("Got MQTT message, topic [%s], message [%s]", msg.Topic(), msg.Payload())
 			co.LogCallback(msg.Topic(), msg.Payload())
 		})
@@ -117,7 +145,7 @@ func (c *mqttCodec) onMessage(cli mqtt.Client, msg mqtt.Message) {
 
 func (c *mqttCodec) onConnectionLost(cli mqtt.Client, err error) {
 	glog.Errorf("Lost conection to MQTT broker: %s", err)
-	close(c.closeNotify)
+	c.Close()
 }
 
 func (c *mqttCodec) Close() {
@@ -158,7 +186,7 @@ func (c *mqttCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 }
 
 func (c *mqttCodec) Send(ctx context.Context, f *frame.Frame) error {
-	f.Src = c.clientID
+	f.Src = c.src
 	msg, err := json.Marshal(f)
 	if err != nil {
 		return errors.Trace(err)
@@ -166,7 +194,10 @@ func (c *mqttCodec) Send(ctx context.Context, f *frame.Frame) error {
 	if f.Dst == "" {
 		f.Dst = c.dst
 	}
-	topic := fmt.Sprintf("%s/rpc", f.Dst)
+	topic := c.pubTopic
+	if topic == "" {
+		topic = fmt.Sprintf("%s/rpc", f.Dst)
+	}
 	glog.V(4).Infof("Sending [%s] to [%s]", msg, topic)
 	token := c.cli.Publish(topic, 1 /* qos */, false /* retained */, msg)
 	token.Wait()

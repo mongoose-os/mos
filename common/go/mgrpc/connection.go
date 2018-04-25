@@ -100,6 +100,8 @@ func connectTo(connectURL string) ConnectOption {
 		t, a = tSerial, url.Host+url.Path
 	case url.Scheme == codec.AzureDMURLScheme:
 		t, a = tAzureDM, url.String()
+	case url.Scheme == codec.WatsonURLScheme:
+		t, a = tWatson, url.String()
 	default:
 		return badConnectOption(errors.Errorf("invalid ConnectTo protocol %q", url.Scheme))
 	}
