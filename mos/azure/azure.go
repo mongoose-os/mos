@@ -238,6 +238,10 @@ func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.NotImplementedf("shared_private_key auth method")
 	}
 
+	// Azure does not support bi-di MQTT comms, RPC won't work.
+	// Turn off if it's present, don't fail if it isn't.
+	devConf.Set("rpc.mqtt.enable", "false")
+
 	if err := config.ApplyDiff(devConf, newConf); err != nil {
 		return errors.Trace(err)
 	}
