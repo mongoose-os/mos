@@ -786,10 +786,16 @@
 			"revisionTime": "2017-09-01T16:16:44Z"
 		},
 		{
-			"checksumSHA1": "eQq+ZoTWPjyizS9XalhZwfGjQao=",
+			"checksumSHA1": "+mZiO0TdI05VboObjo18vs4sEbg=",
 			"path": "golang.org/x/sys/windows",
-			"revision": "af50095a40f9041b3b38960738837185c26e9419",
-			"revisionTime": "2018-01-19T16:06:40Z"
+			"revision": "d0faeb539838e250bd0a9db4182d48d4a1915181",
+			"revisionTime": "2018-05-11T14:37:04Z"
+		},
+		{
+			"checksumSHA1": "uCpbmktijfpv9WhfAH3VTHu9GKA=",
+			"path": "golang.org/x/sys/windows/registry",
+			"revision": "d0faeb539838e250bd0a9db4182d48d4a1915181",
+			"revisionTime": "2018-05-11T14:37:04Z"
 		},
 		{
 			"checksumSHA1": "ZQdHbB9VYCXwQ+9/CmZPhJv0+SM=",

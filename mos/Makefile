@@ -1,6 +1,9 @@
-.PHONY: build clean deploy deploy-fwbuild deploy-mos-binary downloads generate install dmg
+.PHONY: all all-downloads build clean deploy deploy-fwbuild deploy-mos-binary dmg downloads generate install linux mac win
 
 TAG ?= latest
+
+OUTDIR ?= $(CURDIR)
+TMP_GOPATH ?= ~/tmp/mos_gopath
 
 all: build
 
@@ -30,26 +33,38 @@ install: generate
 
 linux: generate
 	docker run -i --rm \
-    -v $${GOPATH%%:*}/src:/go/src \
-    -v $$(pwd):/out \
-    docker.cesanta.com/gobuild32 \
-    -tags 'netgo' \
-    -o /out/downloads/mos/linux/mos -tags no_libudev --ldflags '-extldflags "-static"' \
-    cesanta.com/mos
+	  -v $${GOPATH%%:*}/src:/go/src \
+	  -v $(OUTDIR):/out \
+	  docker.cesanta.com/gobuild32 \
+	    -tags 'netgo' \
+	    -o /out/downloads/mos/linux/mos -tags no_libudev --ldflags '-extldflags "-static"' \
+	    cesanta.com/mos
 
 mac: generate
 	brew install libftdi libusb-compat pkg-config
-	go build -o downloads/mos/mac/mos
+	go build -o $(OUTDIR)/downloads/mos/mac/mos
 
 
 win: generate
-	set -x ; docker run -i --rm \
-    -v /$$(cd ../.. && pwd):/go/src \
-    -v /$$(pwd):/out \
-    docker.cesanta.com/gobuild-mingw \
-    bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
+	docker run -i --rm \
+	  -v $${GOPATH%%:*}/src:/go/src \
+	  -v $(OUTDIR):/out \
+	docker.cesanta.com/gobuild-mingw \
+	  bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc \
+	           go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
 
-downloads: linux mac win dmg
+# Set up GOPATH on the side and build there. Because Go is awesome.
+downloads: clean
+	@[ `uname -s` == "Darwin" ] || \
+	  { echo Can only build downloads on a Mac, this is `uname -s`; \
+	   exit 1; }
+	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src
+	rsync -a $(CURDIR)/../ $(TMP_GOPATH)/src/cesanta.com/
+	cd $(TMP_GOPATH)/src/cesanta.com && GOPATH=$(TMP_GOPATH) govendor sync -v
+	cd $(TMP_GOPATH)/src/cesanta.com/mos && \
+	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
+
+all-downloads: dmg linux win
 	cp version/version.json downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
@@ -69,7 +84,7 @@ dmg: mac
 	mkdir -p $(DMGDIR)/Contents/{MacOS,Resources}
 	install -m 644 $(APPNAME).icns $(DMGDIR)/Contents/Resources/
 	install -m 644 Info.plist $(DMGDIR)/Contents/
-	install -m 755 downloads/mos/mac/mos $(DMGDIR)/Contents/MacOS/_$(APPNAME)
+	install -m 755 $(OUTDIR)/downloads/mos/mac/mos $(DMGDIR)/Contents/MacOS/_$(APPNAME)
 	install -m 755 downloads/mos/libusb-1.0.0.dylib $(DMGDIR)/Contents/MacOS/
 	install -m 755 downloads/mos/libftdi1.2.dylib  $(DMGDIR)/Contents/MacOS/
 	install -m 755 mac_app_wrapper.sh $(DMGDIR)/Contents/MacOS/$(APPNAME)
@@ -77,7 +92,7 @@ dmg: mac
 	hdiutil create a.dmg -volname mos -srcfolder dmg -ov
 	mkdir -p downloads/mos/dmg
 	hdiutil convert a.dmg -format UDRW -o downloads/mos/dmg/mos.dmg
-	rm -rf a.dmg
+	rm -rf a.dmg dmg
 
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version/version.*
+	rm -rf dmg mos_* mos.exe mos gobuild-cache downloads/mos/{dmg,mac,linux,win} version/version.*
