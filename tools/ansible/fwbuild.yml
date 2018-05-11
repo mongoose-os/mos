@@ -2,7 +2,6 @@
 
 - hosts: fwbuild
   gather_facts: no
-  become_user: root
 
   roles:
     - role: fwbuild
