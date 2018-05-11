@@ -61,6 +61,7 @@ downloads: clean
 	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src
 	rsync -a $(CURDIR)/../ $(TMP_GOPATH)/src/cesanta.com/
 	cd $(TMP_GOPATH)/src/cesanta.com && GOPATH=$(TMP_GOPATH) govendor sync -v
+	rsync -a --delete $(TMP_GOPATH)/src/cesanta.com/vendor/ $(CURDIR)/../vendor/
 	cd $(TMP_GOPATH)/src/cesanta.com/mos && \
 	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
 
