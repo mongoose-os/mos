@@ -18,8 +18,7 @@ generate version/version.go version/version.json:
 	} || rm -f version/version version/build_id
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-	@go generate . ./flash/cc3220 ./version
-	@gofmt -w bindata_assetfs.go flash/cc3220/bindata.go
+	@go generate ./...
 	@cat version/version.json
 	@echo
 
@@ -56,11 +55,11 @@ downloads: linux mac win dmg
 deploy: deploy-fwbuild deploy-mos-binary
 
 deploy-fwbuild: generate
-	cd ../prod && \
+	cd ../tools/ansible && \
     ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
 
 deploy-mos-binary: generate
-	cd ../prod && \
+	cd ../tools/ansible && \
     ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos
 
 APPNAME = mos
@@ -81,4 +80,4 @@ dmg: mac
 	rm -rf a.dmg
 
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version/version.*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/ version/version.*
