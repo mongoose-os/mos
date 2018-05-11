@@ -1,0 +1,20 @@
+- name: Create cron script wrappers directory
+  file: path=/etc/systemd/cron-scripts state=directory
+
+- name: "{{ name }}: create service"
+  template: src=include/systemd_cron/templates/job.service dest=/etc/systemd/system/{{ name }}.service
+
+- name: "{{ name }}: create timer ({{ time }})"
+  template: src=include/systemd_cron/templates/job.timer   dest=/etc/systemd/system/{{ name }}.timer
+
+- name: "{{ name }}: create wrapper"
+  template: src=include/systemd_cron/templates/job.sh      dest=/etc/systemd/cron-scripts/{{ name }}.sh mode=u+rwx
+
+- name: "{{ name }}: enable timer"
+  service: name={{ name }}.timer state=started enabled=yes
+
+- name: "{{ name }}: pin timer"
+  lineinfile: dest=/etc/systemd/system-preset/90-our.preset line="enable {{name}}.timer" create=yes mode=0644
+
+- name: "{{ name }}: pin timer service"
+  lineinfile: dest=/etc/systemd/system-preset/90-our.preset line="enable {{name}}.service" create=yes mode=0644

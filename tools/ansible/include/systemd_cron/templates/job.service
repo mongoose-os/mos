@@ -1,0 +1,6 @@
+[Unit]
+Description={{ name }}
+
+[Service]
+Type=oneshot
+ExecStart=/etc/systemd/cron-scripts/{{ name }}.sh

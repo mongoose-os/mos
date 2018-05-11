@@ -1,0 +1,9 @@
+[Unit]
+Description=Runs {{ name }}.service
+
+[Timer]
+OnCalendar={{ time }}
+Unit={{ name }}.service
+
+[Install]
+WantedBy=multi-user.target
