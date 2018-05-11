@@ -6,14 +6,8 @@
   * From the root of the dev repo, invoke:
 
 ```bash
-$ git clean -fdx mos
-$ python tools/deploy_mos.py
+$ tools/deploy_mos.py
 ```
-
-    Cleaning mos dir is needed because mac builds might fail if there are
-    some leftovers from the previous builds.
-    TODO: make it unnecessary.
-
   * Done!
 
 # How to cut a release
@@ -57,8 +51,7 @@ $ python tools/make_release_tags.py X.XX
   * From the root of the dev repo, invoke:
 
 ```bash
-$ git clean -fdx mos
-$ python tools/deploy_mos.py --release-tag X.XX
+$ tools/deploy_mos.py --release-tag X.XX
 ```
 
   * Restore publishing service on the CI machine:

@@ -70,11 +70,11 @@ all-downloads: dmg linux win
 
 deploy: deploy-fwbuild deploy-mos-binary
 
-deploy-fwbuild: generate
+deploy-fwbuild:
 	cd ../tools/ansible && \
     ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
 
-deploy-mos-binary: generate
+deploy-mos-binary: downloads
 	cd ../tools/ansible && \
     ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos
 
