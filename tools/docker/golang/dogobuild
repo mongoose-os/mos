@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # The gobuild tool builds a Go main package and
 # puts it in a docker image. The Go package must live
@@ -12,6 +12,9 @@
 #
 # NOTE: only the first component of the GOPATH is considered.
 #
+
+set -e
+
 IMAGE=${1}
 PKG=${2}
 DOCKERFILE=${3}
@@ -47,12 +50,20 @@ cp ${DOCKERFILE} "${TMPDIR}/"
 
 set -x
 
+docker pull ${GOBUILD_IMAGE}
 docker run -i --rm \
        -v "${TMPDIR}:/out" \
-       -v ${GOPATH%%:*}/src:/go/src \
+       -v $(realpath ../../..):/go/src/cesanta.com \
+       -v /tmp/gobuild-cache:/go/pkg \
+       --entrypoint /bin/bash \
+       ${GOBUILD_IMAGE} \
+       -c "cd /go/src/cesanta.com && govendor sync -v"
+docker run -i --rm \
+       -v "${TMPDIR}:/out" \
+       -v $(realpath ../../..):/go/src/cesanta.com \
        -v /tmp/gobuild-cache:/go/pkg \
        ${GOBUILD_IMAGE} \
-       -o /out/`basename "${PKG}"` ${GOBUILD_ARGS} ${PKG}
+       -v -o /out/`basename "${PKG}"` ${GOBUILD_ARGS} ${PKG}
 
 # The dockerfile has to be under the current directory
 cd "${TMPDIR}"
