@@ -41,7 +41,7 @@ linux: generate
 	    cesanta.com/mos
 
 mac: generate
-	brew install libftdi libusb-compat pkg-config
+	brew install coreutils libftdi libusb-compat pkg-config
 	go build -o $(OUTDIR)/downloads/mos/mac/mos
 
 

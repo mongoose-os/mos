@@ -148,12 +148,12 @@ if __name__ == "__main__":
 
     for i, distr in enumerate(UBUNTU_VERSIONS):
         RunSubprocess(
-                ["/bin/bash", build_deb_path, deb_package, distr, myargs.release_tag]
+                ["/bin/bash", BUILD_DEB_PATH, deb_package, distr, myargs.release_tag]
         )
 
     for i, distr in enumerate(UBUNTU_VERSIONS):
         RunSubprocess(
-                ["/bin/bash", upload_deb_path, deb_package, distr],
+                ["/bin/bash", UPLOAD_DEB_PATH, deb_package, distr],
                 communicator=UploaderComm
         )
 
