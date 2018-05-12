@@ -91,8 +91,8 @@ dmg: mac
 	install -m 755 mac_app_wrapper.sh $(DMGDIR)/Contents/MacOS/$(APPNAME)
 	ln -fs /Applications dmg/
 	hdiutil create a.dmg -volname mos -srcfolder dmg -ov
-	mkdir -p downloads/mos/dmg
-	hdiutil convert a.dmg -format UDRW -o downloads/mos/dmg/mos.dmg
+	mkdir -p $(OUTDIR)/downloads/mos/dmg
+	hdiutil convert a.dmg -format UDRW -o $(OUTDIR)/downloads/mos/dmg/mos.dmg
 	rm -rf a.dmg dmg
 
 clean:
