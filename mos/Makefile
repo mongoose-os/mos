@@ -76,7 +76,7 @@ deploy-fwbuild:
 
 deploy-mos-binary: downloads
 	cd ../tools/ansible && \
-    ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos
+    ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t mos
 
 APPNAME = mos
 DMGDIR = dmg/$(APPNAME).app
