@@ -231,6 +231,7 @@ func (c *client) run() {
 				}
 				if err := c.broker.auth(c.id, c.username, c.password); err != nil {
 					c.writePacket(connack<<4, []byte{0, 4})
+					return
 				}
 			}
 			c.writePacket(connack<<4, []byte{0, 0})
