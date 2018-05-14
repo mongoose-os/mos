@@ -105,21 +105,6 @@ if __name__ == "__main__":
         print("This tool must be run from a mos-tool repo")
         exit(1)
 
-    if myargs.release_tag != "":
-        deb_package = "mos"
-        tag_effective = myargs.release_tag
-
-        # Make sure that the user didn't forget to stop publishing and make release tags.
-        r = input("You made sure that publishing finished and stopped the timer, right? [y|N] ")
-        if r != "y":
-            print("I'm glad I asked. Go do that then.")
-            exit(1)
-
-        r = input("You ran 'tools/make_release_tags.py --release-tag %s' already, right? [y|N] " % tag_effective)
-        if r != "y":
-            print("I'm glad I asked. Go do that then.")
-            exit(1)
-
     try:
         os.stat(GPG_KEY_PATH)
     except Exception:
@@ -143,13 +128,23 @@ if __name__ == "__main__":
     print("Ok, passphrase is correct")
 
     if myargs.release_tag != "":
-        print("BOOM! Sorry, this is not ready yet.")
-        exit(1)
+        deb_package = "mos"
+        tag_effective = myargs.release_tag
 
-    else:
-        if platform == "mac":
-            RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
-        RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
+        # Make sure that the user didn't forget to stop publishing and make release tags.
+        r = input("You made sure that publishing finished and stopped the timer, right? [y|N] ")
+        if r != "y":
+            print("I'm glad I asked. Go do that then.")
+            exit(1)
+
+        r = input("You ran 'tools/make_release_tags.py --release-tag %s' already, right? [y|N] " % tag_effective)
+        if r != "y":
+            print("I'm glad I asked. Go do that then.")
+            exit(1)
+
+    if platform == "mac":
+        RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
+    RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
 
     for i, distr in enumerate(UBUNTU_VERSIONS):
         RunSubprocess(
