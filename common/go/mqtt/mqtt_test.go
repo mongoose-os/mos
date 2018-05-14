@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 
@@ -150,6 +151,68 @@ func TestQoS1(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("timeout")
 	}
+}
+
+func TestWill(t *testing.T) {
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	broker := NewBroker(nil)
+	go broker.Run(ln)
+
+	opts := MQTT.NewClientOptions().AddBroker("tcp://" + ln.Addr().String())
+	c := MQTT.NewClient(opts)
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		t.Fatal(token.Error())
+	}
+
+	msgc := make(chan MQTT.Message, 1)
+	if token := c.Subscribe("test/bye", 1, func(c MQTT.Client, m MQTT.Message) {
+		msgc <- m
+	}); token.Wait() && token.Error() != nil {
+		t.Fatal(token.Error())
+	}
+
+	go func() {
+		opts := MQTT.NewClientOptions().AddBroker("tcp://" + ln.Addr().String())
+		opts.SetWill("test/bye", "goodbye!", 0, false)
+		c := MQTT.NewClient(opts)
+		if token := c.Connect(); token.Wait() && token.Error() != nil {
+			t.Fatal(token.Error())
+		}
+		c.Disconnect(250)
+	}()
+
+	select {
+	case m := <-msgc:
+		if m.Topic() != "test/bye" || string(m.Payload()) != "goodbye!" {
+			t.Fatal(m)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timeout")
+	}
+}
+
+func TestWebsocket(t *testing.T) {
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	h := &WebSocketHandler{}
+	http.Handle("/ws", h)
+	go http.Serve(ln, nil)
+	broker := NewBroker(nil)
+	go broker.Run(h)
+
+	opts := MQTT.NewClientOptions().AddBroker("ws://" + ln.Addr().String() + "/ws")
+	c := MQTT.NewClient(opts)
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		t.Fatal(token.Error())
+	}
+	defer c.Disconnect(250)
 }
 
 func TestHooks(t *testing.T) {

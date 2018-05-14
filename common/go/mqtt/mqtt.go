@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"golang.org/x/net/websocket"
 )
 
 type AuthFunc func(id, username, password string) error
@@ -23,9 +26,14 @@ type Hooks struct {
 	Subscribe SubscribeFunc
 }
 
+// Accepter waits for and returns the next connection to the listener
+type Accepter interface {
+	Accept() (net.Conn, error)
+}
+
 // Broker is a Pub/Sub message forwarder for MQTT protocol.
 type Broker interface {
-	Run(l net.Listener) error
+	Run(l Accepter) error
 	Publish(topic string, payload []byte)
 }
 
@@ -42,13 +50,15 @@ type broker struct {
 }
 
 type client struct {
-	broker   *broker
-	conn     net.Conn
-	id       string
-	username string
-	password string
-	subAlias map[string]string
-	pubAlias map[string]string
+	broker      *broker
+	conn        net.Conn
+	id          string
+	username    string
+	password    string
+	willTopic   string
+	willMessage string
+	subAlias    map[string]string
+	pubAlias    map[string]string
 }
 
 type pendingMsg struct {
@@ -72,7 +82,7 @@ func NewBroker(hooks *Hooks) Broker {
 	return brk
 }
 
-func (b *broker) Run(l net.Listener) error {
+func (b *broker) Run(l Accepter) error {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -211,24 +221,32 @@ func (c *client) run() {
 				return
 			}
 			flags := data[protoLen+3]
-			if c.broker.auth != nil && (flags&0xfc) != 0xc0 {
+			fields := []*string{&c.id}
+			if flags&(1<<2) != 0 {
+				fields = append(fields, &c.willTopic, &c.willMessage)
+			}
+			if flags&0xfc == 0xc0 {
+				fields = append(fields, &c.username, &c.password)
+			} else if c.broker.auth != nil {
 				c.writePacket(connack<<4, []byte{0, 5})
-				return
 			}
 			data := data[protoLen+6:]
-			if c.broker.auth != nil {
-				c.id, c.username, c.password = "", "", ""
-				for _, s := range []*string{&c.id, &c.username, &c.password} {
-					if len(data) < 2 {
-						return
-					}
-					n := int(data[0])*256 + int(data[1])
-					if len(data) < 2+n {
-						return
-					}
-					*s = string(data[2 : 2+n])
-					data = data[2+n:]
+			c.id, c.username, c.password, c.willTopic, c.willMessage = "", "", "", "", ""
+			for _, s := range fields {
+				if len(data) < 2 {
+					return
 				}
+				n := int(data[0])*256 + int(data[1])
+				if len(data) < 2+n {
+					return
+				}
+				*s = string(data[2 : 2+n])
+				data = data[2+n:]
+			}
+			if c.willTopic != "" {
+				defer c.broker.Publish(c.willTopic, []byte(c.willMessage))
+			}
+			if c.broker.auth != nil {
 				if err := c.broker.auth(c.id, c.username, c.password); err != nil {
 					c.writePacket(connack<<4, []byte{0, 4})
 					return
@@ -333,7 +351,9 @@ func (c *client) run() {
 		case puback:
 			bid := int(data[0])*256 + int(data[1])
 			pub, id := c.broker.dequeue(bid)
-			pub.writePacket(puback<<4, []byte{byte(id >> 8), byte(id)})
+			if pub != nil {
+				pub.writePacket(puback<<4, []byte{byte(id >> 8), byte(id)})
+			}
 		case pingreq:
 			c.writePacket(pingresp<<4, nil)
 		case disconnect:
@@ -377,4 +397,26 @@ func (c *client) publish(header byte, msgID int, topic string, payload []byte) e
 	msg = append([]byte(topic), msg...)
 	msg = append([]byte{byte(len(topic) >> 8), byte(len(topic))}, msg...)
 	return c.writePacket(header, msg)
+}
+
+type WebSocketHandler struct {
+	once sync.Once
+	c    chan net.Conn
+}
+
+func (h *WebSocketHandler) init() {
+	h.once.Do(func() { h.c = make(chan net.Conn) })
+}
+
+func (h *WebSocketHandler) Accept() (net.Conn, error) {
+	h.init()
+	return <-h.c, nil
+}
+
+func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	websocket.Handler(func(ws *websocket.Conn) {
+		h.c <- ws
+		<-ws.Request().Context().Done()
+	}).ServeHTTP(w, r)
 }
