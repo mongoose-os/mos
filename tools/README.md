@@ -30,13 +30,8 @@ $ sudo systemctl stop publish_repos.timer
     releases for the new version (from the dev repo root)
 
 ```bash
-$ python tools/make_release_tags.py X.XX
+$ tools/make_release_tags.py --release-tag X.XX
 ```
-
-    It really works much better with fast Internet, because it has to download
-    a ton of (latest) released binaries from github and re-upload them for
-    the newly created releases. So, do that from your home machine, not from
-    the mac-builder in the office.
 
   * Previous command has created a tag X.XX on all our repos. Now you need to
     provide a release notes at least on mongoose-os and mos-tool repos; for

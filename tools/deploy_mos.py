@@ -109,8 +109,13 @@ if __name__ == "__main__":
         deb_package = "mos"
         tag_effective = myargs.release_tag
 
-        # Make sure that the user didn't forget to make release tags
-        r = input("You ran 'tools/make_release_tags.py %s' already, right? [y|N]" % tag_effective)
+        # Make sure that the user didn't forget to stop publishing and make release tags.
+        r = input("You made sure that publishing finished and stopped the timer, right? [y|N] ")
+        if r != "y":
+            print("I'm glad I asked. Go do that then.")
+            exit(1)
+
+        r = input("You ran 'tools/make_release_tags.py --release-tag %s' already, right? [y|N] " % tag_effective)
         if r != "y":
             print("I'm glad I asked. Go do that then.")
             exit(1)
