@@ -1,4 +1,4 @@
-FROM docker.cesanta.com/ubuntu-golang:bionic
+FROM docker.cesanta.com/ubuntu32-golang:bionic
 
 RUN mkdir /out /src
 WORKDIR /src

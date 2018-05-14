@@ -144,6 +144,8 @@ if __name__ == "__main__":
 
         RunSubprocess(["git", "checkout", tag_effective])
 
+    RunSubprocess(["make", "-C", "tools/docker/golang", "pull-all"])
+
     if platform == "mac":
         RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
     RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
