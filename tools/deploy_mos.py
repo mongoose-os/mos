@@ -142,6 +142,8 @@ if __name__ == "__main__":
             print("I'm glad I asked. Go do that then.")
             exit(1)
 
+        RunSubprocess(["git", "checkout", tag_effective])
+
     if platform == "mac":
         RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
     RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
