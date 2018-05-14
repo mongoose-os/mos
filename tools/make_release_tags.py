@@ -89,17 +89,17 @@ def make_repo_tag(repo_name, tag):
     print("%s: Cloning to %s" % (repo_name, local_path))
     repo = git.Repo.clone_from("git@github.com:%s" % repo_name, local_path)
 
-    # TODO(dfrank): delete tag only if it exists. It's surprisingly hard to
-    # check whether the tag exists.
-    try:
-        repo.delete_tag(tag)
-    except:
-        pass
-
+    force = False
+    for t in repo.tags:
+        if t.name == tag:
+            print("%s: Deleting tag %s => %s" % (repo_name, tag, t.commit))
+            repo.delete_tag(tag)
+            force = True
+            break
     print("%s: Creating and pushing tag %s" % (repo_name, tag))
-    repo.create_tag(tag)
-    repo.remotes.origin.push(tag)
-    print("%s: Pushed" % repo_name)
+    nt = repo.create_tag(tag)
+    repo.remotes.origin.push(nt, force=force)
+    print("%s: Pushed, %s => %s" % (repo_name, tag, nt.commit))
 
 
 def del_repo_tag(repo_name, tag):

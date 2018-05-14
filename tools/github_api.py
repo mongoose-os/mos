@@ -41,7 +41,7 @@ def call_api(
       "Authorization": "token %s" % token,
     })
 
-    print('Reaching GitHub %s "%s" with query params %s, json data %s, headers %s' % (method, url, params, json_data, headers))
+    #print('Reaching GitHub %s "%s" with query params %s, json data %s, headers %s' % (method, url, params, json_data, headers))
     resp = requests.request(
         method, url=url, params=params, json=json_data, headers=headers, data=data
         )
