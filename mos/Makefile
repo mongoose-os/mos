@@ -66,7 +66,7 @@ downloads: clean
 	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
 
 all-downloads: dmg linux win
-	cp version/version.json downloads/mos/
+	cp version/version.json $(OUTDIR)/downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
 
