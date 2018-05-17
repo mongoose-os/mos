@@ -193,7 +193,7 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 		cmd = append(cmd, "-v", fmt.Sprintf("%s:/mongoose-os", mosSrcPath))
 	}
 	if cwd, err := os.Getwd(); err == nil {
-		cmd = append(cmd, "-v", fmt.Sprintf("%s:%s", cwd, filepath.ToSlash(cwd)))
+		cmd = append(cmd, "-v", fmt.Sprintf("%s:%s", cwd, ourutil.GetPathForDocker(cwd)))
 	}
 	cmd = append(cmd, dockerImage)
 	shellCmd := []string{"/usr/local/bin/serve_core.py"}

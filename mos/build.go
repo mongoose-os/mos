@@ -278,10 +278,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	genDir := moscommon.GetGeneratedFilesDir(buildDirAbs)
 
 	fwDir := moscommon.GetFirmwareDir(buildDir)
-	fwDirDocker := getPathForDocker(fwDir)
+	fwDirDocker := ourutil.GetPathForDocker(fwDir)
 
 	objsDir := moscommon.GetObjectDir(buildDirAbs)
-	objsDirDocker := getPathForDocker(objsDir)
+	objsDirDocker := ourutil.GetPathForDocker(objsDir)
 
 	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
@@ -450,8 +450,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"PLATFORM":       manifest.Platform,
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
-		"GEN_DIR":        getPathForDocker(genDir),
-		"FS_STAGING_DIR": getPathForDocker(moscommon.GetFilesystemStagingDir(buildDir)),
+		"GEN_DIR":        ourutil.GetPathForDocker(genDir),
+		"FS_STAGING_DIR": ourutil.GetPathForDocker(moscommon.GetFilesystemStagingDir(buildDir)),
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(getPathsForDocker(appSources), " "),
@@ -461,7 +461,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"FFI_SYMBOLS":    strings.Join(manifest.FFISymbols, " "),
 		"APP_CFLAGS":     generateCflags(manifest.CFlags, manifest.CDefs),
 		"APP_CXXFLAGS":   generateCflags(manifest.CXXFlags, manifest.CDefs),
-		"MANIFEST_FINAL": getPathForDocker(moscommon.GetMosFinalFilePath(buildDirAbs)),
+		"MANIFEST_FINAL": ourutil.GetPathForDocker(moscommon.GetMosFinalFilePath(buildDirAbs)),
 	} {
 		err := addBuildVar(manifest, k, v)
 		if err != nil {
@@ -476,7 +476,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// If not, then check if APP_CONF_SCHEMA was set manually, and warn about
 	// that.
 	if curConfSchemaFName != "" {
-		if err := addBuildVar(manifest, "APP_CONF_SCHEMA", getPathForDocker(curConfSchemaFName)); err != nil {
+		if err := addBuildVar(manifest, "APP_CONF_SCHEMA", ourutil.GetPathForDocker(curConfSchemaFName)); err != nil {
 			return errors.Trace(err)
 		}
 	} else {
@@ -519,35 +519,35 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		// abs. paths).
 		mp.addMountPoint(appMountPath, dockerAppPath)
 		mp.addMountPoint(fp.MosDirEffective, dockerMgosPath)
-		mp.addMountPoint(fp.MosDirEffective, getPathForDocker(fp.MosDirEffective))
+		mp.addMountPoint(fp.MosDirEffective, ourutil.GetPathForDocker(fp.MosDirEffective))
 
 		// Mount build dir
-		mp.addMountPoint(buildDirAbs, getPathForDocker(buildDirAbs))
+		mp.addMountPoint(buildDirAbs, ourutil.GetPathForDocker(buildDirAbs))
 
 		// Mount all dirs with source files
 		for _, d := range appSourceDirs {
-			mp.addMountPoint(d, getPathForDocker(d))
+			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
 		}
 
 		// Mount all include paths
 		for _, d := range appIncludes {
-			mp.addMountPoint(d, getPathForDocker(d))
+			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
 		}
 
 		// Mount all dirs with filesystem files
 		for _, d := range appFSDirs {
-			mp.addMountPoint(d, getPathForDocker(d))
+			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
 		}
 
 		// Mount all dirs with binary libs
 		for _, d := range appBinLibDirs {
-			mp.addMountPoint(d, getPathForDocker(d))
+			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
 		}
 
 		// If generated config schema file is present, mount its dir as well
 		if curConfSchemaFName != "" {
 			d := filepath.Dir(curConfSchemaFName)
-			mp.addMountPoint(d, getPathForDocker(d))
+			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
 		}
 
 		for containerPath, hostPath := range mp {
@@ -1319,7 +1319,7 @@ func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
 	// Docker Toolbox hack: in docker toolbox on windows, the actual host paths
 	// like C:\foo\bar don't work, this path becomes /c/foo/bar.
 	if isInDockerToolbox() {
-		hostPath = getPathForDocker(hostPath)
+		hostPath = ourutil.GetPathForDocker(hostPath)
 	}
 
 	freportf(logWriter, "mount from %q to %q", hostPath, containerPath)
@@ -1337,33 +1337,15 @@ func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
 
 // }}}
 
-// Docker paths {{{
-// getPathForDocker replaces OS-dependent separators in a given path with "/"
-func getPathForDocker(p string) string {
-	ret := path.Join(strings.Split(p, string(filepath.Separator))...)
-	if filepath.IsAbs(p) {
-		if runtime.GOOS == "windows" && ret[1] == ':' {
-			// Remove the colon after drive letter, also lowercase the drive letter
-			// (the lowercasing part is important for docker toolbox: there, host
-			// paths like C:\foo\bar don't work, this path becomse /c/foo/bar)
-			ret = fmt.Sprint(strings.ToLower(ret[:1]), ret[2:])
-		}
-		ret = path.Join("/", ret)
-	}
-	return ret
-}
-
-// getPathsForDocker calls getPathForDocker for each paths in the slice,
+// getPathsForDocker calls ourutil.GetPathForDocker for each paths in the slice,
 // and returns modified slice
 func getPathsForDocker(p []string) []string {
 	ret := make([]string, len(p))
 	for i, v := range p {
-		ret[i] = getPathForDocker(v)
+		ret[i] = ourutil.GetPathForDocker(v)
 	}
 	return ret
 }
-
-// }}}
 
 // Docker build {{{
 func runDockerBuild(dockerRunArgs []string) error {
