@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -1056,7 +1057,13 @@ func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, e
 		target,
 	}
 
-	for k, v := range manifest.BuildVars {
+	kk := []string{}
+	for k, _ := range manifest.BuildVars {
+		kk = append(kk, k)
+	}
+	sort.Strings(kk)
+	for _, k := range kk {
+		v := manifest.BuildVars[k]
 		makeArgs = append(makeArgs, fmt.Sprintf(
 			"%s=%s",
 			k,
@@ -1189,7 +1196,13 @@ func getCustomLibLocations() (map[string]string, error) {
 }
 
 func generateCflags(cflags []string, cdefs map[string]string) string {
-	for k, v := range cdefs {
+	kk := []string{}
+	for k, _ := range cdefs {
+		kk = append(kk, k)
+	}
+	sort.Strings(kk)
+	for _, k := range kk {
+		v := cdefs[k]
 		cflags = append(cflags, fmt.Sprintf("-D%s=%s", k, v))
 	}
 
