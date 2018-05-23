@@ -33,7 +33,7 @@ func GetManifestArchFilePath(projectDir, arch string) string {
 
 func GetGeneratedFilesDir(buildDir string) string {
 	if genDirFlag != "" {
-		if gdfa, err := filepath.Abs(buildDir); err == nil {
+		if gdfa, err := filepath.Abs(genDirFlag); err == nil {
 			return gdfa
 		}
 	}
