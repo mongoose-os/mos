@@ -3,7 +3,17 @@ package moscommon
 import (
 	"fmt"
 	"path/filepath"
+
+	flag "github.com/spf13/pflag"
 )
+
+var (
+	genDirFlag = ""
+)
+
+func init() {
+	flag.StringVar(&genDirFlag, "gen-dir", "", "Directory to put build output under. Default is build_dir/gen")
+}
 
 func GetDepsDir(projectDir string) string {
 	return filepath.Join(projectDir, "deps")
@@ -22,6 +32,11 @@ func GetManifestArchFilePath(projectDir, arch string) string {
 }
 
 func GetGeneratedFilesDir(buildDir string) string {
+	if genDirFlag != "" {
+		if gdfa, err := filepath.Abs(buildDir); err == nil {
+			return gdfa
+		}
+	}
 	return filepath.Join(buildDir, "gen")
 }
 
@@ -43,6 +58,10 @@ func GetBuildCtxFilePath(buildDir string) string {
 
 func GetBuildStatFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "build_stat.json")
+}
+
+func GetMakeVarsFilePath(buildDir string) string {
+	return filepath.Join(GetGeneratedFilesDir(buildDir), "vars.mk")
 }
 
 func GetFirmwareElfFilePath(buildDir string) string {

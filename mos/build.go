@@ -55,6 +55,7 @@ var (
 			"cc3200=docker.cesanta.com/mg-iot-cloud-project-cc3200:release",
 		"build images, arch1=image1,arch2=image2")
 	cleanBuild         = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
+	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
 	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
 	keepTempFiles      = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	modules            = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
@@ -186,6 +187,9 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	if *buildDryRunFlag {
+		return nil
+	}
 
 	if bParams.BuildTarget == moscommon.BuildTargetDefault {
 		// We were building a firmware, so perform the required actions with moving
@@ -278,7 +282,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	genDir := moscommon.GetGeneratedFilesDir(buildDirAbs)
 
-	fwDir := moscommon.GetFirmwareDir(buildDir)
+	fwDir := moscommon.GetFirmwareDir(buildDirAbs)
 	fwDirDocker := ourutil.GetPathForDocker(fwDir)
 
 	objsDir := moscommon.GetObjectDir(buildDirAbs)
@@ -452,7 +456,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
 		"GEN_DIR":        ourutil.GetPathForDocker(genDir),
-		"FS_STAGING_DIR": ourutil.GetPathForDocker(moscommon.GetFilesystemStagingDir(buildDir)),
+		"FS_STAGING_DIR": ourutil.GetPathForDocker(moscommon.GetFilesystemStagingDir(buildDirAbs)),
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(getPathsForDocker(appSources), " "),
@@ -602,12 +606,22 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		if err != nil {
 			return errors.Trace(err)
 		}
+
+		// Write make vars file. It's not critical but may be useful.
+		ioutil.WriteFile(
+			moscommon.GetMakeVarsFilePath(buildDirAbs),
+			[]byte(strings.Join(getMakeVars(manifest.BuildVars), "\n")),
+			0644)
+
 		dockerRunArgs = append(dockerRunArgs,
 			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
 		)
 
 		if err := runDockerBuild(dockerRunArgs); err != nil {
 			return errors.Trace(err)
+		}
+		if *buildDryRunFlag {
+			return nil
 		}
 	} else {
 		// We're already inside of the docker container, so invoke make directly
@@ -620,6 +634,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		freportf(logWriter, "Make arguments: %s", strings.Join(makeArgs, " "))
+
+		if *buildDryRunFlag {
+			return nil
+		}
 
 		cmd := exec.Command("make", makeArgs...)
 		err = runCmd(cmd, logWriter)
@@ -781,7 +799,7 @@ func buildRemote(bParams *buildParams) error {
 	err = ioutil.WriteFile(
 		moscommon.GetManifestFilePath(tmpCodeDir),
 		manifestData,
-		0666,
+		0644,
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1025,6 +1043,23 @@ func printConfSchemaWarn(manifest *build.FWAppManifest) {
 	}
 }
 
+func getMakeVars(vars map[string]string) []string {
+	kk := []string{}
+	for k, _ := range vars {
+		kk = append(kk, k)
+	}
+	sort.Strings(kk)
+	vv := []string{}
+	for _, k := range kk {
+		vv = append(vv, fmt.Sprintf(
+			"%s=%s",
+			k,
+			strings.Replace(strings.Replace(vars[k], "\n", " ", -1), "\r", " ", -1),
+		))
+	}
+	return vv
+}
+
 func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, error) {
 	j := *buildParalellism
 	if j == 0 {
@@ -1057,19 +1092,7 @@ func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, e
 		target,
 	}
 
-	kk := []string{}
-	for k, _ := range manifest.BuildVars {
-		kk = append(kk, k)
-	}
-	sort.Strings(kk)
-	for _, k := range kk {
-		v := manifest.BuildVars[k]
-		makeArgs = append(makeArgs, fmt.Sprintf(
-			"%s=%s",
-			k,
-			strings.Replace(strings.Replace(v, "\n", " ", -1), "\r", " ", -1),
-		))
-	}
+	makeArgs = append(makeArgs, getMakeVars(manifest.BuildVars)...)
 
 	// Add extra make args
 	if buildCmdExtra != nil {
@@ -1371,6 +1394,10 @@ func runDockerBuild(dockerRunArgs []string) error {
 	)
 
 	freportf(logWriter, "Docker arguments: %s", strings.Join(dockerArgs, " "))
+
+	if *buildDryRunFlag {
+		return nil
+	}
 
 	// When make runs with -j and we interrupt the container with Ctrl+C, make
 	// becomes a runaway process eating 100% of one CPU core. So far we failed
