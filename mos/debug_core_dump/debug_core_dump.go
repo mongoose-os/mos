@@ -45,12 +45,12 @@ var (
 			extraServeCoreArgs: []string{},
 		},
 		"esp32": platformDebugParams{
-			image:              "docker.cesanta.com/esp32-build:3.0-rc1-r8",
+			image:              "docker.cesanta.com/esp32-build:3.0-rc1-r9",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000", "--xtensa_addr_fixup=true"},
 		},
 		"esp8266": platformDebugParams{
-			image:              "docker.cesanta.com/esp8266-build:2.2.1-1.5.0-r2",
+			image:              "docker.cesanta.com/esp8266-build:2.2.1-1.5.0-r3",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000"},
 		},
@@ -102,7 +102,7 @@ func getMosSrcPath() string {
 	return ""
 }
 
-func getFwELFFile() string {
+func getFwELFFile(app, platform, version, buildID string) string {
 	if fwELFFile != "" {
 		return fwELFFile
 	}
@@ -113,6 +113,11 @@ func getFwELFFile() string {
 	}
 	// Are we in the app dir? Use file from build dir.
 	try := filepath.Join(cwd, "build", "objs", "fw.elf")
+	glog.V(2).Infof("Trying %q", try)
+	if _, err := os.Stat(try); err == nil {
+		return try
+	}
+	try = filepath.Join(cwd, "build", "objs", fmt.Sprintf("%s.elf", app))
 	glog.V(2).Infof("Trying %q", try)
 	if _, err := os.Stat(try); err == nil {
 		return try
@@ -168,7 +173,7 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 		return errors.Errorf("don't know how to handle %q", info.Platform)
 	}
 	if elfFile == "" {
-		elfFile = getFwELFFile()
+		elfFile = getFwELFFile(info.App, info.Platform, info.Version, info.BuildID)
 		if elfFile == "" {
 			return errors.Errorf("--fw-elf-file is not set and could not be guessed")
 		}

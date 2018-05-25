@@ -68,8 +68,8 @@ func FormatTimestampNow() string {
 	return ts
 }
 
-func printConsoleLine(out io.Writer, line []byte) {
-	if tsfSpec != "" {
+func printConsoleLine(out io.Writer, addTS bool, line []byte) {
+	if tsfSpec != "" && addTS {
 		fmt.Printf("%s", FormatTimestampNow())
 	}
 	removeNonText(line)
@@ -85,7 +85,7 @@ func analyzeCoreDump(out io.Writer, cd []byte) error {
 	tfn := tf.Name()
 	tf.Write([]byte(debug_core_dump.CoreDumpStart))
 	tf.Write([]byte("\r\n"))
-	printConsoleLine(out, []byte(fmt.Sprintf("mos: wrote to %s (%d bytes)\n", tfn, len(cd))))
+	printConsoleLine(out, true, []byte(fmt.Sprintf("mos: wrote to %s (%d bytes)\n", tfn, len(cd))))
 	if _, err := tf.Write(cd); err != nil {
 		tf.Close()
 		return errors.Annotatef(err, "failed to write core dump to %s", tfn)
@@ -93,7 +93,7 @@ func analyzeCoreDump(out io.Writer, cd []byte) error {
 	tf.Write([]byte("\r\n"))
 	tf.Write([]byte(debug_core_dump.CoreDumpEnd))
 	tf.Close()
-	printConsoleLine(out, []byte("mos: analyzing core dump\n"))
+	printConsoleLine(out, true, []byte("mos: analyzing core dump\n"))
 	return debug_core_dump.DebugCoreDumpF(tfn, "", true)
 }
 
@@ -128,6 +128,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		var curLine []byte
 		var coreDump []byte
 		coreDumping := false
+		lastCDProgress := 0
 
 		for {
 			buf := make([]byte, 100)
@@ -146,40 +147,54 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 				if lf < 0 {
 					break
 				}
-				curLine = append(curLine, buf[:lf+1]...)
+				chunk := buf[:lf+1]
+				cont := len(curLine) > 0
+				curLine = append(curLine, chunk...)
 				if catchCoreDumps {
 					tsl := bytes.TrimSpace(curLine)
 					if !coreDumping && bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpStart)) == 0 {
-						printConsoleLine(out, curLine)
-						printConsoleLine(out, []byte("mos: catching core dump\n"))
+						printConsoleLine(out, !cont, chunk)
+						printConsoleLine(out, true, []byte("mos: catching core dump\n"))
 						coreDumping = true
 						coreDump = nil
 					} else if coreDumping {
 						if bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpEnd)) == 0 {
+							if lastCDProgress > 0 {
+								printConsoleLine(out, false, []byte("\n"))
+							}
+							printConsoleLine(out, true, curLine)
 							coreDumping = false
-							printConsoleLine(out, curLine)
+							lastCDProgress = 0
 							curLine = nil
 							if err := analyzeCoreDump(out, coreDump); err != nil {
-								printConsoleLine(out, []byte(fmt.Sprintf("mos: %s\n", err)))
+								printConsoleLine(out, true, []byte(fmt.Sprintf("mos: %s\n", err)))
 							}
 						} else {
 							// There should be no empty lines in the CD body.
-							// If we encounter an empty line, this meand device rebooted without finishing the CD.
+							// If we encounter an empty line, this means device rebooted without finishing the CD.
 							if len(tsl) == 0 {
-								printConsoleLine(out, []byte("mos: core dump aborted\n"))
+								printConsoleLine(out, true, []byte("mos: core dump aborted\n"))
 								coreDumping = false
+								lastCDProgress = 0
 								coreDump = nil
 							} else {
 								coreDump = append(coreDump, curLine...)
+								if len(coreDump) > lastCDProgress+32*1024 {
+									printConsoleLine(out, lastCDProgress == 0, []byte("."))
+									lastCDProgress = len(coreDump)
+								}
 							}
 						}
 					}
 				}
 				if !coreDumping && curLine != nil {
-					printConsoleLine(out, curLine)
+					printConsoleLine(out, !cont, chunk)
 				}
 				curLine = nil
 				buf = buf[lf+1:]
+			}
+			if !coreDumping && len(buf) > 0 {
+				printConsoleLine(out, len(curLine) == 0, buf)
 			}
 			curLine = append(curLine, buf...)
 		}
