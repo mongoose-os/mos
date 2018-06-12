@@ -29,11 +29,23 @@ func (d *Deps) AddDep(node string, dep string) {
 	d.m[node] = append(d.m[node], dep)
 }
 
+func (d *Deps) AddDeps(node string, deps []string) {
+	d.m[node] = append(d.m[node], deps...)
+}
+
 func (d *Deps) AddNodeWithDeps(node string, deps []string) {
 	d.AddNode(node)
 	for _, dep := range deps {
 		d.AddDep(node, dep)
 	}
+}
+
+func (d *Deps) GetNodes() []string {
+	var nodes []string
+	for n, _ := range d.m {
+		nodes = append(nodes, n)
+	}
+	return nodes
 }
 
 func (d *Deps) GetDeps(node string) []string {

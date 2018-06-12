@@ -64,3 +64,8 @@ libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: 2017-09-29
+init_deps:
+- mylib1
+- mylib2
+- mylib4
+- mylib3

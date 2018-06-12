@@ -161,7 +161,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			os.MkdirAll(buildDir, 0777)
 			actualFilename := filepath.Join(buildDir, "mos_final_actual.yml")
 			ioutil.WriteFile(actualFilename, data, 0644)
-			return errors.Errorf("actual manifest %q doesn't match %q", actualFilename, expectedFilename)
+			return errors.Errorf("expected manifest %s doesn't match actual %s", expectedFilename, actualFilename)
 		}
 	}
 

@@ -82,6 +82,8 @@ type FWAppManifest struct {
 	// application. The user doesn't have to set this field manually, it's set
 	// automatically during libs "expansion" (see Libs above)
 	LibsHandled []FWAppManifestLibHandled `yaml:"libs_handled,omitempty" json:"libs_handled"`
+
+	InitDeps []string `yaml:"init_deps,omitempty" json:"init_deps"`
 }
 
 // ConfigSchemaItem represents a single config schema item, like this:

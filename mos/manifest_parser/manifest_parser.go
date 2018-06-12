@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -35,8 +36,9 @@ const (
 	// - 2017-06-16: added support for conds with very basic expressions
 	//               (only build_vars)
 	// - 2017-09-29: added support for includes
+	// - 2018-06-12: added support for globs in init_deps
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2017-09-29"
+	maxManifestVersion = "2018-06-12"
 
 	depsApp = "app"
 
@@ -333,6 +335,8 @@ func readManifestWithLibs(
 	// Create a deps structure and add a root node: an "app"
 	deps := NewDeps()
 	deps.AddNode(depsApp)
+	initDeps := NewDeps()
+	initDeps.AddNode(depsApp)
 
 	manifest, mtime, err := readManifestWithLibs2(manifestParseContext{
 		dir:        dir,
@@ -343,6 +347,7 @@ func readManifestWithLibs(
 
 		nodeName:    depsApp,
 		deps:        deps,
+		initDeps:    initDeps,
 		libsHandled: libsHandled,
 
 		appManifest: nil,
@@ -363,7 +368,7 @@ func readManifestWithLibs(
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
 	// Get all deps in topological order
-	topo, cycle := deps.Topological(true)
+	depsTopo, cycle := deps.Topological(true)
 	if cycle != nil {
 		return nil, time.Time{}, errors.Errorf(
 			"dependency cycle: %v", strings.Join(cycle, " -> "),
@@ -376,13 +381,39 @@ func readManifestWithLibs(
 	// and generate init code for it, but it would be a breaking change, at least
 	// because all libs init functions return bool, but mgos_app_init returns
 	// enum mgos_app_init_result.
-	topo = topo[0 : len(topo)-1]
+	depsTopo = depsTopo[0 : len(depsTopo)-1]
 
 	// Create a LibsHandled slice in topological order computed above
-	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(topo))
-	for _, v := range topo {
+	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(depsTopo))
+	for _, v := range depsTopo {
 		manifest.LibsHandled = append(manifest.LibsHandled, libsHandled[v])
 	}
+
+	// Expand initDeps (which may contain globs) against actual list of libs.
+	initDepsResolved := NewDeps()
+	for _, node := range initDeps.GetNodes() {
+		if node == depsApp {
+			continue
+		}
+		nodeDeps := initDeps.GetDeps(node)
+		var nodeDepsResolved []string
+		for _, nodeDep := range nodeDeps {
+			for _, dep := range depsTopo {
+				if m, _ := path.Match(nodeDep, dep); m {
+					nodeDepsResolved = append(nodeDepsResolved, dep)
+				}
+			}
+		}
+		initDepsResolved.AddNodeWithDeps(node, nodeDepsResolved)
+	}
+
+	initDepsTopo, cycle := initDepsResolved.Topological(true)
+	if cycle != nil {
+		return nil, time.Time{}, errors.Errorf(
+			"init dependency cycle: %v", strings.Join(cycle, " -> "),
+		)
+	}
+	manifest.InitDeps = initDepsTopo
 
 	if err := expandManifestLibsAndConds(manifest, interp, adjustments); err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -408,6 +439,7 @@ type manifestParseContext struct {
 
 	nodeName    string
 	deps        *Deps
+	initDeps    *Deps
 	libsHandled map[string]build.FWAppManifestLibHandled
 
 	appManifest *build.FWAppManifest
@@ -496,16 +528,11 @@ func prepareLib(
 
 	pc.mtx.Lock()
 	pc.deps.AddDep(pc.nodeName, name)
+	pc.initDeps.AddDep(pc.nodeName, name) // Implicit init dep
 	pc.mtx.Unlock()
-
-	if m.Weak {
-		ourutil.Freportf(pc.logWriter, "Lib %q is optional, skipping", name)
-		return
-	}
 
 	if !pc.flagSet.Add(name) {
 		// That library is already handled by someone else
-		ourutil.Freportf(pc.logWriter, "Lib %q is already handled, skipping", name)
 		return
 	}
 
@@ -532,6 +559,7 @@ func prepareLib(
 	// Now that we know we need to handle current lib, add a node for it
 	pc.mtx.Lock()
 	pc.deps.AddNode(name)
+	pc.initDeps.AddNode(name)
 	pc.mtx.Unlock()
 
 	pc2 := manifestParseContext{}
@@ -569,6 +597,7 @@ func prepareLib(
 		Deps:     pc.deps.GetDeps(name),
 		Manifest: libManifest,
 	}
+	pc.initDeps.AddNodeWithDeps(name, libManifest.InitAfter)
 	pc.mtx.Unlock()
 
 	lpres <- libPrepareResult{
@@ -742,15 +771,6 @@ func ReadManifestFile(
 	if manifest.Platform == "" && manifest.ArchOld != "" {
 		manifest.Platform = manifest.ArchOld
 	}
-
-	// Convert init_after to weak deps
-	for _, v := range manifest.InitAfter {
-		manifest.Libs = append(manifest.Libs, build.SWModule{
-			Name: v,
-			Weak: true,
-		})
-	}
-	manifest.InitAfter = nil
 
 	manifest.MongooseOsVersion, err = interpreter.ExpandVars(interp, manifest.MongooseOsVersion, false)
 	if err != nil {
@@ -1232,7 +1252,14 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	}
 
 	tplData := libsInitData{}
-	for _, v := range manifest.LibsHandled {
+	for _, n := range manifest.InitDeps {
+		var v *build.FWAppManifestLibHandled
+		for _, lv := range manifest.LibsHandled {
+			if lv.Name == n {
+				v = &lv
+				break
+			}
+		}
 		if len(v.Sources) == 0 {
 			// This library has no sources, nothing to init.
 			continue

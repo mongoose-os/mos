@@ -31,10 +31,6 @@ type SWModule struct {
 
 	SuffixTpl string
 
-	// Weak is relevant if only SWModule represents a lib (as opposed to an
-	// app or a module).
-	Weak bool `yaml:"weak,omitempty" json:"weak,omitempty"`
-
 	localPath string
 }
 
