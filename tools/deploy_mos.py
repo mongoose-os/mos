@@ -122,7 +122,7 @@ if __name__ == "__main__":
     RunSubprocess([
         "docker", "run", "-it", "--rm",
         "-v", "%s:/root/.gnupg" % GPG_KEY_PATH,
-        "docker.cesanta.com/ubuntu-golang:xenial",
+        "docker.io/mgos/ubuntu-golang:xenial",
         "gpg", "--sign", "--no-use-agent", "-o", "/dev/null", "/dev/null"],
         communicator=UploaderComm)
     print("Ok, passphrase is correct")

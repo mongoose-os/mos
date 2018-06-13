@@ -13,28 +13,28 @@ pull-all:  docker-pull-ubuntu-golang-xenial docker-pull-ubuntu-golang-artful doc
            docker-pull-gobuild docker-pull-gobuild32 docker-pull-gobuild-mingw
 
 docker-build-ubuntu-golang-%: Dockerfile.ubuntu-golang
-	docker build -t docker.cesanta.com/ubuntu-golang:$* -f Dockerfile.ubuntu-golang --build-arg base=ubuntu:$* .
+	docker build -t docker.io/mgos/ubuntu-golang:$* -f Dockerfile.ubuntu-golang --build-arg base=ubuntu:$* .
 
 docker-build-ubuntu32-golang-%: Dockerfile.ubuntu-golang
-	docker build -t docker.cesanta.com/ubuntu32-golang:$* -f Dockerfile.ubuntu-golang --build-arg base=cesanta/ubuntu32:$* .
+	docker build -t docker.io/mgos/ubuntu32-golang:$* -f Dockerfile.ubuntu-golang --build-arg base=cesanta/ubuntu32:$* .
 
 docker-build-%: Dockerfile.%
-	docker build -t docker.cesanta.com/$* -f Dockerfile.$* .
+	docker build -t docker.io/mgos/$* -f Dockerfile.$* .
 
 docker-push-ubuntu-golang-%:
-	docker push docker.cesanta.com/ubuntu-golang:$*
+	docker push docker.io/mgos/ubuntu-golang:$*
 
 docker-push-ubuntu32-golang-%:
-	docker push docker.cesanta.com/ubuntu32-golang:$*
+	docker push docker.io/mgos/ubuntu32-golang:$*
 
 docker-push-%:
-	docker push docker.cesanta.com/$*
+	docker push docker.io/mgos/$*
 
 docker-pull-ubuntu-golang-%:
-	docker pull docker.cesanta.com/ubuntu-golang:$*
+	docker pull docker.io/mgos/ubuntu-golang:$*
 
 docker-pull-ubuntu32-golang-%:
-	docker pull docker.cesanta.com/ubuntu32-golang:$*
+	docker pull docker.io/mgos/ubuntu32-golang:$*
 
 docker-pull-%:
-	docker pull docker.cesanta.com/$*
+	docker pull docker.io/mgos/$*

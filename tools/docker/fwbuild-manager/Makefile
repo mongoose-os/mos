@@ -10,13 +10,13 @@ generate:
 
 docker-build: generate
 	$(CURDIR)/../golang/dogobuild \
-	  docker.cesanta.com/fwbuild-manager \
+	  docker.io/mgos/fwbuild-manager \
 	  cesanta.com/fwbuild/manager \
 	  Dockerfile \
-	  docker.cesanta.com/gobuild
+	  docker.io/mgos/gobuild
 
 docker-tag:
-	docker tag docker.cesanta.com/fwbuild-manager:$(FROM_TAG) docker.cesanta.com/fwbuild-manager:$(TAG)
+	docker tag docker.io/mgos/fwbuild-manager:$(FROM_TAG) docker.cesanta.com/fwbuild-manager:$(TAG)
 
 docker-push:
-	docker push docker.cesanta.com/fwbuild-manager:$(TAG)
+	docker push docker.io/mgos/fwbuild-manager:$(TAG)

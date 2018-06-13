@@ -25,7 +25,7 @@
   tags: certs
   when: num_certs.stdout|int == 0
   docker_container:
-    image: docker.cesanta.com/letsencrypt
+    image: docker.io/mgos/letsencrypt
     name: letsencrypt
     volumes:
       - /data/letsencrypt:/etc/letsencrypt:rw
@@ -44,7 +44,7 @@
     name: renew_certs
     time: '{{ renew_time }}'
     cmd: |
-      docker run --rm -v /data/letsencrypt:/etc/letsencrypt docker.cesanta.com/letsencrypt \
+      docker run --rm -v /data/letsencrypt:/etc/letsencrypt docker.io/mgos/letsencrypt \
         letsencrypt renew -v --email {{ email }} --agree-tos \
         --webroot -w /etc/letsencrypt/www && \
       pkill -HUP nginx

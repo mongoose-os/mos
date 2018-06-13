@@ -19,10 +19,10 @@
   tags:
     - cloud-mos
   shell: >-
-    docker pull docker.cesanta.com/mos:{{ cur_mos_version_tag }}
+    docker pull docker.io/mgos/mos:{{ cur_mos_version_tag }}
 
 - name: Pull fwbuild-instance image:{{ cur_mos_version_tag }}
   tags:
     - fwbuild-instance
   shell: >-
-    docker pull docker.cesanta.com/fwbuild-instance:{{ cur_mos_version_tag }}
+    docker pull docker.io/mgos/fwbuild-instance:{{ cur_mos_version_tag }}

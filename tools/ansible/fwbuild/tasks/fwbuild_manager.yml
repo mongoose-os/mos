@@ -7,12 +7,12 @@
   tags:
     - fwbuild-manager
   shell: >-
-    docker pull docker.cesanta.com/fwbuild-manager:{{ fwbuild_manager_tag }}
+    docker pull docker.io/mgos/fwbuild-manager:{{ fwbuild_manager_tag }}
 
 - name: install fwbuild-manager docker job
   tags: fwbuild-manager
   docker_container:
-    image: docker.cesanta.com/fwbuild-manager:{{ fwbuild_manager_tag }}
+    image: docker.io/mgos/fwbuild-manager:{{ fwbuild_manager_tag }}
     name: fwbuild-manager
     ports:
       - 443:443

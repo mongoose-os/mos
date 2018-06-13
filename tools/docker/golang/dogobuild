@@ -6,9 +6,9 @@
 #
 # Usage:
 #
-#     dogobuild docker.cesanta.com/mos cesanta.com/mos Dockerfile [gobuild_image]
+#     dogobuild docker.io/mgos/mos cesanta.com/mos Dockerfile [gobuild_image]
 #
-# If gobuild_image is not provided, docker.cesanta.com/gobuild is used
+# If gobuild_image is not provided, docker.io/mgos/gobuild is used
 #
 # NOTE: only the first component of the GOPATH is considered.
 #
@@ -28,7 +28,7 @@ fi
 shift 3
 
 if [ -z "${GOBUILD_IMAGE}" ]; then
-  GOBUILD_IMAGE="docker.cesanta.com/gobuild"
+  GOBUILD_IMAGE="docker.io/mgos/gobuild"
 else
   shift 1
 fi

@@ -1,3 +1,3 @@
-FROM docker.cesanta.com/gobase
+FROM docker.io/mgos/gobase
 ADD manager /
 ENTRYPOINT ["/manager"]

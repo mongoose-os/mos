@@ -5,14 +5,14 @@ all: docker-build
 
 docker-build:
 	$(CURDIR)/../golang/dogobuild \
-	  docker.cesanta.com/mos \
+	  docker.io/mgos/mos \
 	  cesanta.com/mos \
 	  Dockerfile \
-	  docker.cesanta.com/gobuild \
+	  docker.io/mgos/gobuild \
 	  -v -tags noflash
 
 docker-tag:
-	docker tag docker.cesanta.com/mos:$(FROM_TAG) docker.cesanta.com/mos:$(TAG)
+	docker tag docker.io/mgos/mos:$(FROM_TAG) docker.cesanta.com/mos:$(TAG)
 
 docker-push:
-	docker push docker.cesanta.com/mos:$(TAG)
+	docker push docker.io/mgos/mos:$(TAG)

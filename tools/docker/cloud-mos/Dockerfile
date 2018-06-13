@@ -1,4 +1,4 @@
-FROM docker.cesanta.com/gobase
+FROM docker.io/mgos/gobase
 RUN apt-get update && apt-get install -y zip unzip libftdi-dev libtool libusb-1.0-0
 ADD mos /
 # allow to mount docker "static" binary from coreos
