@@ -19,7 +19,10 @@ import (
 )
 
 const (
-	streamFrameDelimiter string = `"""`
+	// Old delimiter.
+	streamFrameDelimiter1 string = `"""`
+	// New delimiter (as of 2018/06/14).
+	streamFrameDelimiter2 string = "\n"
 )
 
 var wantRead = errors.New("wantRead")
@@ -96,17 +99,28 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.Frame, error) {
 	var junk, frameData, remainder []byte
 	var junkLen, frameBegin, frameDataBegin, frameDataEnd, frameEnd int
 	remainder = scc.rxBuf
-	frameBegin = bytes.Index(remainder, []byte(streamFrameDelimiter))
+	frameBegin1 := bytes.Index(remainder, []byte(streamFrameDelimiter1))
+	frameBegin2 := bytes.Index(remainder, []byte(streamFrameDelimiter2))
+	frameBegin = min(frameBegin1, frameBegin2)
+	if frameBegin < 0 {
+		frameBegin = max(frameBegin1, frameBegin2)
+	}
 	frameEnd = -1
 	// Yield stuff before begin as junk, except suffix which can become part of a match.
 	if frameBegin >= 0 {
 		junkLen = frameBegin
+		frameBeginLen := 0
 		// It's a beginning of a frame if it is followed by an opening brace.
-		frameDataBegin = frameBegin + len(streamFrameDelimiter)
+		if frameBegin == frameBegin1 {
+			frameBeginLen = len(streamFrameDelimiter1)
+		} else {
+			frameBeginLen = len(streamFrameDelimiter2)
+		}
+		frameDataBegin = frameBeginLen
 		if frameDataBegin < len(remainder) {
 			if remainder[frameDataBegin] != '{' && remainder[frameDataBegin] != eofChar {
 				// It's some random junk or maybe we lost sync, skip the thing.
-				junkLen += len(streamFrameDelimiter)
+				junkLen += frameBeginLen
 				frameBegin = -1
 				frameDataBegin = -1
 			}
@@ -117,7 +131,7 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.Frame, error) {
 			err = wantRead
 		}
 	} else {
-		junkLen = len(scc.rxBuf) - tailMatch(scc.rxBuf, []byte(streamFrameDelimiter))
+		junkLen = len(scc.rxBuf) - tailMatch(scc.rxBuf, []byte(streamFrameDelimiter1))
 		err = wantRead
 	}
 	if junkLen > 0 {
@@ -129,11 +143,21 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.Frame, error) {
 			glog.V(4).Infof("junk: %s", junk)
 		}
 	}
-	if frameBegin >= 0 && len(remainder) >= len(streamFrameDelimiter)*2 {
-		frameDataEnd = bytes.Index(scc.rxBuf[frameDataBegin:], []byte(streamFrameDelimiter))
+	if frameBegin >= 0 && len(remainder) >= len(streamFrameDelimiter1)*2 {
+		frameDataEnd1 := bytes.Index(scc.rxBuf[frameDataBegin:], []byte(streamFrameDelimiter1))
+		frameDataEnd2 := bytes.Index(scc.rxBuf[frameDataBegin:], []byte(streamFrameDelimiter2))
+		frameDataEnd = min(frameDataEnd1, frameDataEnd2)
+		if frameDataEnd < 0 {
+			frameDataEnd = max(frameDataEnd1, frameDataEnd2)
+		}
 		if frameDataEnd >= 0 {
+			if frameDataEnd == frameDataEnd1 {
+				frameEnd = frameDataEnd + len(streamFrameDelimiter1)
+			} else {
+				frameEnd = frameDataEnd + len(streamFrameDelimiter2)
+			}
 			frameDataEnd += frameDataBegin
-			frameEnd = frameDataEnd + len(streamFrameDelimiter)
+			frameEnd += frameDataBegin
 		} else {
 			// We have not received frame delimeter, so let's see if we've got EOF then
 			scc.eofLock.Lock()
@@ -271,7 +295,8 @@ func (scc *streamConnectionCodec) Recv(ctx context.Context) (*frame.Frame, error
 }
 
 func (scc *streamConnectionCodec) Send(ctx context.Context, f *frame.Frame) error {
-	frameData := []byte(streamFrameDelimiter)
+	frameData := []byte(streamFrameDelimiter2)
+	frameData = append(frameData, []byte(streamFrameDelimiter1)...)
 	framePayload, err := frame.MarshalJSON(f)
 	if err != nil {
 		return errors.Trace(err)
@@ -282,7 +307,8 @@ func (scc *streamConnectionCodec) Send(ctx context.Context, f *frame.Frame) erro
 		crcHex := fmt.Sprintf("%08x", crc32.ChecksumIEEE(framePayload))
 		frameData = append(frameData, []byte(crcHex)...)
 	}
-	frameData = append(frameData, []byte(streamFrameDelimiter)...)
+	frameData = append(frameData, []byte(streamFrameDelimiter1)...)
+	frameData = append(frameData, []byte(streamFrameDelimiter2)...)
 	_, err = scc.conn.WriteWithContext(ctx, frameData)
 	if err != nil {
 		scc.Close()

@@ -45,6 +45,7 @@ type serialCodec struct {
 	handsShaken     bool
 	handsShakenLock sync.Mutex
 	writeLock       sync.Mutex
+	hsCounter       int
 
 	// Underlying serial port implementation allows concurrent Read/Write, but
 	// calling Close while Read/Write is in progress results in a race. A
@@ -190,13 +191,19 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 	defer c.writeLock.Unlock()
 	c.setHandsShaken(false)
 	for !c.areHandsShaken() {
-		if _, err := c.connWrite([]byte(streamFrameDelimiter)); err != nil {
+		if _, err := c.connWrite([]byte(streamFrameDelimiter1)); err != nil {
 			return 0, errors.Trace(err)
 		}
 		if _, err := c.connWrite([]byte{eofChar}); err != nil {
 			return 0, errors.Trace(err)
 		}
-		if _, err := c.connWrite([]byte(streamFrameDelimiter)); err != nil {
+		if _, err := c.connWrite([]byte(streamFrameDelimiter1)); err != nil {
+			return 0, errors.Trace(err)
+		}
+		if _, err := c.connWrite([]byte(streamFrameDelimiter2)); err != nil {
+			return 0, errors.Trace(err)
+		}
+		if _, err := c.connWrite([]byte(streamFrameDelimiter2)); err != nil {
 			return 0, errors.Trace(err)
 		}
 		glog.V(1).Infof(" ...sent frame delimiter.")
@@ -257,13 +264,25 @@ func (c *serialCodec) RemoteAddr() string {
 }
 
 func (c *serialCodec) PreprocessFrame(frameData []byte) (bool, error) {
-	c.setHandsShaken(true)
-	if len(frameData) == 1 && frameData[0] == eofChar {
-		// The single-byte frame consisting of just EOF char: we need to send
-		// a delimeter back
-		if _, err := c.connWrite([]byte(streamFrameDelimiter)); err != nil {
+	switch {
+	case len(frameData) == 0:
+		fallthrough
+	case len(frameData) == 1 && frameData[0] == '\r':
+		// Respond with an empty frame to an empty frame.
+		// When we get 3 of these, we consider handshake done.
+		c.hsCounter += 1
+		if c.hsCounter >= 2 {
+			c.setHandsShaken(true)
+		}
+		if _, err := c.connWrite([]byte(streamFrameDelimiter2)); err != nil {
 			return true, errors.Trace(err)
 		}
+	case len(frameData) == 1 && frameData[0] == eofChar:
+		// A single-byte frame consisting of just EOF char: we need to send a delimiter back.
+		if _, err := c.connWrite([]byte(streamFrameDelimiter1)); err != nil {
+			return true, errors.Trace(err)
+		}
+		c.setHandsShaken(true)
 		return true, nil
 	}
 	return false, nil
@@ -291,6 +310,14 @@ func (c *serialCodec) SetOptions(opts *Options) error {
 
 func min(a, b int) int {
 	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func max(a, b int) int {
+	if a > b {
 		return a
 	} else {
 		return b
