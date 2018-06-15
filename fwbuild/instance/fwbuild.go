@@ -51,7 +51,7 @@ import (
 
 var (
 	volumesDir = flag.String("volumes-dir", "/var/tmp/fwbuild-volumes", "dir where build volumes are created")
-	mosImage   = flag.String("mos-image", "docker.cesanta.com/mos:latest",
+	mosImage   = flag.String("mos-image", "docker.io/mgos/mos:latest",
 		"cloud-mos docker image")
 
 	reqParFileName    = flag.String("req-params", "", "Request params filename")
@@ -278,7 +278,7 @@ func saveBuildCtxInfo(src string) error {
 // just contains uploaded source files, context metadata (see BuildCtxInfo),
 // and build artifacts.
 //
-// buildFirmware runs mos in the container docker.cesanta.com/mos, which in
+// buildFirmware runs mos in the container docker.io/mgos/mos, which in
 // turn will spawn one more container which will perform the actual build. The
 // build will be run as an unprivileged user, thus we have to ensure that the
 // output dir can be written to an arbitrary user that actually runs within

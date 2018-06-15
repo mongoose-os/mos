@@ -1,7 +1,7 @@
 version: '2'
 services:
   fwbuild-manager:
-    image: docker.cesanta.com/fwbuild-manager
+    image: docker.io/mgos/fwbuild-manager
     volumes:
       - /var/tmp/fwbuild-volumes:/var/tmp/fwbuild-volumes
       - /var/run/docker.sock:/var/run/docker.sock

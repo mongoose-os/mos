@@ -12,7 +12,7 @@ docker-build:
 	  -v -tags noflash
 
 docker-tag:
-	docker tag docker.io/mgos/mos:$(FROM_TAG) docker.cesanta.com/mos:$(TAG)
+	docker tag docker.io/mgos/mos:$(FROM_TAG) docker.io/mgos/mos:$(TAG)
 
 docker-push:
 	docker push docker.io/mgos/mos:$(TAG)

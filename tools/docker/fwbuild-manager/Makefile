@@ -16,7 +16,7 @@ docker-build: generate
 	  docker.io/mgos/gobuild
 
 docker-tag:
-	docker tag docker.io/mgos/fwbuild-manager:$(FROM_TAG) docker.cesanta.com/fwbuild-manager:$(TAG)
+	docker tag docker.io/mgos/fwbuild-manager:$(FROM_TAG) docker.io/mgos/fwbuild-manager:$(TAG)
 
 docker-push:
 	docker push docker.io/mgos/fwbuild-manager:$(TAG)

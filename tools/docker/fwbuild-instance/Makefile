@@ -13,7 +13,7 @@ docker-build:
 	  docker.io/mgos/gobuild
 
 docker-tag:
-	docker tag docker.io/mgos/fwbuild-instance:$(FROM_TAG) docker.cesanta.com/fwbuild-instance:$(TAG)
+	docker tag docker.io/mgos/fwbuild-instance:$(FROM_TAG) docker.io/mgos/fwbuild-instance:$(TAG)
 
 docker-push:
 	docker push docker.io/mgos/fwbuild-instance:$(TAG)

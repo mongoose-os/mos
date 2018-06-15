@@ -42,8 +42,8 @@ import (
 )
 
 var (
-	instanceDockerImage = flag.String("instance-docker-image", "docker.cesanta.com/fwbuild-instance", "Fwbuild instance docker image, without a tag")
-	mosImage            = flag.String("mos-image", "docker.cesanta.com/mos", "Mos tool docker image, without a tag")
+	instanceDockerImage = flag.String("instance-docker-image", "docker.io/mgos/fwbuild-instance", "Fwbuild instance docker image, without a tag")
+	mosImage            = flag.String("mos-image", "docker.io/mgos/mos", "Mos tool docker image, without a tag")
 	volumesDir          = flag.String("volumes-dir", "/var/tmp/fwbuild-volumes", "")
 
 	port         = flag.String("port", "80", "HTTP port to listen at.")
