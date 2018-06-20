@@ -37,8 +37,9 @@ const (
 	//               (only build_vars)
 	// - 2017-09-29: added support for includes
 	// - 2018-06-12: added support for globs in init_deps
+	// - 2018-06-20: added no_implicit_init_deps
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2018-06-12"
+	maxManifestVersion = "2018-06-20"
 
 	depsApp = "app"
 
@@ -528,7 +529,9 @@ func prepareLib(
 
 	pc.mtx.Lock()
 	pc.deps.AddDep(pc.nodeName, name)
-	pc.initDeps.AddDep(pc.nodeName, name) // Implicit init dep
+	if !manifest.NoImplInitDeps {
+		pc.initDeps.AddDep(pc.nodeName, name) // Implicit init dep
+	}
 	pc.mtx.Unlock()
 
 	if !pc.flagSet.Add(name) {

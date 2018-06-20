@@ -45,27 +45,28 @@ type FWAppManifestLibHandled struct {
 type FWAppManifest struct {
 	AppManifest `yaml:",inline"`
 	// arch was deprecated at 2017/08/15 and should eventually be removed.
-	ArchOld      string             `yaml:"arch,omitempty" json:"arch"`
-	Platform     string             `yaml:"platform,omitempty" json:"platform"`
-	Platforms    []string           `yaml:"platforms,omitempty" json:"platforms"`
-	Author       string             `yaml:"author,omitempty" json:"author"`
-	Description  string             `yaml:"description,omitempty" json:"description"`
-	Sources      []string           `yaml:"sources,omitempty" json:"sources"`
-	Includes     []string           `yaml:"includes,omitempty" json:"includes"`
-	Filesystem   []string           `yaml:"filesystem,omitempty" json:"filesystem"`
-	BinaryLibs   []string           `yaml:"binary_libs,omitempty" json:"binary_libs"`
-	ExtraFiles   []string           `yaml:"extra_files,omitempty" json:"extra_files"`
-	FFISymbols   []string           `yaml:"ffi_symbols,omitempty" json:"ffi_symbols"`
-	Tests        []string           `yaml:"tests,omitempty" json:"tests"`
-	Modules      []SWModule         `yaml:"modules,omitempty" json:"modules"`
-	Libs         []SWModule         `yaml:"libs,omitempty" json:"libs"`
-	InitAfter    []string           `yaml:"init_after,omitempty" json:"init_after"`
-	ConfigSchema []ConfigSchemaItem `yaml:"config_schema,omitempty" json:"config_schema"`
-	BuildVars    map[string]string  `yaml:"build_vars,omitempty" json:"build_vars"`
-	CFlags       []string           `yaml:"cflags,omitempty" json:"cflags"`
-	CXXFlags     []string           `yaml:"cxxflags,omitempty" json:"cxxflags"`
-	CDefs        map[string]string  `yaml:"cdefs,omitempty" json:"cdefs"`
-	Tags         []string           `yaml:"tags,omitempty" json:"tags"`
+	ArchOld        string             `yaml:"arch,omitempty" json:"arch"`
+	Platform       string             `yaml:"platform,omitempty" json:"platform"`
+	Platforms      []string           `yaml:"platforms,omitempty" json:"platforms"`
+	Author         string             `yaml:"author,omitempty" json:"author"`
+	Description    string             `yaml:"description,omitempty" json:"description"`
+	Sources        []string           `yaml:"sources,omitempty" json:"sources"`
+	Includes       []string           `yaml:"includes,omitempty" json:"includes"`
+	Filesystem     []string           `yaml:"filesystem,omitempty" json:"filesystem"`
+	BinaryLibs     []string           `yaml:"binary_libs,omitempty" json:"binary_libs"`
+	ExtraFiles     []string           `yaml:"extra_files,omitempty" json:"extra_files"`
+	FFISymbols     []string           `yaml:"ffi_symbols,omitempty" json:"ffi_symbols"`
+	Tests          []string           `yaml:"tests,omitempty" json:"tests"`
+	Modules        []SWModule         `yaml:"modules,omitempty" json:"modules"`
+	Libs           []SWModule         `yaml:"libs,omitempty" json:"libs"`
+	InitAfter      []string           `yaml:"init_after,omitempty" json:"init_after"`
+	NoImplInitDeps bool               `yaml:"no_implicit_init_deps,omitempty" json:"no_implicit_init_deps"`
+	ConfigSchema   []ConfigSchemaItem `yaml:"config_schema,omitempty" json:"config_schema"`
+	BuildVars      map[string]string  `yaml:"build_vars,omitempty" json:"build_vars"`
+	CFlags         []string           `yaml:"cflags,omitempty" json:"cflags"`
+	CXXFlags       []string           `yaml:"cxxflags,omitempty" json:"cxxflags"`
+	CDefs          map[string]string  `yaml:"cdefs,omitempty" json:"cdefs"`
+	Tags           []string           `yaml:"tags,omitempty" json:"tags"`
 
 	LibsVersion       string `yaml:"libs_version,omitempty" json:"libs_version"`
 	ModulesVersion    string `yaml:"modules_version,omitempty" json:"modules_version"`
