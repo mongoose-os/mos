@@ -17,7 +17,8 @@ type VersionJson struct {
 }
 
 const (
-	brewDistrName = "brew"
+	LatestVersionName = "latest"
+	brewDistrName     = "brew"
 )
 
 var (
@@ -29,7 +30,7 @@ var (
 		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
 	)
 
-	debianDistrNames = []string{"xenial", "zesty", "artful"}
+	ubuntuDistrNames = []string{"xenial", "artful", "bionic"}
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
@@ -46,7 +47,7 @@ func GetMosVersionFromBuildId(buildId string) string {
 	if matches != nil && LooksLikeVersionNumber(matches[2]) {
 		return matches[2]
 	}
-	return "latest"
+	return LatestVersionName
 }
 
 // GetMosVersionSuffix returns an empty string if mos version is "latest";
@@ -65,8 +66,8 @@ func LooksLikeDistrBuildId(s string) bool {
 	return ourutil.FindNamedSubmatches(regexpBuildIdDistr, s) != nil
 }
 
-func LooksLikeDebianBuildId(s string) bool {
-	return GetDebianPackageName(s) != ""
+func LooksLikeUbuntuBuildId(s string) bool {
+	return GetUbuntuPackageName(s) != ""
 }
 
 func LooksLikeBrewBuildId(s string) bool {
@@ -74,13 +75,13 @@ func LooksLikeBrewBuildId(s string) bool {
 	return matches != nil && matches["distr"] == brewDistrName
 }
 
-// GetDebianPackageName parses given build id string, and if it looks like a
+// GetUbuntuPackageName parses given build id string, and if it looks like a
 // debian build id, returns either "mos-latest" or "mos". Otherwise, returns
 // an empty string.
-func GetDebianPackageName(buildId string) string {
+func GetUbuntuPackageName(buildId string) string {
 	matches := ourutil.FindNamedSubmatches(regexpBuildIdDistr, buildId)
 	if matches != nil {
-		for _, v := range debianDistrNames {
+		for _, v := range ubuntuDistrNames {
 			if strings.HasPrefix(matches["distr"], v) {
 				if LooksLikeVersionNumber(matches["version"]) {
 					return "mos"
@@ -90,7 +91,7 @@ func GetDebianPackageName(buildId string) string {
 			}
 		}
 
-		// Some non-debian distro name
+		// Some distro other than Ubuntu
 		return ""
 	} else {
 		// Doesn't look like distro build id

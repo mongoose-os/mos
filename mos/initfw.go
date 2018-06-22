@@ -14,6 +14,7 @@ import (
 	"cesanta.com/mos/build/archive"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 )
 
@@ -32,9 +33,14 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	// Download zip data
-	fmt.Println("Downloading empty app...")
+	v := version.GetMosVersion()
+	if v == version.LatestVersionName {
+		v = "master"
+	}
+	url := fmt.Sprintf("https://github.com/mongoose-os-apps/empty/archive/%s.zip", v)
 
-	url := fmt.Sprintf("https://github.com/mongoose-os-apps/empty/archive/master.zip")
+	reportf("Downloading %s...", url)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return errors.Trace(err)
@@ -55,7 +61,7 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 
 	zipReader := bytes.NewReader(zipData)
 
-	fmt.Println("Unpacking...")
+	reportf("Unpacking...")
 	if err := archive.UnzipInto(zipReader, zipReader.Size(), ".", 1); err != nil {
 		return errors.Trace(err)
 	}

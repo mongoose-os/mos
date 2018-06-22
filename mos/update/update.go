@@ -72,13 +72,13 @@ func GetServerMosVersion(mosVersion string) (*version.VersionJson, error) {
 }
 
 func Update(ctx context.Context, devConn *dev.DevConn) error {
-	if version.LooksLikeDebianBuildId(version.BuildId) {
+	if version.LooksLikeUbuntuBuildId(version.BuildId) {
 		// It looks like this binary is from Ubuntu's deb, so, use apt to update
 		if err := ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt", "update"); err != nil {
 			return errors.Trace(err)
 		}
 
-		if err := ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt", "install", "--only-upgrade", version.GetDebianPackageName(version.BuildId)); err != nil {
+		if err := ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt", "install", "--only-upgrade", version.GetUbuntuPackageName(version.BuildId)); err != nil {
 			return errors.Trace(err)
 		}
 
