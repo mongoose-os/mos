@@ -1,26 +1,26 @@
 #!/bin/bash
 
 OS=`uname`
-DESTDIR=$1
-test -z "$DESTDIR" && DESTDIR=~/.mos/bin
 PROGNAME=mos
-FULLPATH=$DESTDIR/$PROGNAME
-MOS_URL=
+VERSION=${1:-release}  # Can also be "latest" or a version number
+DESTDIR=${2:-~/.mos/bin}
 
 checklib() {
   if ! test -f "$1" ; then
     echo "Installing `basename $1` ..."
     mkdir -p `dirname $1`
-    curl -fsSL https://mongoose-os.com/downloads/mos-release/`basename $1` -o "$1"
+    curl -fsSL https://mongoose-os.com/downloads/mos-$VERSION/`basename $1` -o "$1"
   fi
 }
 
 test -d $DESTDIR || mkdir -p $DESTDIR
 
+FULLPATH=$DESTDIR/$PROGNAME
+
 if test "$OS" = Linux ; then
-  MOS_URL=https://mongoose-os.com/downloads/mos-release/linux/mos
+  MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/linux/mos
 elif test "$OS" = Darwin ; then
-  MOS_URL=https://mongoose-os.com/downloads/mos-release/mac/mos
+  MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/mac/mos
   checklib /usr/local/opt/libftdi/lib/libftdi1.2.dylib
   checklib /usr/local/opt/libusb/lib/libusb-1.0.0.dylib
 else
