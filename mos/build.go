@@ -556,7 +556,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		for containerPath, hostPath := range mp {
-			dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
+			// Do not mount non-existent paths. This can happen for auto-generated paths
+			// such as src/${platform} where no platform-specific sources exist.
+			if _, err := os.Stat(hostPath); err == nil {
+				dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
+			}
 		}
 		// }}}
 
