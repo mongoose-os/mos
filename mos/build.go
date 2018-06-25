@@ -1472,7 +1472,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	if !ok {
 
 		for {
-			ourutil.Freportf(lpr.logWriter, "The --lib flag was not given for it, checking repository")
+			ourutil.Freportf(lpr.logWriter, "The --lib flag was not given for %q, checking repository", name)
 
 			needUpdate := true
 
@@ -1649,11 +1649,12 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 		mosDirEffective = *mosRepo
 	} else {
 		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
-
 		appDir, err := getCodeDirAbs()
 		if err != nil {
 			return "", errors.Trace(err)
 		}
+
+		md := getModulesDir(appDir)
 
 		m := build.SWModule{
 			// TODO(dfrank) get upstream repo URL from a flag
@@ -1663,11 +1664,27 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 			Version:  mongooseOsVersion,
 		}
 
-		// NOTE: mongoose-os repo is huge, so in order to save space and time, we
-		// do a shallow clone (--depth 1).
-		mosDirEffective, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, "", updateInterval, 1)
+		localDir, err := m.GetLocalDir(md, mongooseOsVersion)
 		if err != nil {
-			return "", errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
+			return "", errors.Trace(err)
+		}
+
+		if _, err := os.Stat(localDir); err == nil {
+			// lib's local dir already exists
+
+			if *noLibsUpdate {
+				ourutil.Freportf(logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
+				mosDirEffective = localDir
+			}
+		}
+
+		if mosDirEffective == "" {
+			// NOTE: mongoose-os repo is huge, so in order to save space and time, we
+			// do a shallow clone (--depth 1).
+			mosDirEffective, err = m.PrepareLocalDir(md, logWriter, true, "", updateInterval, 1)
+			if err != nil {
+				return "", errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
+			}
 		}
 	}
 
