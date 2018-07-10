@@ -82,7 +82,7 @@ func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		switch len(hubsInfo) {
 		case 0:
 			return errors.Errorf("there are no Azure IoT hubs present, please create one " +
-				"as described here: https://mongoose-os.com/docs/cloud_integrations/azure.html")
+				"as described here: https://mongoose-os.com/docs/cloud/azure.md")
 		case 1:
 			azureIoTHubName = hubsInfo[0].Name
 			azureIoTHubHostName = hubsInfo[0].Properties.HostName
@@ -94,7 +94,7 @@ func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		output, err := ourutil.GetCommandOutput("az", "iot", "hub", "show", "--name", azureIoTHubName)
 		if err != nil {
 			return errors.Errorf("Azure IoT Hub %q does not exist, please create it "+
-				"as described here: https://mongoose-os.com/docs/cloud_integrations/azure.html", azureIoTHubName)
+				"as described here: https://mongoose-os.com/docs/cloud/azure.md", azureIoTHubName)
 		}
 		var hubInfo azureIoTHubInfo
 		if err = json.Unmarshal([]byte(output), &hubInfo); err != nil {
