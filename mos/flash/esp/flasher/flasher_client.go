@@ -397,7 +397,11 @@ func (fc *FlasherClient) Digest(addr, length, blockSize uint32) ([][]byte, error
 	if !fc.connected {
 		return nil, errors.New("not connected")
 	}
-	result, err := fc.simpleCmd(cmdFlashDigest, []uint32{addr, length, blockSize}, 5*time.Second)
+	timeout := 1 * time.Second
+	if blockSize == 0 {
+		timeout += time.Duration(length/1048576) * time.Second
+	}
+	result, err := fc.simpleCmd(cmdFlashDigest, []uint32{addr, length, blockSize}, timeout)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
