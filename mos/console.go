@@ -129,6 +129,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		var coreDump []byte
 		coreDumping := false
 		lastCDProgress := 0
+		cont := false
 
 		for {
 			buf := make([]byte, 100)
@@ -148,7 +149,6 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 					break
 				}
 				chunk := buf[:lf+1]
-				cont := len(curLine) > 0
 				curLine = append(curLine, chunk...)
 				if catchCoreDumps {
 					tsl := bytes.TrimSpace(curLine)
@@ -192,9 +192,11 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 				}
 				curLine = nil
 				buf = buf[lf+1:]
+				cont = false
 			}
 			if !coreDumping && len(buf) > 0 {
-				printConsoleLine(out, len(curLine) == 0, buf)
+				printConsoleLine(out, !cont, buf)
+				cont = true
 			}
 			curLine = append(curLine, buf...)
 		}
