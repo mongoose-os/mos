@@ -35,7 +35,7 @@ linux: generate
 	docker run -i --rm \
 	  -v $${GOPATH%%:*}/src:/go/src \
 	  -v $(OUTDIR):/out \
-	  docker.cesanta.com/gobuild32 \
+	  docker.io/mgos/gobuild32 \
 	    -tags 'netgo' \
 	    -o /out/downloads/mos/linux/mos -tags no_libudev --ldflags '-extldflags "-static"' \
 	    cesanta.com/mos
@@ -49,7 +49,7 @@ win: generate
 	docker run -i --rm \
 	  -v $${GOPATH%%:*}/src:/go/src \
 	  -v $(OUTDIR):/out \
-	docker.cesanta.com/gobuild-mingw \
+	docker.io/mgos/gobuild-mingw \
 	  bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc \
 	           go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
 

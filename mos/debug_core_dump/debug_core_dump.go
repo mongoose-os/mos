@@ -35,27 +35,27 @@ type platformDebugParams struct {
 var (
 	debugParams = map[string]platformDebugParams{
 		"cc3200": platformDebugParams{
-			image:              "docker.cesanta.com/cc3200-build:1.3.0-r8",
+			image:              "docker.io/mgos/cc3200-build:1.3.0-r8",
 			extraGDBArgs:       []string{},
 			extraServeCoreArgs: []string{},
 		},
 		"cc3220": platformDebugParams{
-			image:              "docker.cesanta.com/cc3220-build:2.10.00.04-r2",
+			image:              "docker.io/mgos/cc3220-build:2.10.00.04-r2",
 			extraGDBArgs:       []string{},
 			extraServeCoreArgs: []string{},
 		},
 		"esp32": platformDebugParams{
-			image:              "docker.cesanta.com/esp32-build:3.0-rc1-r9",
+			image:              "docker.io/mgos/esp32-build:3.0-r11",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000", "--xtensa_addr_fixup=true"},
 		},
 		"esp8266": platformDebugParams{
-			image:              "docker.cesanta.com/esp8266-build:2.2.1-1.5.0-r3",
+			image:              "docker.io/mgos/esp8266-build:2.2.1-1.5.0-r3",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000"},
 		},
 		"stm32": platformDebugParams{
-			image:              "docker.cesanta.com/stm32-build:1.8.0-r5",
+			image:              "docker.io/mgos/stm32-build:r9",
 			extraGDBArgs:       []string{},
 			extraServeCoreArgs: []string{},
 		},

@@ -32,7 +32,7 @@ if ! [[ "${ORIGIN}" =~ mos-tool(.git)?$ ]]; then
   echo "You should run this script from mos-tool repository, not from ${ORIGIN}"; exit 1;
 fi
 
-IMAGE=docker.cesanta.com/ubuntu-golang:${DISTR}
+IMAGE=docker.io/mgos/ubuntu-golang:${DISTR}
 
 mkdir -p $HOME/tmp
 

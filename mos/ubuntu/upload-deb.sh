@@ -16,7 +16,7 @@ set -x -e
 docker run -it --rm \
     -v ${GNUPGHOME}:/root/.gnupg \
     -v ${OUTDIR}:/work \
-    docker.cesanta.com/ubuntu-golang:xenial \
+    docker.io/mgos/ubuntu-golang:xenial \
     /bin/bash -l -c "\
         cd /work && \
         debsign *_source.changes && \
