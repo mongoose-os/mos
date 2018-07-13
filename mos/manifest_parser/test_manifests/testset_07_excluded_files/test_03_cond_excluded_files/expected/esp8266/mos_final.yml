@@ -8,11 +8,8 @@ description: My test app
 sources:
 - __APP_ROOT__/app/src/app_src1.c
 - __APP_ROOT__/app/src/app_src3.c
-libs:
-- origin: https://github.com/mongoose-os-libs/mongoose
-  location: https://github.com/mongoose-os-libs/mongoose
-  suffixtpl: ""
 build_vars:
+  BOARD: ""
   FOO: bar
 libs_version: "0.01"
 modules_version: "0.01"

@@ -101,18 +101,17 @@ func dataMgos_deps_initCTmpl() (*asset, error) {
 	return a, nil
 }
 
-var _dataRoot_manifestYml = []byte(`
-manifest_version: 2017-06-16
+var _dataRoot_manifestYml = []byte(`manifest_version: 2018-06-20
 
-libs:
-  - origin: https://github.com/mongoose-os-libs/mongoose
+build_vars:
+  BOARD: ""
 
 conds:
   - when: mos.platform == "esp32"
     apply:
       build_vars:
-        ESP_IDF_EXTRA_COMPONENTS:
-        ESP_IDF_SDKCONFIG_OPTS:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
 `)
 
 func dataRoot_manifestYmlBytes() ([]byte, error) {
@@ -125,7 +124,7 @@ func dataRoot_manifestYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/root_manifest.yml", size: 231, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/root_manifest.yml", size: 197, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

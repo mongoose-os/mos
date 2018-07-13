@@ -20,10 +20,6 @@ filesystem:
 - __APP_ROOT__/libs/mylib2/fs/mylib2_file1
 - __APP_ROOT__/libs/mylib4/fs/mylib4_file1
 - __APP_ROOT__/libs/mylib3/fs/mylib3_file1
-libs:
-- origin: https://github.com/mongoose-os-libs/mongoose
-  location: https://github.com/mongoose-os-libs/mongoose
-  suffixtpl: ""
 config_schema:
 - - mylib1
   - o
@@ -41,6 +37,7 @@ config_schema:
   - o
   - title: Myapp settings
 build_vars:
+  BOARD: ""
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
