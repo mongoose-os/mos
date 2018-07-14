@@ -78,7 +78,8 @@ func printConsoleLine(out io.Writer, addTS bool, line []byte) {
 
 func analyzeCoreDump(out io.Writer, cd []byte) error {
 	info, err := debug_core_dump.GetInfoFromCoreDump(cd)
-	tf, err := ioutil.TempFile("", fmt.Sprintf("core-%s-%s-%s", info.App, info.Platform, time.Now().Format("20060102-150405.")))
+	cwd, _ := os.Getwd() // Mac docker cannot mount dirs from /tmp. Thus, create core in the CWD
+	tf, err := ioutil.TempFile(cwd, fmt.Sprintf("core-%s-%s-%s", info.App, info.Platform, time.Now().Format("20060102-150405.")))
 	if err != nil {
 		return errors.Annotatef(err, "failed open core dump file")
 	}
