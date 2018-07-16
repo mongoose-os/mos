@@ -401,6 +401,9 @@ func (fc *FlasherClient) Digest(addr, length, blockSize uint32) ([][]byte, error
 	if blockSize == 0 {
 		timeout += time.Duration(2*length/1048576) * time.Second
 	}
+	if timeout > 24*time.Second {
+		timeout = 24 * time.Second
+	}
 	result, err := fc.simpleCmd(cmdFlashDigest, []uint32{addr, length, blockSize}, timeout)
 	if err != nil {
 		return nil, errors.Trace(err)
