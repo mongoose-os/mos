@@ -37,6 +37,7 @@ type FWAppManifestLibHandled struct {
 	Name     string         `yaml:"name,omitempty" json:"name"`
 	Path     string         `yaml:"path,omitempty" json:"path"`
 	Deps     []string       `yaml:"deps,omitempty" json:"deps"`
+	InitDeps []string       `yaml:"init_deps,omitempty" json:"init_deps"`
 	Manifest *FWAppManifest `yaml:"manifest,omitempty" json:"manifest"`
 	Sources  []string       `yaml:"sources,omitempty" json:"sources"`
 }

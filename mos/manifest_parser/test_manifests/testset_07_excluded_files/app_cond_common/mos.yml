@@ -14,4 +14,6 @@ conds:
             sources:
               - -src/app_src2.c
 
-manifest_version: 2017-09-29
+no_implicit_init_deps: true
+
+manifest_version: 2018-06-20

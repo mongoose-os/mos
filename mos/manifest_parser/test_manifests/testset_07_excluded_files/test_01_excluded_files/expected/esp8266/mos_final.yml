@@ -23,12 +23,15 @@ config_schema:
   - title: Myapp settings
 build_vars:
   BOARD: ""
+  MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
 cdefs:
+  MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
 libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: 2017-09-29
 init_deps:
+- core
 - mylib1

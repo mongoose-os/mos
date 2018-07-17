@@ -178,6 +178,10 @@ func main() {
 	mRand.Seed(seed1 ^ seed2.Int64())
 
 	defer glog.Flush()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		glog.Flush()
+	}()
 
 	consoleMsgs = make(chan []byte, 10)
 
@@ -194,6 +198,10 @@ func main() {
 
 	goflag.CommandLine.Parse([]string{}) // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
+
+	glog.Infof("Version: %s", version.Version)
+	glog.Infof("Build ID: %s", version.BuildId)
+	glog.Infof("Update channel: %s", update.GetUpdateChannel())
 
 	if err := paths.Init(); err != nil {
 		log.Fatal(err)

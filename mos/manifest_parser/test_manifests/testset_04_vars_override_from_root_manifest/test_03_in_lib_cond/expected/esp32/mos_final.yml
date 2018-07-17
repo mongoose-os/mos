@@ -42,11 +42,13 @@ build_vars:
   ESP_IDF_SDKCONFIG_OPTS: |2
      SOMETHING_FROM_MYLIB3=y SOMETHING_ELSE_FROM_MYLIB3=y
      SOMETHING_FROM_APP=y
+  MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
   MGOS_HAVE_MYLIB4: "1"
 cdefs:
+  MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
@@ -56,6 +58,7 @@ modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: 2017-09-29
 init_deps:
+- core
 - mylib1
 - mylib2
 - mylib4

@@ -25,6 +25,7 @@ import (
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/interpreter"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -49,6 +50,9 @@ const (
 	rootManifestAssetName = "data/root_manifest.yml"
 
 	SwmodSuffixTpl = "-${version}"
+
+	coreLibName     = "core"
+	coreLibLocation = "https://github.com/mongoose-os-libs/core"
 )
 
 var (
@@ -384,10 +388,10 @@ func readManifestWithLibs(
 	// enum mgos_app_init_result.
 	depsTopo = depsTopo[0 : len(depsTopo)-1]
 
-	// Create a LibsHandled slice in topological order computed above
-	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(depsTopo))
-	for _, v := range depsTopo {
-		manifest.LibsHandled = append(manifest.LibsHandled, libsHandled[v])
+	lhp := map[string]*build.FWAppManifestLibHandled{}
+	for k, v := range libsHandled {
+		vc := v
+		lhp[k] = &vc
 	}
 
 	// Expand initDeps (which may contain globs) against actual list of libs.
@@ -398,14 +402,21 @@ func readManifestWithLibs(
 		}
 		nodeDeps := initDeps.GetDeps(node)
 		var nodeDepsResolved []string
+		nodeDepsResolvedMap := map[string]bool{}
 		for _, nodeDep := range nodeDeps {
 			for _, dep := range depsTopo {
 				if m, _ := path.Match(nodeDep, dep); m {
-					nodeDepsResolved = append(nodeDepsResolved, dep)
+					if !nodeDepsResolvedMap[dep] {
+						nodeDepsResolved = append(nodeDepsResolved, dep)
+						nodeDepsResolvedMap[dep] = true
+					}
 				}
 			}
 		}
+		sort.Strings(nodeDepsResolved)
+		lhp[node].InitDeps = nodeDepsResolved
 		initDepsResolved.AddNodeWithDeps(node, nodeDepsResolved)
+		glog.Infof("%s: %s", node, nodeDepsResolved)
 	}
 
 	initDepsTopo, cycle := initDepsResolved.Topological(true)
@@ -415,6 +426,12 @@ func readManifestWithLibs(
 		)
 	}
 	manifest.InitDeps = initDepsTopo
+
+	// Create a LibsHandled slice in topological order computed above
+	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(depsTopo))
+	for _, v := range depsTopo {
+		manifest.LibsHandled = append(manifest.LibsHandled, *lhp[v])
+	}
 
 	if err := expandManifestLibsAndConds(manifest, interp, adjustments); err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -472,6 +489,21 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 		// Also, remove any build vars from adjustments, so that they won't be set on
 		// deps' manifest we're going to read as well
 		pc.adjustments.BuildVars = make(map[string]string)
+
+		if !manifest.NoImplInitDeps {
+			found := false
+			for _, l := range manifest.Libs {
+				if name, _ := l.GetName(); name == coreLibName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				manifest.Libs = append(manifest.Libs, build.SWModule{
+					Location: coreLibLocation,
+				})
+			}
+		}
 	}
 
 	// Prepare all libs {{{
@@ -601,6 +633,10 @@ func prepareLib(
 		Manifest: libManifest,
 	}
 	pc.initDeps.AddNodeWithDeps(name, libManifest.InitAfter)
+	if !libManifest.NoImplInitDeps && name != coreLibName {
+		// Implicit dep on "core"
+		pc.initDeps.AddDep(name, coreLibName)
+	}
 	pc.mtx.Unlock()
 
 	lpres <- libPrepareResult{
@@ -659,6 +695,7 @@ func ReadManifest(
 			// Extend common app manifest with arch-specific things.
 			if err := extendManifest(manifest, manifest, archManifest, "", "", interp, &extendManifestOptions{
 				skipFailedExpansions: true,
+				extendInitDeps:       true,
 			}); err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
@@ -1120,6 +1157,9 @@ func extendManifest(
 	mMain.ConfigSchema = append(m1.ConfigSchema, m2.ConfigSchema...)
 	mMain.CFlags = append(m1.CFlags, m2.CFlags...)
 	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
+	if opts.extendInitDeps {
+		mMain.InitAfter = append(m1.InitAfter, m2.InitAfter...)
+	}
 
 	// m2.BuildVars and m2.CDefs can contain expressions which should be expanded
 	// against manifest m1.
@@ -1153,6 +1193,7 @@ func extendManifest(
 type extendManifestOptions struct {
 	skipSources          bool
 	skipFailedExpansions bool
+	extendInitDeps       bool
 }
 
 func prependPaths(items []string, dir string) []string {
@@ -1241,8 +1282,9 @@ func mergeSupportedPlatforms(p1, p2 []string) []string {
 }
 
 type libsInitDataItem struct {
-	Name string
-	Deps []string
+	Name  string
+	Ident string
+	Deps  []string
 }
 
 type libsInitData struct {
@@ -1268,8 +1310,9 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 			continue
 		}
 		tplData.Libs = append(tplData.Libs, libsInitDataItem{
-			Name: moscommon.IdentifierFromString(v.Name),
-			Deps: v.Deps,
+			Name:  v.Name,
+			Ident: moscommon.IdentifierFromString(v.Name),
+			Deps:  v.InitDeps,
 		})
 	}
 

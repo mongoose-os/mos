@@ -44,12 +44,14 @@ config_schema:
   - title: Myapp settings
 build_vars:
   BOARD: ""
+  MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
   MGOS_HAVE_MYLIB4: "1"
   MYLIB4_SWITCH_FOO: "0"
 cdefs:
+  MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
@@ -59,6 +61,7 @@ modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: 2017-09-29
 init_deps:
+- core
 - mylib1
 - mylib2
 - mylib4

@@ -8,7 +8,7 @@
 #include "mgos_app.h"
 
 {{range .Libs}}
-extern bool mgos_{{.Name}}_init(void);{{end}}
+extern bool mgos_{{.Ident}}_init(void);{{end}}
 
 static const struct lib_descr {
   const char *title;
@@ -18,7 +18,7 @@ static const struct lib_descr {
   // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
   {
     .title = "{{.Name}}",
-    .init = mgos_{{.Name}}_init,
+    .init = mgos_{{.Ident}}_init,
   },
 {{end}}
 };
