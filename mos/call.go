@@ -6,10 +6,7 @@ import (
 
 	"context"
 
-	"cesanta.com/common/go/mgrpc/frame"
-	"cesanta.com/common/go/ourjson"
 	"cesanta.com/mos/dev"
-	"cesanta.com/mos/rpccreds"
 
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
@@ -28,23 +25,7 @@ func isJSON(s string) bool {
 func callDeviceService(
 	ctx context.Context, devConn *dev.DevConn, method string, args string,
 ) (string, error) {
-	if args != "" && !isJSON(args) {
-		return "", errors.Errorf("Args [%s] is not a valid JSON string", args)
-	}
-
-	cmd := &frame.Command{Cmd: method}
-	if args != "" {
-		cmd.Args = ourjson.RawJSON([]byte(args))
-	}
-
-	resp, err := devConn.RPC.Call(ctx, devConn.Dest, cmd, rpccreds.GetRPCCreds)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	if resp.Status != 0 {
-		return "", errors.Errorf("remote error %d: %s", resp.Status, resp.StatusMsg)
-	}
+	s, e := dev.CallDeviceService(ctx, devConn, method, args)
 
 	// TODO(dfrank): instead of that, we should probably add a separate function
 	// for rebooting
@@ -52,9 +33,7 @@ func callDeviceService(
 		waitForReboot()
 	}
 
-	// Ignoring errors here, cause response could be empty which is a success
-	str, _ := json.MarshalIndent(resp.Response, "", "  ")
-	return string(str), nil
+	return s, e
 }
 
 func call(ctx context.Context, devConn *dev.DevConn) error {

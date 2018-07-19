@@ -25,6 +25,7 @@ import (
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/fs"
 	"cesanta.com/mos/gcp"
+	"cesanta.com/mos/ota"
 	"cesanta.com/mos/update"
 	"cesanta.com/mos/version"
 	"cesanta.com/mos/watson"
@@ -120,6 +121,7 @@ func init() {
 		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
 		{"put", fs.Put, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
 		{"rm", fs.Rm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
+		{"ota", ota.OTA, `Perform an OTA update on a device`, nil, []string{"port"}, true},
 		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true},
 		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},

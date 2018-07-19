@@ -18,13 +18,10 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const (
-	chunkSize = 512
-)
-
 var (
-	fsOpAttempts = 3
-	longFormat   = flag.BoolP("long", "l", false, "Long output format.")
+	fsOpAttempts  = 3
+	longFormat    = flag.BoolP("long", "l", false, "Long output format.")
+	ChunkSizeFlag = flag.Int("chunk-size", 512, "Chunk size for operations")
 )
 
 func listFiles(ctx context.Context, devConn *dev.DevConn, path string) (res []fwfs.ListExtResult, err error) {
@@ -81,11 +78,11 @@ func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 		// Get the next chunk of data
 		ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 		defer cancel()
-		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, chunkSize, offset, attempts)
+		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, ChunkSizeFlag, offset, attempts)
 		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfs.GetArgs{
 			Filename: &name,
 			Offset:   lptr.Int64(offset),
-			Len:      lptr.Int64(chunkSize),
+			Len:      lptr.Int64(int64(*ChunkSizeFlag)),
 		})
 		if err != nil {
 			attempts -= 1
@@ -162,7 +159,7 @@ func PutFile(ctx context.Context, devConn *dev.DevConn, hostFilename, devFilenam
 }
 
 func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename string) error {
-	data := make([]byte, chunkSize)
+	data := make([]byte, *ChunkSizeFlag)
 	appendFlag := false
 
 	attempts := fsOpAttempts

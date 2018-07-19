@@ -3,10 +3,12 @@ package dev
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"time"
 
 	"cesanta.com/common/go/mgrpc"
 	"cesanta.com/common/go/mgrpc/codec"
+	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	fwconfig "cesanta.com/fw/defs/config"
 	fwfilesystem "cesanta.com/fw/defs/fs"
@@ -177,4 +179,35 @@ func (dc *DevConn) ConnectWithOpts(ctx context.Context, reconnect bool, tlsConfi
 
 func (dc *DevConn) GetTimeout() time.Duration {
 	return dc.c.Timeout
+}
+
+func isJSON(s string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
+}
+
+func CallDeviceService(
+	ctx context.Context, devConn *DevConn, method string, args string,
+) (string, error) {
+	if args != "" && !isJSON(args) {
+		return "", errors.Errorf("Args [%s] is not a valid JSON string", args)
+	}
+
+	cmd := &frame.Command{Cmd: method}
+	if args != "" {
+		cmd.Args = ourjson.RawJSON([]byte(args))
+	}
+
+	resp, err := devConn.RPC.Call(ctx, devConn.Dest, cmd, rpccreds.GetRPCCreds)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	if resp.Status != 0 {
+		return "", errors.Errorf("remote error %d: %s", resp.Status, resp.StatusMsg)
+	}
+
+	// Ignoring errors here, cause response could be empty which is a success
+	str, _ := json.MarshalIndent(resp.Response, "", "  ")
+	return string(str), nil
 }
