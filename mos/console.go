@@ -20,9 +20,9 @@ import (
 
 // console specific flags
 var (
-	baudRate        uint
+	baudRateFlag    uint
 	noInput         bool
-	hwFC            bool
+	hwFCFlag        bool
 	setControlLines bool
 	tsfSpec         string
 	catchCoreDumps  bool
@@ -33,10 +33,10 @@ var (
 )
 
 func init() {
-	flag.UintVar(&baudRate, "baud-rate", 115200, "Serial port speed")
+	flag.UintVar(&baudRateFlag, "baud-rate", 115200, "Serial port speed")
 	flag.BoolVar(&noInput, "no-input", false,
 		"Do not read from stdin, only print device's output to stdout")
-	flag.BoolVar(&hwFC, "hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
+	flag.BoolVar(&hwFCFlag, "hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
 	flag.BoolVar(&setControlLines, "set-control-lines", true, "Set RTS and DTR explicitly when in console/RPC mode")
 	flag.BoolVar(&catchCoreDumps, "catch-core-dumps", true, "Catch and save core dumps")
 
@@ -107,8 +107,8 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 
 	s, err := serial.Open(serial.OpenOptions{
 		PortName:            port,
-		BaudRate:            baudRate,
-		HardwareFlowControl: hwFC,
+		BaudRate:            baudRateFlag,
+		HardwareFlowControl: hwFCFlag,
 		DataBits:            8,
 		ParityMode:          serial.PARITY_NONE,
 		StopBits:            1,

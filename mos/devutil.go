@@ -88,10 +88,9 @@ func createDevConnWithJunkHandler(
 			LogCallback: logHandler,
 		},
 		Serial: codec.SerialCodecOptions{
-			JunkHandler: junkHandler,
-			// Due to lack of flow control, we send data in chunks and wait after each.
-			SendChunkSize:        16,
-			SendChunkDelay:       5 * time.Millisecond,
+			BaudRate:             baudRateFlag,
+			HardwareFlowControl:  hwFCFlag,
+			JunkHandler:          junkHandler,
 			SetControlLines:      setControlLines,
 			InvertedControlLines: *invertedControlLines,
 		},
@@ -99,6 +98,12 @@ func createDevConnWithJunkHandler(
 			APIKey:       watson.WatsonAPIKeyFlag,
 			APIAuthToken: watson.WatsonAPIAuthTokenFlag,
 		},
+	}
+	// Due to lack of flow control, we send data in chunks and wait after each.
+	// At higher, non-default bad rate we assume user knows what they are doing.
+	if codecOpts.Serial.BaudRate <= 115200 {
+		codecOpts.Serial.SendChunkSize = 16
+		codecOpts.Serial.SendChunkDelay = 5 * time.Millisecond
 	}
 	devConn, err := c.CreateDevConnWithOpts(ctx, addr, *reconnect, tlsConfig, codecOpts)
 	return devConn, errors.Trace(err)

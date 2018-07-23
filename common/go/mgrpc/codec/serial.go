@@ -30,6 +30,8 @@ const (
 )
 
 type SerialCodecOptions struct {
+	BaudRate             uint
+	HardwareFlowControl  bool
 	SendChunkSize        int
 	SendChunkDelay       time.Duration
 	JunkHandler          func(junk []byte)
@@ -63,15 +65,20 @@ type serialCodec struct {
 
 func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Codec, error) {
 	glog.Infof("Opening %s...", portName)
-	s, err := serial.Open(serial.OpenOptions{
+	oo := serial.OpenOptions{
 		PortName:              portName,
 		BaudRate:              115200,
 		DataBits:              8,
 		ParityMode:            serial.PARITY_NONE,
 		StopBits:              1,
+		HardwareFlowControl:   opts.HardwareFlowControl,
 		InterCharacterTimeout: uint(interCharacterTimeout / time.Millisecond),
 		MinimumReadSize:       0,
-	})
+	}
+	if opts.BaudRate != 0 {
+		oo.BaudRate = opts.BaudRate
+	}
+	s, err := serial.Open(oo)
 	glog.Infof("%s opened: %v, err: %v", portName, s, err)
 	if err != nil {
 		return nil, errors.Trace(err)

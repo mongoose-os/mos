@@ -81,6 +81,7 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "unable to start an update")
 	}
 
+	ourutil.Reportf("Writing data...")
 	data := make([]byte, *fs.ChunkSizeFlag)
 	total := int64(0)
 	lastReport := time.Now()
@@ -96,7 +97,13 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 			Data string `json:"data"`
 		}{Data: dataB64}
 		staJSON, _ := json.Marshal(&sta)
-		s, err = dev.CallDeviceService(ctx, devConn, "OTA.Write", string(staJSON))
+		for i := 0; i < 3; i++ {
+			ctx2, _ := context.WithTimeout(ctx, devConn.GetTimeout())
+			_, err = dev.CallDeviceService(ctx2, devConn, "OTA.Write", string(staJSON))
+			if err == nil {
+				break
+			}
+		}
 		total += int64(n)
 		if total%65536 == 0 || time.Since(lastReport) > 5*time.Second {
 			ourutil.Reportf("  %d of %d (%.2f%%)", total, fi.Size(), float64(total)*100.0/float64(fi.Size()))
