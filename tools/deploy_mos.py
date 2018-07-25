@@ -31,7 +31,7 @@ MOS_TOOL_PATH = os.path.expanduser("~/tmp/mos_deploy_staging")
 GPG_KEY_PATH = os.path.join(os.environ["HOME"], ".gnupg-cesantabot")
 BUILD_DEB_PATH = os.path.join("mos", "ubuntu", "build-deb.sh")
 UPLOAD_DEB_PATH = os.path.join("mos", "ubuntu", "upload-deb.sh")
-UBUNTU_VERSIONS = ["xenial", "artful", "bionic"]
+UBUNTU_VERSIONS = ["xenial", "artful", "bionic", "cosmic"]
 
 deb_package = "mos-latest"
 tag_effective = "latest"

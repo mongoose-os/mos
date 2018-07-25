@@ -30,7 +30,7 @@ var (
 		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
 	)
 
-	ubuntuDistrNames = []string{"xenial", "artful", "bionic"}
+	ubuntuDistrNames = []string{"xenial", "artful", "bionic", "cosmic"}
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
