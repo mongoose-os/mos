@@ -3,8 +3,8 @@ class Mos < Formula
 
   desc "Mongoose OS command-line tool"
   homepage "https://mongoose-os.com/"
-  url "https://github.com/cesanta/mos-tool/archive/2.2.tar.gz"
-  sha256 "570ad1ff43ef64ac2330aa3284edca2fa979a444af5eaeafd7f9deb2ca66e77c"
+  url "https://github.com/cesanta/mos-tool/archive/2.4.1.tar.gz"
+  sha256 "49d01c91c44cbcc7901d4b0d4830c9549d734781f798a27dbc9c9752403ae428"
   head ""
 
   depends_on "go" => :build
