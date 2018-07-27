@@ -556,11 +556,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		for containerPath, hostPath := range mp {
-			// Do not mount non-existent paths. This can happen for auto-generated paths
-			// such as src/${platform} where no platform-specific sources exist.
-			if _, err := os.Stat(hostPath); err == nil {
-				dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
-			}
+			dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
 		}
 		// }}}
 
@@ -1356,6 +1352,12 @@ type mountPoints map[string]string
 // something is already mounted to the given containerPath, then it's compared
 // to the new hostPath value; if they are not equal, an error is returned.
 func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
+	// Do not mount non-existent paths. This can happen for auto-generated paths
+	// such as src/${platform} where no platform-specific sources exist.
+	if _, err := os.Stat(hostPath); err != nil {
+		return nil
+	}
+
 	// Docker Toolbox hack: in docker toolbox on windows, the actual host paths
 	// like C:\foo\bar don't work, this path becomes /c/foo/bar.
 	if isInDockerToolbox() {
