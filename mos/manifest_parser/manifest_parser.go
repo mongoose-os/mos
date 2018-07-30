@@ -39,8 +39,9 @@ const (
 	// - 2017-09-29: added support for includes
 	// - 2018-06-12: added support for globs in init_deps
 	// - 2018-06-20: added no_implicit_init_deps
+	// - 2018-07-30: added lib_versions
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2018-06-20"
+	maxManifestVersion = "2018-07-30"
 
 	depsApp = "app"
 
@@ -573,8 +574,12 @@ func prepareLib(
 
 	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
 
+	libVersion := pc.appManifest.LibVersions[name]
+	if libVersion == "" {
+		libVersion = pc.appManifest.LibsVersion
+	}
 	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
-		&m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
+		&m, pc.rootAppDir, libVersion, manifest.Platform,
 	)
 	if err != nil {
 		lpres <- libPrepareResult{
@@ -614,6 +619,13 @@ func prepareLib(
 	if err != nil {
 		lpres <- libPrepareResult{
 			err: errors.Trace(err),
+		}
+		return
+	}
+
+	if len(libManifest.LibVersions) != 0 {
+		lpres <- libPrepareResult{
+			err: errors.Errorf("lib_versions is only allowed in app manifest"),
 		}
 		return
 	}

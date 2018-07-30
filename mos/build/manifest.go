@@ -69,9 +69,10 @@ type FWAppManifest struct {
 	CDefs          map[string]string  `yaml:"cdefs,omitempty" json:"cdefs"`
 	Tags           []string           `yaml:"tags,omitempty" json:"tags"`
 
-	LibsVersion       string `yaml:"libs_version,omitempty" json:"libs_version"`
-	ModulesVersion    string `yaml:"modules_version,omitempty" json:"modules_version"`
-	MongooseOsVersion string `yaml:"mongoose_os_version,omitempty" json:"mongoose_os_version"`
+	LibsVersion       string            `yaml:"libs_version,omitempty" json:"libs_version"`
+	LibVersions       map[string]string `yaml:"lib_versions,omitempty" json:"lib_versions"`
+	ModulesVersion    string            `yaml:"modules_version,omitempty" json:"modules_version"`
+	MongooseOsVersion string            `yaml:"mongoose_os_version,omitempty" json:"mongoose_os_version"`
 
 	Conds []ManifestCond `yaml:"conds,omitempty" json:"conds"`
 
