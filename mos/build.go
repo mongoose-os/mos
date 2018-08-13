@@ -1497,7 +1497,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 
 				// Try to get current hash, ignoring errors
 				curHash := ""
-				if m.GetType() == build.SWModuleTypeGithub {
+				if m.GetType() == build.SWModuleTypeGit {
 					curHash, _ = gitinst.GetCurrentHash(localDir)
 				}
 
@@ -1546,7 +1546,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					return "", errors.Annotatef(err, "preparing local copy of the lib %q", name)
 				}
 
-				if m.GetType() == build.SWModuleTypeGithub {
+				if m.GetType() == build.SWModuleTypeGit {
 					if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
 						freportf(logWriter, "Hash is updated: %q -> %q", curHash, newHash)
 						// The current repo hash has changed after the pull, so we need to
@@ -1695,7 +1695,10 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 
 func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
 	switch m.GetType() {
-	case build.SWModuleTypeGithub:
+	case build.SWModuleTypeGit:
+		if !strings.Contains(m.Location, "github.com") {
+			break
+		}
 		assetUrl, err := getGithubLibAssetUrl(m.Location, platform, version.GetMosVersion())
 		if err != nil {
 			return errors.Trace(err)
@@ -1725,12 +1728,10 @@ func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
 		if err := ioutil.WriteFile(tgt, data, 0644); err != nil {
 			return errors.Trace(err)
 		}
-
-	default:
-		return errors.Errorf("unable to fetch library for swmodule of type %v", m.GetType())
 	}
 
-	return nil
+	name, _ := m.GetName()
+	return errors.Errorf("unable to fetch prebuilt binary for %q", name)
 }
 
 // }}}

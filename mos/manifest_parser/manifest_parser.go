@@ -40,8 +40,9 @@ const (
 	// - 2018-06-12: added support for globs in init_deps
 	// - 2018-06-20: added no_implicit_init_deps
 	// - 2018-07-30: added lib_versions
+	// - 2018-08-13: added support for non-GitHub Git repos
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2018-07-30"
+	maxManifestVersion = "2018-08-13"
 
 	depsApp = "app"
 
@@ -793,11 +794,15 @@ func ReadManifestFile(
 
 	// Normalize all Libs and Modules
 	for i, _ := range manifest.Libs {
-		manifest.Libs[i].Normalize()
+		if err = manifest.Libs[i].Normalize(); err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
 	}
 
 	for i, _ := range manifest.Modules {
-		manifest.Modules[i].Normalize()
+		if err = manifest.Modules[i].Normalize(); err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
 	}
 
 	if manifest.BuildVars == nil {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -39,16 +40,28 @@ type SWModuleType int
 const (
 	SWModuleTypeInvalid SWModuleType = iota
 	SWModuleTypeLocal
-	SWModuleTypeGithub
+	SWModuleTypeGit
 )
 
-func (m *SWModule) Normalize() {
+var (
+	gitSSHShortRegex = regexp.MustCompile(`(\w+@)?\w+:(\w+)`)
+)
+
+func (m *SWModule) Normalize() error {
 	if m.Location == "" && m.OriginOld != "" {
 		m.Location = m.OriginOld
 	} else {
 		// Just for the compatibility with a bit older fwbuild
 		m.OriginOld = m.Location
 	}
+	if m.Name == "" {
+		n, err := m.GetName()
+		if err != nil {
+			return errors.Annotatef(err, "name of lib is not set and cannot be guessed from %q", m.Location)
+		}
+		m.Name = n
+	}
+	return nil
 }
 
 // IsClean returns whether the local library repo is clean. Non-existing
@@ -62,7 +75,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 	}
 
 	switch m.GetType() {
-	case SWModuleTypeGithub:
+	case SWModuleTypeGit:
 		lp := filepath.Join(libsDir, m.getGitDirName(name, m.getVersionGit(defaultVersion)))
 
 		if _, err := os.Stat(lp); err != nil {
@@ -109,7 +122,7 @@ func (m *SWModule) PrepareLocalDir(
 		}
 
 		switch m.GetType() {
-		case SWModuleTypeGithub:
+		case SWModuleTypeGit:
 			version := m.getVersionGit(defaultVersion)
 			if err := prepareLocalCopyGit(m.Location, version, lp, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
 				return "", errors.Trace(err)
@@ -139,7 +152,7 @@ func (m *SWModule) getVersionGit(defaultVersion string) string {
 
 func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 	switch m.GetType() {
-	case SWModuleTypeGithub:
+	case SWModuleTypeGit:
 		name, err := m.GetName()
 		if err != nil {
 			return "", errors.Trace(err)
@@ -179,11 +192,19 @@ func (m *SWModule) GetName() (string, error) {
 	}
 
 	switch m.GetType() {
-	case SWModuleTypeGithub:
-		// Take last path fragment
+	case SWModuleTypeGit:
+		// Take last path fragment, drop ".git" if present.
 		u, err := url.Parse(m.Location)
 		if err != nil {
-			return "", errors.Trace(err)
+			if sm := gitSSHShortRegex.FindAllStringSubmatch(m.Location, 1); sm != nil {
+				ourutil.Reportf("%#v", sm[0])
+				u = &url.URL{Path: sm[0][2]}
+			} else {
+				return "", errors.Trace(err)
+			}
+		} else if u.Host == "" && u.Opaque != "" {
+			/* Git short-hand repo path w/o user@, i.e. server:name */
+			u.Path = u.Opaque
 		}
 
 		parts := strings.Split(u.Path, "/")
@@ -191,7 +212,12 @@ func (m *SWModule) GetName() (string, error) {
 			return "", errors.Errorf("path is empty in the URL %q", u.Path)
 		}
 
-		return parts[len(parts)-1], nil
+		name := parts[len(parts)-1]
+		if strings.HasSuffix(name, ".git") {
+			name = name[:len(name)-4]
+		}
+
+		return name, nil
 	case SWModuleTypeLocal:
 		_, name := filepath.Split(m.Location)
 		if name == "" {
@@ -214,23 +240,27 @@ func (m *SWModule) GetType() SWModuleType {
 	if stype == "" {
 		if m.Location != "" {
 			u, err := url.Parse(m.Location)
-			if err != nil {
-				return SWModuleTypeLocal
+			if err == nil {
+				switch u.Scheme {
+				case "ssh":
+					stype = "git"
+				case "https":
+					switch u.Host {
+					case "github.com":
+						stype = "git"
+					}
+				default:
+				}
 			}
-
-			switch u.Host {
-			case "github.com":
-				stype = "github"
+			if stype == "" && gitSSHShortRegex.MatchString(m.Location) {
+				stype = "git"
 			}
-		} else {
-			// Name is already checked to be not empty
-			return SWModuleTypeLocal
 		}
 	}
 
 	switch stype {
-	case "github":
-		return SWModuleTypeGithub
+	case "git":
+		return SWModuleTypeGit
 	default:
 		return SWModuleTypeLocal
 	}
@@ -277,7 +307,7 @@ func prepareLocalCopyGit(
 	}
 
 	if !repoExists {
-		freportf(logWriter, "Repository %q does not exist, cloning...\n", targetDir)
+		freportf(logWriter, "Repository %q does not exist, cloning from %q...\n", targetDir, origin)
 		cloneOpts := ourgit.CloneOptions{
 			Depth: cloneDepth,
 		}
