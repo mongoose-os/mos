@@ -24,7 +24,6 @@ import (
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/common/state"
-	"cesanta.com/mos/manifest_parser"
 	"cesanta.com/mos/mosgit"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
@@ -465,9 +464,8 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 		logWriter := bytes.Buffer{}
 
 		swmod := build.SWModule{
-			Location:  originURL,
-			Version:   version.GetMosVersion(),
-			SuffixTpl: manifest_parser.SwmodSuffixTpl,
+			Location: originURL,
+			Version:  version.GetMosVersion(),
 		}
 
 		glog.Infof("Checking out %s at the version %s...", basename, version.GetMosVersion())

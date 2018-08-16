@@ -34,7 +34,7 @@ type AppManifest struct {
 }
 
 type FWAppManifestLibHandled struct {
-	Name     string         `yaml:"name,omitempty" json:"name"`
+	Lib      SWModule       `yaml:"lib,omitempty" json:"name"`
 	Path     string         `yaml:"path,omitempty" json:"path"`
 	Deps     []string       `yaml:"deps,omitempty" json:"deps"`
 	InitDeps []string       `yaml:"init_deps,omitempty" json:"init_deps"`
@@ -69,17 +69,13 @@ type FWAppManifest struct {
 	CDefs          map[string]string  `yaml:"cdefs,omitempty" json:"cdefs"`
 	Tags           []string           `yaml:"tags,omitempty" json:"tags"`
 
-	LibsVersion       string            `yaml:"libs_version,omitempty" json:"libs_version"`
-	LibVersions       map[string]string `yaml:"lib_versions,omitempty" json:"lib_versions"`
-	ModulesVersion    string            `yaml:"modules_version,omitempty" json:"modules_version"`
-	MongooseOsVersion string            `yaml:"mongoose_os_version,omitempty" json:"mongoose_os_version"`
+	LibsVersion       string `yaml:"libs_version,omitempty" json:"libs_version"`
+	ModulesVersion    string `yaml:"modules_version,omitempty" json:"modules_version"`
+	MongooseOsVersion string `yaml:"mongoose_os_version,omitempty" json:"mongoose_os_version"`
 
 	Conds []ManifestCond `yaml:"conds,omitempty" json:"conds"`
 
 	ManifestVersion string `yaml:"manifest_version,omitempty" json:"manifest_version"`
-	// SkeletonVersion is deprecated since 05.06.2017 (all existing manifests
-	// are updated at 18.08.2017)
-	SkeletonVersion string `yaml:"skeleton_version,omitempty" json:"skeleton_version"`
 
 	// are names of the libraries which need to be initialized before the
 	// application. The user doesn't have to set this field manually, it's set

@@ -39,7 +39,6 @@ const (
 	// - 2017-09-29: added support for includes
 	// - 2018-06-12: added support for globs in init_deps
 	// - 2018-06-20: added no_implicit_init_deps
-	// - 2018-07-30: added lib_versions
 	// - 2018-08-13: added support for non-GitHub Git repos
 	minManifestVersion = "2017-03-17"
 	maxManifestVersion = "2018-08-13"
@@ -50,8 +49,6 @@ const (
 
 	assetPrefix           = "asset://"
 	rootManifestAssetName = "data/root_manifest.yml"
-
-	SwmodSuffixTpl = "-${version}"
 
 	coreLibName     = "core"
 	coreLibLocation = "https://github.com/mongoose-os-libs/core"
@@ -263,20 +260,26 @@ func ReadManifestFinal(
 				return nil, nil, errors.Trace(err)
 			}
 
-			// Check if binary version of the lib exists. If so, maybe use it instead
-			// of sources.
+			// Check if binary version of the lib exists. We do this if there are
+			// no sources or if we prefer binary libs (for speed).
 			binaryLib := ""
-			bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Name, manifest.Platform)
-			if _, err := os.Stat(bl); err == nil {
-				bl, err := filepath.Abs(bl)
-				if err != nil {
-					return nil, nil, errors.Trace(err)
-				}
-
-				// Prebuilt lib exists: use it if either preferPrebuiltLibs is true
-				// (so that we prefer binary) or if there are no sources.
-				if len(manifest.LibsHandled[k].Sources) == 0 || preferPrebuiltLibs {
+			var fetchErr error
+			if (len(manifest.LibsHandled[k].Sources) == 0 && len(origSources) != 0) || preferPrebuiltLibs {
+				bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Lib.Name, manifest.Platform)
+				if _, err := os.Stat(bl); err == nil {
+					bl, err := filepath.Abs(bl)
+					if err != nil {
+						return nil, nil, errors.Trace(err)
+					}
+					ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
 					binaryLib = bl
+				} else {
+					// Try fetching
+					fetchErr = lcur.Lib.FetchPrebuiltBinary(manifest.Platform, manifest.LibsVersion, bl)
+					if fetchErr == nil {
+						ourutil.Freportf(logWriter, "Successfully fetched prebuilt binary for %q to %q", lcur.Lib.Name, bl)
+						binaryLib = bl
+					}
 				}
 			}
 
@@ -288,12 +291,13 @@ func ReadManifestFinal(
 				// Use lib sources, not prebuilt binary
 				if len(manifest.LibsHandled[k].Sources) == 0 && len(origSources) != 0 {
 					// Originally the lib had some sources in its mos.yml, but turns out
-					// that they don't exist, and we have failed to fetch a prebuilt
+					// that they don't exist (closed source lib), and we have failed to fetch a prebuilt
 					// binary for it. Error out with a descriptive message.
 					return nil, nil, errors.Errorf(
 						"neither sources nor prebuilt binary exists for the lib %q "+
 							"(or, if a library doesn't have any code by design, its mos.yml "+
-							"shouldn't contain \"sources\")", manifest.LibsHandled[k].Name,
+							"shouldn't contain \"sources\"). Fetch error was: %s",
+						manifest.LibsHandled[k].Lib.Name, fetchErr,
 					)
 				}
 				manifest.Sources = append(manifest.Sources, manifest.LibsHandled[k].Sources...)
@@ -551,7 +555,6 @@ func prepareLib(
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
-	m.SuffixTpl = ""
 
 	name, err := m.GetName()
 	if err != nil {
@@ -575,12 +578,8 @@ func prepareLib(
 
 	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
 
-	libVersion := pc.appManifest.LibVersions[name]
-	if libVersion == "" {
-		libVersion = pc.appManifest.LibsVersion
-	}
 	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
-		&m, pc.rootAppDir, libVersion, manifest.Platform,
+		&m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
 	)
 	if err != nil {
 		lpres <- libPrepareResult{
@@ -624,13 +623,6 @@ func prepareLib(
 		return
 	}
 
-	if len(libManifest.LibVersions) != 0 {
-		lpres <- libPrepareResult{
-			err: errors.Errorf("lib_versions is only allowed in app manifest"),
-		}
-		return
-	}
-
 	// Add a build var and C macro MGOS_HAVE_<lib_name>
 	haveName := fmt.Sprintf(
 		"MGOS_HAVE_%s", strings.ToUpper(moscommon.IdentifierFromString(name)),
@@ -639,12 +631,14 @@ func prepareLib(
 	manifest.BuildVars[haveName] = "1"
 	manifest.CDefs[haveName] = "1"
 
-	pc.libsHandled[name] = build.FWAppManifestLibHandled{
-		Name:     name,
+	lh := build.FWAppManifestLibHandled{
+		Lib:      m,
 		Path:     libLocalDir,
 		Deps:     pc.deps.GetDeps(name),
 		Manifest: libManifest,
 	}
+	lh.Lib.Name = name
+	pc.libsHandled[name] = lh
 	pc.initDeps.AddNodeWithDeps(name, libManifest.InitAfter)
 	if !libManifest.NoImplInitDeps && name != coreLibName {
 		// Implicit dep on "core"
@@ -760,15 +754,6 @@ func ReadManifestFile(
 	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestSrc, &manifest); err != nil {
 		return nil, time.Time{}, errors.Annotatef(err, "parsing manifest %q", manifestFullName)
-	}
-
-	// If SkeletonVersion is specified, but ManifestVersion is not, then use the
-	// former
-	if manifest.ManifestVersion == "" && manifest.SkeletonVersion != "" {
-		// TODO(dfrank): uncomment the warning below when our examples use
-		// manifest_version
-		//ourutil.Freportf(logWriterStderr, "WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
-		manifest.ManifestVersion = manifest.SkeletonVersion
 	}
 
 	if manifest.ManifestVersion != "" {
@@ -905,13 +890,13 @@ func expandManifestLibsAndConds(
 		// - App
 		allManifests := []*build.FWAppManifestLibHandled{}
 		allManifests = append(allManifests, &build.FWAppManifestLibHandled{
-			Name:     "dummy_empty_manifest",
+			Lib:      build.SWModule{Name: "dummy_empty_manifest"},
 			Path:     "",
 			Manifest: &build.FWAppManifest{},
 		})
 
 		allManifests = append(allManifests, &build.FWAppManifestLibHandled{
-			Name:     "root_manifest",
+			Lib:      build.SWModule{Name: "root_manifest"},
 			Path:     "",
 			Manifest: rootManifest,
 		})
@@ -921,7 +906,7 @@ func expandManifestLibsAndConds(
 			allManifests = append(allManifests, &manifest.LibsHandled[k])
 		}
 		allManifests = append(allManifests, &build.FWAppManifestLibHandled{
-			Name:     "app",
+			Lib:      build.SWModule{Name: "app"},
 			Path:     "",
 			Manifest: manifest,
 		})
@@ -945,7 +930,7 @@ func expandManifestLibsAndConds(
 					skipSources: true,
 				},
 			); err != nil {
-				return errors.Annotatef(err, `expanding %q`, lcur.Name)
+				return errors.Annotatef(err, `expanding %q`, lcur.Lib.Name)
 			}
 
 			commonManifest = &curManifest
@@ -985,7 +970,7 @@ func expandManifestLibsAndConds(
 				if err := ExpandManifestConds(
 					manifest.LibsHandled[k].Manifest, commonManifest, interp,
 				); err != nil {
-					return errors.Annotatef(err, "expanding %q conds", manifest.LibsHandled[k].Name)
+					return errors.Annotatef(err, "expanding %q conds", manifest.LibsHandled[k].Lib.Name)
 				}
 			}
 		}
@@ -1317,7 +1302,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	for _, n := range manifest.InitDeps {
 		var v *build.FWAppManifestLibHandled
 		for _, lv := range manifest.LibsHandled {
-			if lv.Name == n {
+			if lv.Lib.Name == n {
 				v = &lv
 				break
 			}
@@ -1327,8 +1312,8 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 			continue
 		}
 		tplData.Libs = append(tplData.Libs, libsInitDataItem{
-			Name:  v.Name,
-			Ident: moscommon.IdentifierFromString(v.Name),
+			Name:  v.Lib.Name,
+			Ident: moscommon.IdentifierFromString(v.Lib.Name),
 			Deps:  v.InitDeps,
 		})
 	}

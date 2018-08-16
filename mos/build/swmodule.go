@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"cesanta.com/common/go/ourgit"
 	"cesanta.com/common/go/ourutil"
-	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/mosgit"
 
 	"github.com/cesanta/errors"
@@ -30,8 +31,6 @@ type SWModule struct {
 	Version   string `yaml:"version,omitempty" json:"version,omitempty"`
 	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	SuffixTpl string
-
 	localPath string
 }
 
@@ -44,8 +43,76 @@ const (
 )
 
 var (
-	gitSSHShortRegex = regexp.MustCompile(`(\w+@)?\w+:(\w+)`)
+	gitSSHShortRegex = regexp.MustCompile(`(?:(\w+)@)?(\S+?):(\S+)`)
 )
+
+func parseGitLocation(loc string) (string, string, string, string, error) {
+	isShort := false
+	var repoName, libName, repoURL, pathWithinRepo string
+	u, err := url.Parse(loc)
+	if err != nil {
+		if sm := gitSSHShortRegex.FindAllStringSubmatch(loc, 1); sm != nil {
+			u = &url.URL{
+				User: url.User(sm[0][1]),
+				Host: sm[0][2],
+				Path: sm[0][3],
+			}
+			isShort = true
+		} else {
+			return "", "", "", "", errors.Errorf("%q is not a Git location spec 1", loc)
+		}
+	} else if u.Host == "" && u.Opaque != "" {
+		/* Git short-hand repo path w/o user@, i.e. server:name */
+		u = &url.URL{
+			Host: u.Scheme,
+			Path: u.Opaque,
+		}
+		isShort = true
+	} else if u.Scheme == "" {
+		return "", "", "", "", errors.Errorf("%q is not a Git location spec 2", loc)
+	}
+
+	parts := strings.Split(u.Path, "/")
+	if len(parts) == 0 {
+		return "", "", "", "", errors.Errorf("path is empty in %q", loc)
+	}
+	libName = parts[len(parts)-1]
+	if strings.HasSuffix(libName, ".git") {
+		libName = libName[:len(libName)-4]
+	}
+	// Now find where repo name ends and path within repo begins.
+	// For GitHub HTTP URLs we expect tree/*/, for all other we find first component that ends in ".git".
+	if u.Scheme == "https" && u.Host == "github.com" && len(parts) > 4 {
+		repoName = parts[2]
+		u.Path = strings.Join(parts[:3], "/")
+		pathWithinRepo = filepath.Join(parts[5:]...)
+	} else {
+		for i, part := range parts {
+			if strings.HasSuffix(part, ".git") {
+				repoName = part[:len(part)-4]
+				if i+1 < len(parts) {
+					u.Path = strings.Join(parts[:i+1], "/")
+					pathWithinRepo = filepath.Join(parts[i+1:]...)
+				}
+				break
+			} else {
+				repoName = part
+			}
+		}
+	}
+
+	if isShort {
+		if u.User != nil && u.User.Username() != "" {
+			repoURL = fmt.Sprintf("%s@%s:%s", u.User.Username(), u.Host, u.Path)
+		} else {
+			repoURL = fmt.Sprintf("%s:%s", u.Host, u.Path)
+		}
+	} else {
+		repoURL = u.String()
+	}
+
+	return repoName, libName, repoURL, pathWithinRepo, nil
+}
 
 func (m *SWModule) Normalize() error {
 	if m.Location == "" && m.OriginOld != "" {
@@ -67,18 +134,13 @@ func (m *SWModule) Normalize() error {
 // IsClean returns whether the local library repo is clean. Non-existing
 // dir is considered clean.
 func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
-	gitinst := mosgit.NewOurGit()
-
-	name, err := m.GetName()
-	if err != nil {
-		return false, errors.Trace(err)
-	}
-
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		lp := filepath.Join(libsDir, m.getGitDirName(name, m.getVersionGit(defaultVersion)))
-
-		if _, err := os.Stat(lp); err != nil {
+		rp, err := m.getLocalGitRepoDir(libsDir, defaultVersion)
+		if err != nil {
+			return false, errors.Trace(err)
+		}
+		if _, err := os.Stat(rp); err != nil {
 			if os.IsNotExist(err) {
 				// Dir does not exist: we treat it as "dirty", just in order to fetch
 				// all libs locally, so that it's more obvious for people that they can
@@ -90,8 +152,9 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 			return false, errors.Trace(err)
 		}
 
-		// Dir exists, check if it's clean
-		isClean, err := gitinst.IsClean(lp, m.getVersionGit(defaultVersion))
+		// Dir exists, check if the repo is clean
+		gitinst := mosgit.NewOurGit()
+		isClean, err := gitinst.IsClean(rp, m.getVersionGit(defaultVersion))
 		if err != nil {
 			return false, errors.Trace(err)
 		}
@@ -114,51 +177,140 @@ func (m *SWModule) PrepareLocalDir(
 	libsDir string, logWriter io.Writer, deleteIfFailed bool, defaultVersion string,
 	pullInterval time.Duration, cloneDepth int,
 ) (string, error) {
-	if m.localPath == "" {
+	if m.localPath != "" {
+		return m.localPath, nil
+	}
 
-		lp, err := m.GetLocalDir(libsDir, defaultVersion)
+	var err error
+	localPath := ""
+	switch m.GetType() {
+	case SWModuleTypeGit:
+		localRepoPath, err := m.getLocalGitRepoDir(libsDir, defaultVersion)
 		if err != nil {
 			return "", errors.Trace(err)
 		}
+		_, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
+		version := m.getVersionGit(defaultVersion)
+		if err = prepareLocalCopyGit(repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
+			return "", errors.Trace(err)
+		}
 
-		switch m.GetType() {
-		case SWModuleTypeGit:
-			version := m.getVersionGit(defaultVersion)
-			if err := prepareLocalCopyGit(m.Location, version, lp, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
-				return "", errors.Trace(err)
+		if pathWithinRepo != "" {
+			localPath = filepath.Join(localRepoPath, pathWithinRepo)
+			st, err := os.Stat(localPath)
+			if err != nil {
+				return "", errors.Errorf("%q does not exist within %q", pathWithinRepo, localRepoPath)
 			}
+			if !st.IsDir() {
+				return "", errors.Errorf("%q is not a directory", localPath)
+			}
+		} else {
+			localPath = localRepoPath
+		}
 
-			// Everything went fine, so remember local path (and return it later)
-			m.localPath = lp
-
-		case SWModuleTypeLocal:
-			m.localPath = lp
+	case SWModuleTypeLocal:
+		localPath, err = m.GetLocalDir(libsDir, defaultVersion)
+		if err != nil {
+			return "", errors.Trace(err)
 		}
 	}
 
-	return m.localPath, nil
+	// Everything went fine, so remember local path (and return it later)
+	m.localPath = localPath
+
+	return localPath, nil
 }
 
-func (m *SWModule) getVersionGit(defaultVersion string) string {
+func getGithubLibAssetUrl(repoUrl, platform, version string) (string, error) {
+	u, err := url.Parse(repoUrl)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	_, name := path.Split(u.Path)
+
+	return fmt.Sprintf("%s/releases/download/%s/lib%s-%s.a", repoUrl, version, name, platform), nil
+}
+
+func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) error {
+	version := m.GetVersion(defaultVersion)
+	switch m.GetType() {
+	case SWModuleTypeGit:
+		if !strings.Contains(m.Location, "github.com") {
+			break
+		}
+		assetUrl, err := getGithubLibAssetUrl(m.Location, platform, version)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		resp, err := http.Get(assetUrl)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return errors.Errorf("got %d status code when accessed %s", resp.StatusCode, assetUrl)
+		}
+
+		// Fetched the asset successfully
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(tgt), 0755); err != nil {
+			return errors.Trace(err)
+		}
+
+		if err := ioutil.WriteFile(tgt, data, 0644); err != nil {
+			return errors.Trace(err)
+		}
+		return nil
+	}
+
+	name, _ := m.GetName()
+	return errors.Errorf("unable to fetch prebuilt binary for %q", name)
+}
+
+func (m *SWModule) GetVersion(defaultVersion string) string {
 	version := m.Version
 	if version == "" {
 		version = defaultVersion
 	}
-	if version == "" || version == "latest" {
+	return version
+}
+
+func (m *SWModule) getVersionGit(defaultVersion string) string {
+	version := m.GetVersion(defaultVersion)
+	if version == "latest" {
 		version = "master"
 	}
 	return version
 }
 
+func (m *SWModule) getLocalGitRepoDir(libsDir, defaultVersion string) (string, error) {
+	if m.GetType() != SWModuleTypeGit {
+		return "", errors.Errorf("%q is not a Git lib", m.Location)
+	}
+	repoName, _, _, _, err := parseGitLocation(m.Location)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+	return filepath.Join(libsDir, repoName), nil
+}
+
 func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		name, err := m.GetName()
+		localRepoPath, err := m.getLocalGitRepoDir(libsDir, defaultVersion)
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-
-		return filepath.Join(libsDir, m.getGitDirName(name, m.getVersionGit(defaultVersion))), nil
+		_, _, _, pathWithinRepo, _ := parseGitLocation(m.Location)
+		return filepath.Join(localRepoPath, pathWithinRepo), nil
 
 	case SWModuleTypeLocal:
 		if m.Location != "" {
@@ -193,31 +345,8 @@ func (m *SWModule) GetName() (string, error) {
 
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		// Take last path fragment, drop ".git" if present.
-		u, err := url.Parse(m.Location)
-		if err != nil {
-			if sm := gitSSHShortRegex.FindAllStringSubmatch(m.Location, 1); sm != nil {
-				ourutil.Reportf("%#v", sm[0])
-				u = &url.URL{Path: sm[0][2]}
-			} else {
-				return "", errors.Trace(err)
-			}
-		} else if u.Host == "" && u.Opaque != "" {
-			/* Git short-hand repo path w/o user@, i.e. server:name */
-			u.Path = u.Opaque
-		}
-
-		parts := strings.Split(u.Path, "/")
-		if len(parts) == 0 {
-			return "", errors.Errorf("path is empty in the URL %q", u.Path)
-		}
-
-		name := parts[len(parts)-1]
-		if strings.HasSuffix(name, ".git") {
-			name = name[:len(name)-4]
-		}
-
-		return name, nil
+		_, libName, _, _, err := parseGitLocation(m.Location)
+		return libName, err
 	case SWModuleTypeLocal:
 		_, name := filepath.Split(m.Location)
 		if name == "" {
@@ -266,11 +395,26 @@ func (m *SWModule) GetType() SWModuleType {
 	}
 }
 
+var (
+	repoLocks     = map[string]*sync.Mutex{}
+	repoLocksLock = sync.Mutex{}
+)
+
 func prepareLocalCopyGit(
 	origin, version, targetDir string,
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
 ) (retErr error) {
+
+	repoLocksLock.Lock()
+	lock := repoLocks[targetDir]
+	if lock == nil {
+		lock = &sync.Mutex{}
+		repoLocks[targetDir] = lock
+	}
+	repoLocksLock.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 
 	gitinst := mosgit.NewOurGit()
 
@@ -475,7 +619,7 @@ func prepareLocalCopyGit(
 				return errors.Trace(err)
 			}
 		} else {
-			freportf(logWriter, "Repository %q is updated recently enough, don't touch it", targetDir)
+			glog.V(2).Infof("Repository %q is recent enough, not updating", targetDir)
 		}
 	} else {
 		glog.V(2).Infof("requested version %q is not a branch, skip pulling.", version)
@@ -490,12 +634,6 @@ func prepareLocalCopyGit(
 	}
 
 	return nil
-}
-
-// getGitDirName returns given name with the appropriate version suffix
-// (see moscommon.GetVersionSuffix(repoVersion))
-func (m *SWModule) getGitDirName(name, repoVersion string) string {
-	return fmt.Sprint(name, moscommon.GetVersionSuffixTpl(repoVersion, m.SuffixTpl))
 }
 
 func freportf(logFile io.Writer, f string, args ...interface{}) {

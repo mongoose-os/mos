@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -1332,17 +1331,6 @@ func absPathSlice(slice []string) ([]string, error) {
 	return ret, nil
 }
 
-func getGithubLibAssetUrl(repoUrl, platform, version string) (string, error) {
-	u, err := url.Parse(repoUrl)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	_, name := path.Split(u.Path)
-
-	return fmt.Sprintf("%s/releases/download/%s/lib%s-%s.a", repoUrl, version, name, platform), nil
-}
-
 // Docker utils {{{
 
 // Docker mount points {{{
@@ -1561,20 +1549,6 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					}
 				}
 
-				// Check if prebuilt binary exists, and if not, try to fetch it
-				prebuiltFilePath := moscommon.GetBinaryLibFilePath(localDir, name, platform)
-
-				if _, err := os.Stat(prebuiltFilePath); err != nil {
-					// Prebuilt binary doesn't exist; let's see if we can fetch it
-					err = fetchPrebuiltBinary(m, platform, prebuiltFilePath)
-					if err == nil {
-						ourutil.Freportf(lpr.logWriter, "Successfully fetched prebuilt binary for %q to %q", name, prebuiltFilePath)
-					} else {
-						ourutil.Freportf(lpr.logWriter, "Falling back to sources for %q (failed to fetch prebuilt binary: %s)", name, err.Error())
-					}
-				} else {
-					ourutil.Freportf(lpr.logWriter, "Prebuilt binary for %q already exists", name)
-				}
 			}
 
 			break
@@ -1640,7 +1614,7 @@ func getModulesDir(projectDir string) string {
 	if paths.ModulesDir != "" {
 		return paths.ModulesDir
 	} else {
-		return moscommon.GetDepsDir(projectDir)
+		return filepath.Join(moscommon.GetDepsDir(projectDir), "modules")
 	}
 }
 
@@ -1691,47 +1665,6 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 	}
 
 	return mosDirEffective, nil
-}
-
-func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
-	switch m.GetType() {
-	case build.SWModuleTypeGit:
-		if !strings.Contains(m.Location, "github.com") {
-			break
-		}
-		assetUrl, err := getGithubLibAssetUrl(m.Location, platform, version.GetMosVersion())
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		resp, err := http.Get(assetUrl)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("got %d status code when accessed %s", resp.StatusCode, assetUrl)
-		}
-
-		// Fetched the asset successfully
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		if err := os.MkdirAll(filepath.Dir(tgt), 0755); err != nil {
-			return errors.Trace(err)
-		}
-
-		if err := ioutil.WriteFile(tgt, data, 0644); err != nil {
-			return errors.Trace(err)
-		}
-	}
-
-	name, _ := m.GetName()
-	return errors.Errorf("unable to fetch prebuilt binary for %q", name)
 }
 
 // }}}
