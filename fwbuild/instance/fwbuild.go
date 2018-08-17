@@ -383,15 +383,6 @@ func buildFirmware() error {
 		return errors.Trace(err)
 	}
 
-	// If SkeletonVersion is specified, but ManifestVersion is not, then use the
-	// former
-	if manifest.ManifestVersion == "" && manifest.SkeletonVersion != "" {
-		// TODO(dfrank): uncomment the warning below when our examples use
-		// manifest_version
-		//glog.Warningf("skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
-		manifest.ManifestVersion = manifest.SkeletonVersion
-	}
-
 	// Check if manifest manifest version is supported
 	if manifest.ManifestVersion < minManifestVersion {
 		return errors.Errorf(
