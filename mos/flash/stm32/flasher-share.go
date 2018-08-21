@@ -16,14 +16,14 @@ type FlashOpts struct {
 }
 
 func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
-	data, err := fw.GetPartData("boot")
+	data, err := fw.GetPartData("app")
 	if err != nil {
 		return errors.Annotatef(err, "invalid manifest")
 	}
 
-	name := filepath.Join(opts.ShareName, fw.Parts["boot"].Src)
+	name := filepath.Join(opts.ShareName, fw.Parts["app"].Src)
 
-	common.Reportf("Copying %s to %s...", fw.Parts["boot"].Src, opts.ShareName)
+	common.Reportf("Copying %s to %s...", fw.Parts["app"].Src, opts.ShareName)
 	err = ioutil.WriteFile(name, data, 0)
 	if err != nil {
 		return errors.Trace(err)
