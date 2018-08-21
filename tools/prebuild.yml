@@ -1,0 +1,106 @@
+# Remember: libs first, then apps (since the latter may use the former).
+
+# Build private version of closed source libs and publish to public repos.
+- locations:
+    - git@github.com:cesanta/mos-libs.git/cron
+    - git@github.com:cesanta/mos-libs.git/crontab
+    - git@github.com:cesanta/mos-libs.git/dash
+    - git@github.com:cesanta/mos-libs.git/mongoose
+  out:
+    github:
+      repo: mongoose-os-libs/%(repo_subdir)s
+  variants:
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+      cflags: -DMGOS_FREE_BUILD
+      cxxflags: -DMGOS_FREE_BUILD
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+
+- locations:
+    - git@github.com:cesanta/mos-libs.git/ota-shadow
+    - git@github.com:cesanta/mos-libs.git/ota-http-client
+    - git@github.com:cesanta/mos-libs.git/ota-http-server
+    - git@github.com:cesanta/mos-libs.git/rpc-service-ota
+  out:
+    github:
+      repo: mongoose-os-libs/%(repo_subdir)s
+  variants:
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: cc3200
+      platform: cc3200
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+      cflags: -DMGOS_FREE_BUILD
+      cxxflags: -DMGOS_FREE_BUILD
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+
+# Demo apps
+- location: https://github.com/mongoose-os-apps/demo-c
+  variants:
+    - name: esp8266
+      platform: esp8266
+    - name: esp8266-1M
+      platform: esp8266
+      build_vars:
+        FLASH_SIZE: 1048576
+    - name: esp8266-2M
+      platform: esp8266
+      build_vars:
+        FLASH_SIZE: 2097152
+    - name: esp32
+      platform: esp32
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
+
+- location: https://github.com/mongoose-os-apps/demo-js
+  variants:
+    - name: esp8266
+      platform: esp8266
+    - name: esp8266-1M
+      platform: esp8266
+      build_vars:
+        FLASH_SIZE: 1048576
+    - name: esp8266-2M
+      platform: esp8266
+      build_vars:
+        FLASH_SIZE: 2097152
+    - name: esp32
+      platform: esp32
+    - name: cc3220
+      platform: cc3220
+
+- location: https://github.com/mongoose-os-apps/example-m5stack-js
+  variants:
+    - name: esp32
+      platform: esp32
