@@ -263,22 +263,34 @@ func ReadManifestFinal(
 			// Check if binary version of the lib exists. We do this if there are
 			// no sources or if we prefer binary libs (for speed).
 			binaryLib := ""
-			var fetchErr error
+			var fetchErrs []error
 			if (len(manifest.LibsHandled[k].Sources) == 0 && len(origSources) != 0) || preferPrebuiltLibs {
-				bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Lib.Name, manifest.Platform)
-				if _, err := os.Stat(bl); err == nil {
-					bl, err := filepath.Abs(bl)
-					if err != nil {
-						return nil, nil, errors.Trace(err)
-					}
-					ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
-					binaryLib = bl
-				} else {
-					// Try fetching
-					fetchErr = lcur.Lib.FetchPrebuiltBinary(manifest.Platform, manifest.LibsVersion, bl)
-					if fetchErr == nil {
-						ourutil.Freportf(logWriter, "Successfully fetched prebuilt binary for %q to %q", lcur.Lib.Name, bl)
+				var variants []string
+				if v, ok := interp.MVars.GetVar("build_vars.BOARD"); ok && v.(string) != "" {
+					variants = append(variants, fmt.Sprintf("%s-%s", manifest.Platform, v.(string)))
+				}
+				variants = append(variants, manifest.Platform)
+				for _, variant := range variants {
+					bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Lib.Name, variant)
+					if _, err := os.Stat(bl); err == nil {
+						bl, err := filepath.Abs(bl)
+						if err != nil {
+							return nil, nil, errors.Trace(err)
+						}
+						ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
 						binaryLib = bl
+					} else {
+						// Try fetching
+						fetchErr := lcur.Lib.FetchPrebuiltBinary(variant, manifest.LibsVersion, bl)
+						if fetchErr == nil {
+							ourutil.Freportf(logWriter, "Successfully fetched prebuilt binary for %q to %q", lcur.Lib.Name, bl)
+							binaryLib = bl
+						} else {
+							fetchErrs = append(fetchErrs, fetchErr)
+						}
+					}
+					if binaryLib != "" {
+						break
 					}
 				}
 			}
@@ -297,7 +309,7 @@ func ReadManifestFinal(
 						"neither sources nor prebuilt binary exists for the lib %q "+
 							"(or, if a library doesn't have any code by design, its mos.yml "+
 							"shouldn't contain \"sources\"). Fetch error was: %s",
-						manifest.LibsHandled[k].Lib.Name, fetchErr,
+						manifest.LibsHandled[k].Lib.Name, fetchErrs,
 					)
 				}
 				manifest.Sources = append(manifest.Sources, manifest.LibsHandled[k].Sources...)
