@@ -60,6 +60,7 @@ var (
 	reconnect = flag.Bool("reconnect", false, "Enable reconnection")
 	force     = flag.Bool("force", false, "Use the force")
 	verbose   = flag.Bool("verbose", false, "Verbose output")
+	chdir     = flag.StringP("chdir", "C", "", "Change into this directory first")
 
 	invertedControlLines = flag.Bool("inverted-control-lines", false, "DTR and RTS control lines use inverted polarity")
 
@@ -195,6 +196,12 @@ func main() {
 	}
 	initFlags()
 	flag.Parse()
+
+	if *chdir != "" {
+		if err := os.Chdir(*chdir); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	osSpecificInit()
 
