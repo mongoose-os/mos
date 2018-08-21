@@ -63,6 +63,18 @@
       build_vars:
         BOARD: NUCLEO-F746ZG
 
+# Bootloader
+- location: https://github.com/mongoose-os-apps/bootloader
+  variants:
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+
 # Demo apps
 - location: https://github.com/mongoose-os-apps/demo-c
   variants:
@@ -82,6 +94,14 @@
       platform: cc3200
     - name: cc3220
       platform: cc3220
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
 
 - location: https://github.com/mongoose-os-apps/demo-js
   variants:
@@ -99,6 +119,14 @@
       platform: esp32
     - name: cc3220
       platform: cc3220
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
 
 - location: https://github.com/mongoose-os-apps/example-m5stack-js
   variants:
