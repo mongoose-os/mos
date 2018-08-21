@@ -55,7 +55,7 @@ $ tools/deploy_mos.py --release-tag X.XX
 $ sudo systemctl start publish_repos.timer
 ```
 
-  * Update homebrew formula (`mos/homebrew/Formula/mos.rb`) : adjust the `url`
+  * Update homebrew formula ([mos.rb](https://github.com/cesanta/homebrew-mos/blob/master/Formula/mos.rb)) : adjust the `url`
     and `sha256`, which can be calculated as follows:
 
 ```bash
