@@ -123,10 +123,6 @@
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
-    - name: stm32-NUCLEO-F746ZG
-      platform: stm32
-      build_vars:
-        BOARD: NUCLEO-F746ZG
 
 - location: https://github.com/mongoose-os-apps/example-m5stack-js
   variants:
