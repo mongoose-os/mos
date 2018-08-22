@@ -236,7 +236,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	// user about the update (if available)
 	select {
 	case v := <-serverVersionCh:
-		serverVer := version.GetMosVersionFromBuildId(v.BuildId)
+		serverVer := v.BuildVersion
 		localVer := version.GetMosVersion()
 
 		if serverVer != localVer {
@@ -1500,7 +1500,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 						serverVersion := libsDefVersion
 						v, err := update.GetServerMosVersion(update.GetUpdateChannel())
 						if err == nil {
-							serverVersion = version.GetMosVersionFromBuildId(v.BuildId)
+							serverVersion = v.BuildVersion
 						}
 
 						ourutil.Freportf(logWriterStderr,

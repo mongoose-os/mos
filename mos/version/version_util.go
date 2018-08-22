@@ -18,34 +18,21 @@ type VersionJson struct {
 
 const (
 	LatestVersionName = "latest"
-	brewDistrName     = "brew"
 )
 
 var (
 	regexpVersionNumber = regexp.MustCompile(`^\d+\.[0-9.]*$`)
-	regexpBuildId       = regexp.MustCompile(
-		`^(?P<datetime>[^/]+)\/(?P<symbolic>[^@]+)\@(?P<hash>.+)$`,
-	)
-	regexpBuildIdDistr = regexp.MustCompile(
+	regexpBuildIdDistr  = regexp.MustCompile(
 		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
 	)
 
-	ubuntuDistrNames = []string{"xenial", "artful", "bionic", "cosmic"}
+	ubuntuDistrNames = []string{"xenial", "bionic", "cosmic"}
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
 func GetMosVersion() string {
 	if LooksLikeVersionNumber(Version) {
 		return Version
-	}
-	return GetMosVersionFromBuildId(BuildId)
-}
-
-func GetMosVersionFromBuildId(buildId string) string {
-	// E.g.: 20170804-194202/1.234@e1eb86a3 => 1.234
-	matches := regexpBuildId.FindStringSubmatch(buildId)
-	if matches != nil && LooksLikeVersionNumber(matches[2]) {
-		return matches[2]
 	}
 	return LatestVersionName
 }
@@ -71,8 +58,7 @@ func LooksLikeUbuntuBuildId(s string) bool {
 }
 
 func LooksLikeBrewBuildId(s string) bool {
-	matches := ourutil.FindNamedSubmatches(regexpBuildIdDistr, s)
-	return matches != nil && matches["distr"] == brewDistrName
+	return strings.HasSuffix(s, "~brew")
 }
 
 // GetUbuntuPackageName parses given build id string, and if it looks like a
