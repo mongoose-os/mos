@@ -151,7 +151,7 @@ if __name__ == "__main__":
         print("Updating Homebrew...")
         repo = git.Repo(".")
         head_commit = repo.head.commit
-        v = json.load(open("mos/version/version.json", "r"))
+        v = json.load(open(os.path.expanduser("~/tmp/mos_gopath/src/cesanta.com/mos/version/version.json"), "r"))
         RunSubprocess([
             "tools/update_hb.py",
             "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
