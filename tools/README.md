@@ -55,17 +55,8 @@ $ tools/deploy_mos.py --release-tag X.XX
 $ sudo systemctl start publish_repos.timer
 ```
 
-  * Update homebrew formula ([mos.rb](https://github.com/cesanta/homebrew-mos/blob/master/Formula/mos.rb)) : adjust the `url`
-    and `sha256`, which can be calculated as follows:
-
-```bash
-$ curl -L https://github.com/cesanta/mos-tool/archive/X.XX.tar.gz | sha256sum
-```
-
   * Update arch linux PKGBUILD (`mos/archlinux_pkgbuild/mos-release/PKGBUILD`):
-    bump `MOS_TAG` to a new version.
-
-  * Make a PR with those changes
+    bump `MOS_TAG` to a new version and make a PR.
 
   * You're done! And if the process went without any bumps, keep in mind that
     today must be a lucky day for you!

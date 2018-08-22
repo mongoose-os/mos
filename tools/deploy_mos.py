@@ -15,18 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+import getpass
+import json
+import os
+import pty
+import re
+import time
 import subprocess
 import sys
-import re
-import os
-import argparse
-import time
-import pty
-import getpass
 
 import git  # apt-get install python3-git || pip3 install GitPython
-
-MOS_TOOL_PATH = os.path.expanduser("~/tmp/mos_deploy_staging")
 
 GPG_KEY_PATH = os.path.join(os.environ["HOME"], ".gnupg-cesantabot")
 BUILD_DEB_PATH = os.path.join("mos", "ubuntu", "build-deb.sh")
@@ -147,7 +146,21 @@ if __name__ == "__main__":
     RunSubprocess(["make", "-C", "tools/docker/golang", "pull-all"])
 
     if platform == "mac":
+        print("Deploying Mac binary...")
         RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
+        print("Updating Homebrew...")
+        repo = git.Repo(".")
+        head_commit = repo.head.commit
+        v = json.load(open("mos/version/version.json", "r"))
+        RunSubprocess([
+            "tools/update_hb.py",
+            "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
+            "--formula=%s" % ("mos" if myargs.release_tag != "" else "mos-latest"),
+            "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
+            "--version=%s" % v["build_version"],
+            "--push",
+        ])
+
     RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
 
     for i, distr in enumerate(UBUNTU_VERSIONS):

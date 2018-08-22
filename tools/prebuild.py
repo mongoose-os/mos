@@ -45,10 +45,6 @@ import yaml
 # PIP: pip install GitPython
 import git
 
-# Debian/Ubuntu: apt-get install python3-requests
-# PIP: pip3 install requests
-import requests
-
 # NB: only support building from master right now.
 
 
