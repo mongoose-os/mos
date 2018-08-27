@@ -415,9 +415,15 @@ func prepareLocalCopyGit(
 	repoLocksLock.Unlock()
 	lock.Lock()
 	defer lock.Unlock()
+	return prepareLocalCopyGitLocked(origin, version, targetDir, logWriter, deleteIfFailed, pullInterval, cloneDepth)
+}
 
+func prepareLocalCopyGitLocked(
+	origin, version, targetDir string,
+	logWriter io.Writer, deleteIfFailed bool,
+	pullInterval time.Duration, cloneDepth int,
+) (retErr error) {
 	gitinst := mosgit.NewOurGit()
-
 	// version is already converted from "" or "latest" to "master" here.
 
 	// Check if we should clone or pull git repo inside of targetDir.
@@ -504,7 +510,7 @@ func prepareLocalCopyGit(
 				}
 
 				glog.V(2).Infof("calling prepareLocalCopyGit() again")
-				retErr = prepareLocalCopyGit(origin, version, targetDir, logWriter, false, pullInterval, cloneDepth)
+				retErr = prepareLocalCopyGitLocked(origin, version, targetDir, logWriter, false, pullInterval, cloneDepth)
 			}
 		}()
 	}
