@@ -598,7 +598,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		dockerRunArgs = append(dockerRunArgs, sdkVersion)
 
 		makeArgs, err := getMakeArgs(
-			fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
+			filepath.ToSlash(fmt.Sprintf("%s%s", dockerAppPath, appSubdir)),
 			bParams.BuildTarget,
 			manifest,
 		)
