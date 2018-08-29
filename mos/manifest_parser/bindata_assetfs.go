@@ -64,11 +64,8 @@ static const struct lib_descr {
   bool (*init)(void);
 } descrs[] = {
 {{range .Libs}}
-  // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
-  {
-    .title = "{{.Name}}",
-    .init = mgos_{{.Ident}}_init,
-  },
+    // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
+    {.title = "{{.Name}}", .init = mgos_{{.Ident}}_init},
 {{end}}
 };
 
@@ -96,7 +93,7 @@ func dataMgos_deps_initCTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/mgos_deps_init.c.tmpl", size: 758, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/mgos_deps_init.c.tmpl", size: 749, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

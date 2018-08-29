@@ -23,6 +23,7 @@ const (
 	appDir             = "app"
 	expectedDir        = "expected"
 	finalManifestName  = "mos_final.yml"
+	depsInitName       = "mgos_deps_init.c"
 	testDescriptorName = "test_desc.yml"
 
 	testPrefix    = "test_"
@@ -92,6 +93,21 @@ func handleTestSet(t *testing.T, testSetPath string) bool {
 	return ok
 }
 
+func compareFiles(actualFilename, expectedFilename string) error {
+	actualData, err := ioutil.ReadFile(actualFilename)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	expectedData, err := ioutil.ReadFile(expectedFilename)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if bytes.Compare(expectedData, actualData) != 0 {
+		return errors.Errorf("expected file %s doesn't match actual %s", expectedFilename, actualFilename)
+	}
+	return nil
+}
+
 func singleManifestTest(t *testing.T, appPath string) error {
 	// Create test descriptor with default values
 	descr := TestDescr{}
@@ -137,6 +153,10 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			return errors.Trace(err)
 		}
 
+		depsInitData, err := getDepsInitCCode(manifest)
+		if err != nil {
+			return errors.Trace(err)
+		}
 		manifest.LibsHandled = nil
 
 		data, err := yaml.Marshal(manifest)
@@ -149,19 +169,26 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			return errors.Trace(err)
 		}
 
+		buildDir := moscommon.GetBuildDir(filepath.Join(appPath, appDir))
+		os.MkdirAll(buildDir, 0777)
+
+		actualFilename := filepath.Join(buildDir, finalManifestName)
+		ioutil.WriteFile(actualFilename, data, 0644)
 		expectedFilename := filepath.Join(appPath, expectedDir, platform, finalManifestName)
 
-		expectedData, err := ioutil.ReadFile(expectedFilename)
-		if err != nil {
+		if err = compareFiles(actualFilename, expectedFilename); err != nil {
 			return errors.Trace(err)
 		}
 
-		if bytes.Compare(expectedData, data) != 0 {
-			buildDir := moscommon.GetBuildDir(filepath.Join(appPath, appDir))
-			os.MkdirAll(buildDir, 0777)
-			actualFilename := filepath.Join(buildDir, "mos_final_actual.yml")
-			ioutil.WriteFile(actualFilename, data, 0644)
-			return errors.Errorf("expected manifest %s doesn't match actual %s", expectedFilename, actualFilename)
+		actualFilename = filepath.Join(buildDir, depsInitName)
+		ioutil.WriteFile(actualFilename, depsInitData, 0644)
+		expectedFilename = filepath.Join(appPath, expectedDir, platform, depsInitName)
+		if _, err := os.Stat(expectedFilename); err == nil {
+			if err = compareFiles(actualFilename, expectedFilename); err != nil {
+				return errors.Trace(err)
+			}
+		} else {
+			t.Logf("no expected init deps %s", expectedFilename)
 		}
 	}
 

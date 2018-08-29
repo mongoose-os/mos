@@ -7,17 +7,21 @@
 
 #include "mgos_app.h"
 
-{{range .Libs}}
-extern bool mgos_{{.Ident}}_init(void);{{end}}
+
+extern bool mgos_mylib1_init(void);
+extern bool mgos_mylib2_init(void);
 
 static const struct lib_descr {
   const char *title;
   bool (*init)(void);
 } descrs[] = {
-{{range .Libs}}
-    // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
-    {.title = "{{.Name}}", .init = mgos_{{.Ident}}_init},
-{{end}}
+
+    // "mylib1". deps: [ "core" ]
+    {.title = "mylib1", .init = mgos_mylib1_init},
+
+    // "mylib2". deps: [ "core" "mylib1" ]
+    {.title = "mylib2", .init = mgos_mylib2_init},
+
 };
 
 bool mgos_deps_init(void) {

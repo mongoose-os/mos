@@ -40,8 +40,9 @@ const (
 	// - 2018-06-12: added support for globs in init_deps
 	// - 2018-06-20: added no_implicit_init_deps
 	// - 2018-08-13: added support for non-GitHub Git repos
+	// - 2018-08-29: added support for adding libs under conds
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2018-08-13"
+	maxManifestVersion = "2018-08-29"
 
 	depsApp = "app"
 
@@ -342,6 +343,8 @@ func ReadManifestFinal(
 	return manifest, fp, nil
 }
 
+var libsAddedError = errors.Errorf("new libs added")
+
 // readManifestWithLibs reads manifest from the provided dir, "expands" all
 // libs (so that the returned manifest does not really contain any libs),
 // and also returns the most recent modification time of all encountered
@@ -361,14 +364,12 @@ func readManifestWithLibs(
 	initDeps := NewDeps()
 	initDeps.AddNode(depsApp)
 
-	manifest, mtime, err := readManifestWithLibs2(manifestParseContext{
-		dir:        dir,
+	pc := &manifestParseContext{
 		rootAppDir: dir,
 
 		adjustments: *adjustments,
 		logWriter:   logWriter,
 
-		nodeName:    depsApp,
 		deps:        deps,
 		initDeps:    initDeps,
 		libsHandled: libsHandled,
@@ -382,7 +383,9 @@ func readManifestWithLibs(
 
 		mtx:     &sync.Mutex{},
 		flagSet: newStringFlagSet(),
-	})
+	}
+
+	manifest, mtime, err := readManifestWithLibs2(depsApp, dir, pc)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -390,90 +393,112 @@ func readManifestWithLibs(
 	// Set the mos.platform variable
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
-	// Get all deps in topological order
-	depsTopo, cycle := deps.Topological(true)
-	if cycle != nil {
-		return nil, time.Time{}, errors.Errorf(
-			"dependency cycle: %v", strings.Join(cycle, " -> "),
-		)
-	}
-
-	// Remove the last item from topo, which is depsApp
-	//
-	// TODO(dfrank): it would be nice to handle an app just another dependency
-	// and generate init code for it, but it would be a breaking change, at least
-	// because all libs init functions return bool, but mgos_app_init returns
-	// enum mgos_app_init_result.
-	depsTopo = depsTopo[0 : len(depsTopo)-1]
-
-	lhp := map[string]*build.FWAppManifestLibHandled{}
-	for k, v := range libsHandled {
-		vc := v
-		lhp[k] = &vc
-	}
-
-	// Expand initDeps (which may contain globs) against actual list of libs.
-	initDepsResolved := NewDeps()
-	for _, node := range initDeps.GetNodes() {
-		if node == depsApp {
-			continue
+	for {
+		// Get all deps in topological order
+		depsTopo, cycle := deps.Topological(true)
+		if cycle != nil {
+			return nil, time.Time{}, errors.Errorf(
+				"dependency cycle: %v", strings.Join(cycle, " -> "),
+			)
 		}
-		nodeDeps := initDeps.GetDeps(node)
-		var nodeDepsResolved []string
-		nodeDepsResolvedMap := map[string]bool{}
-		for _, nodeDep := range nodeDeps {
-			for _, dep := range depsTopo {
-				if m, _ := path.Match(nodeDep, dep); m {
-					if !nodeDepsResolvedMap[dep] {
-						nodeDepsResolved = append(nodeDepsResolved, dep)
-						nodeDepsResolvedMap[dep] = true
+
+		// Remove the last item from topo, which is depsApp
+		//
+		// TODO(dfrank): it would be nice to handle an app just another dependency
+		// and generate init code for it, but it would be a breaking change, at least
+		// because all libs init functions return bool, but mgos_app_init returns
+		// enum mgos_app_init_result.
+		depsTopo = depsTopo[0 : len(depsTopo)-1]
+
+		lhp := map[string]*build.FWAppManifestLibHandled{}
+		for k, v := range libsHandled {
+			vc := v
+			lhp[k] = &vc
+		}
+
+		// Expand initDeps (which may contain globs) against actual list of libs.
+		initDepsResolved := NewDeps()
+		for _, node := range initDeps.GetNodes() {
+			if node == depsApp {
+				continue
+			}
+			nodeDeps := initDeps.GetDeps(node)
+			var nodeDepsResolved []string
+			nodeDepsResolvedMap := map[string]bool{}
+			for _, nodeDep := range nodeDeps {
+				for _, dep := range depsTopo {
+					if m, _ := path.Match(nodeDep, dep); m {
+						if !nodeDepsResolvedMap[dep] {
+							nodeDepsResolved = append(nodeDepsResolved, dep)
+							nodeDepsResolvedMap[dep] = true
+						}
 					}
 				}
 			}
+			sort.Strings(nodeDepsResolved)
+			lhp[node].InitDeps = nodeDepsResolved
+			initDepsResolved.AddNodeWithDeps(node, nodeDepsResolved)
+			glog.Infof("%s: %s", node, nodeDepsResolved)
 		}
-		sort.Strings(nodeDepsResolved)
-		lhp[node].InitDeps = nodeDepsResolved
-		initDepsResolved.AddNodeWithDeps(node, nodeDepsResolved)
-		glog.Infof("%s: %s", node, nodeDepsResolved)
-	}
 
-	initDepsTopo, cycle := initDepsResolved.Topological(true)
-	if cycle != nil {
-		return nil, time.Time{}, errors.Errorf(
-			"init dependency cycle: %v", strings.Join(cycle, " -> "),
-		)
-	}
-	manifest.InitDeps = initDepsTopo
+		initDepsTopo, cycle := initDepsResolved.Topological(true)
+		if cycle != nil {
+			return nil, time.Time{}, errors.Errorf(
+				"init dependency cycle: %v", strings.Join(cycle, " -> "),
+			)
+		}
+		manifest.InitDeps = initDepsTopo
 
-	// Create a LibsHandled slice in topological order computed above
-	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(depsTopo))
-	for _, v := range depsTopo {
-		manifest.LibsHandled = append(manifest.LibsHandled, *lhp[v])
-	}
+		// Create a LibsHandled slice in topological order computed above
+		manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(depsTopo))
+		for _, v := range depsTopo {
+			manifest.LibsHandled = append(manifest.LibsHandled, *lhp[v])
+		}
 
-	if err := expandManifestLibsAndConds(manifest, interp, adjustments); err != nil {
-		return nil, time.Time{}, errors.Trace(err)
-	}
+		if err := expandManifestLibsAndConds(manifest, interp, adjustments); err != nil {
+			if errors.Cause(err) == libsAddedError {
+				if len(manifest.Libs) > 0 {
+					libsMtime, err := prepareLibs(depsApp, manifest, pc)
+					if err != nil {
+						return nil, time.Time{}, errors.Trace(err)
+					}
+					if libsMtime.After(mtime) {
+						mtime = libsMtime
+					}
+				}
+				for _, lh := range manifest.LibsHandled {
+					if len(lh.Manifest.Libs) > 0 {
+						libsMtime, err := prepareLibs(lh.Lib.Name, lh.Manifest, pc)
+						if err != nil {
+							return nil, time.Time{}, errors.Trace(err)
+						}
+						if libsMtime.After(mtime) {
+							mtime = libsMtime
+						}
+					}
+				}
+				continue
+			}
+			return nil, time.Time{}, errors.Trace(err)
+		}
 
-	if err := expandManifestAllLibsPaths(manifest); err != nil {
-		return nil, time.Time{}, errors.Trace(err)
+		if err := expandManifestAllLibsPaths(manifest); err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
+
+		break
 	}
 
 	return manifest, mtime, nil
 }
 
 type manifestParseContext struct {
-	// Manifest's directory
-	dir string
-
-	// Directory of the "root" app; for the app's manifest it's the same as dir.
-	// Might be a temporary directory
+	// Directory of the "root" app. Might be a temporary directory.
 	rootAppDir string
 
 	adjustments ManifestAdjustments
 	logWriter   io.Writer
 
-	nodeName    string
 	deps        *Deps
 	initDeps    *Deps
 	libsHandled map[string]build.FWAppManifestLibHandled
@@ -489,8 +514,8 @@ type manifestParseContext struct {
 	flagSet *stringFlagSet
 }
 
-func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
-	manifest, mtime, err := ReadManifest(pc.dir, &pc.adjustments, pc.interp)
+func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext) (*build.FWAppManifest, time.Time, error) {
+	manifest, mtime, err := ReadManifest(dir, &pc.adjustments, pc.interp)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -524,14 +549,22 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 		}
 	}
 
-	// Prepare all libs {{{
+	libsMtime, err := prepareLibs(parentNodeName, manifest, pc)
+	if err == nil && libsMtime.After(mtime) {
+		mtime = libsMtime
+	}
+
+	return manifest, mtime, err
+}
+
+func prepareLibs(parentNodeName string, manifest *build.FWAppManifest, pc *manifestParseContext) (time.Time, error) {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(manifest.Libs))
 
 	lpres := make(chan libPrepareResult)
 
-	for _, m := range manifest.Libs {
-		go prepareLib(m, manifest, &pc, lpres, wg)
+	for i := range manifest.Libs {
+		go prepareLib(parentNodeName, &manifest.Libs[i], manifest, pc, lpres, wg)
 	}
 
 	// Closer goroutine
@@ -539,12 +572,12 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 		wg.Wait()
 		close(lpres)
 	}()
-	// }}}
 
 	// Handle all lib prepare results
+	var mtime time.Time
 	for res := range lpres {
 		if res.err != nil {
-			return nil, time.Time{}, errors.Trace(res.err)
+			return time.Time{}, errors.Trace(res.err)
 		}
 
 		// We should return the latest modification date of all encountered
@@ -556,17 +589,24 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 
 	manifest.Libs = nil
 
-	return manifest, mtime, nil
+	return mtime, nil
 }
 
 func prepareLib(
-	m build.SWModule,
+	parentNodeName string, m *build.SWModule,
 	manifest *build.FWAppManifest,
 	pc *manifestParseContext,
 	lpres chan libPrepareResult,
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
+
+	if err := m.Normalize(); err != nil {
+		lpres <- libPrepareResult{
+			err: errors.Trace(err),
+		}
+		return
+	}
 
 	name, err := m.GetName()
 	if err != nil {
@@ -577,9 +617,9 @@ func prepareLib(
 	}
 
 	pc.mtx.Lock()
-	pc.deps.AddDep(pc.nodeName, name)
+	pc.deps.AddDep(parentNodeName, name)
 	if !manifest.NoImplInitDeps {
-		pc.initDeps.AddDep(pc.nodeName, name) // Implicit init dep
+		pc.initDeps.AddDep(parentNodeName, name) // Implicit init dep
 	}
 	pc.mtx.Unlock()
 
@@ -591,7 +631,7 @@ func prepareLib(
 	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
 
 	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
-		&m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
+		m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
 	)
 	if err != nil {
 		lpres <- libPrepareResult{
@@ -612,22 +652,15 @@ func prepareLib(
 	pc.mtx.Lock()
 	pc.deps.AddNode(name)
 	pc.initDeps.AddNode(name)
-	pc.mtx.Unlock()
-
-	pc2 := manifestParseContext{}
-	pc2 = *pc
-
-	pc2.dir = libLocalDir
-	pc2.nodeName = name
-
-	// If platform is empty in pc2, we need to set it from the outer manifest,
+	// If platform is empty, we need to set it from the outer manifest,
 	// because arch is used in libs to handle arch-dependent submanifests, like
 	// mos_esp8266.yml.
-	if pc2.adjustments.Platform == "" {
-		pc2.adjustments.Platform = manifest.Platform
+	if pc.adjustments.Platform == "" {
+		pc.adjustments.Platform = manifest.Platform
 	}
+	pc.mtx.Unlock()
 
-	libManifest, libMtime, err := readManifestWithLibs2(pc2)
+	libManifest, libMtime, err := readManifestWithLibs2(name, libLocalDir, pc)
 	if err != nil {
 		lpres <- libPrepareResult{
 			err: errors.Trace(err),
@@ -639,12 +672,13 @@ func prepareLib(
 	haveName := fmt.Sprintf(
 		"MGOS_HAVE_%s", strings.ToUpper(moscommon.IdentifierFromString(name)),
 	)
+
 	pc.mtx.Lock()
 	manifest.BuildVars[haveName] = "1"
 	manifest.CDefs[haveName] = "1"
 
 	lh := build.FWAppManifestLibHandled{
-		Lib:      m,
+		Lib:      *m,
 		Path:     libLocalDir,
 		Deps:     pc.deps.GetDeps(name),
 		Manifest: libManifest,
@@ -789,13 +823,6 @@ func ReadManifestFile(
 		)
 	}
 
-	// Normalize all Libs and Modules
-	for i, _ := range manifest.Libs {
-		if err = manifest.Libs[i].Normalize(); err != nil {
-			return nil, time.Time{}, errors.Trace(err)
-		}
-	}
-
 	for i, _ := range manifest.Modules {
 		if err = manifest.Modules[i].Normalize(); err != nil {
 			return nil, time.Time{}, errors.Trace(err)
@@ -913,7 +940,6 @@ func expandManifestLibsAndConds(
 			Manifest: rootManifest,
 		})
 
-		//allManifests = append(allManifests, manifest.LibsHandled...)
 		for k, _ := range manifest.LibsHandled {
 			allManifests = append(allManifests, &manifest.LibsHandled[k])
 		}
@@ -973,16 +999,26 @@ func expandManifestLibsAndConds(
 		// When it's done, we'll expand all libs manifests again, etc, until there
 		// are no conds left.
 
+		// Note(rojer): Order of evaluation here is a bit strange:
+		// top-level (app) conds are evaluated first, and then evaluation proceeds
+		// from the bottom (starting with libs with no deps).
+
 		if err := ExpandManifestConds(manifest, commonManifest, interp); err != nil {
 			return errors.Annotatef(err, "expanding app manifest's conds")
 		}
+		if len(manifest.Libs) > 0 {
+			glog.V(2).Infof("New libs added while expanding app conds, restarting eval...")
+			return libsAddedError
+		}
 
-		for k := range manifest.LibsHandled {
-			if manifest.LibsHandled[k].Manifest != nil {
-				if err := ExpandManifestConds(
-					manifest.LibsHandled[k].Manifest, commonManifest, interp,
-				); err != nil {
-					return errors.Annotatef(err, "expanding %q conds", manifest.LibsHandled[k].Lib.Name)
+		for _, l := range manifest.LibsHandled {
+			if l.Manifest != nil && len(l.Manifest.Conds) > 0 {
+				if err := ExpandManifestConds(l.Manifest, commonManifest, interp); err != nil {
+					return errors.Annotatef(err, "expanding %q conds", l.Lib.Name)
+				}
+				if len(l.Manifest.Libs) > 0 {
+					glog.V(2).Infof("New libs added while expnading conds for %s, restarting eval...", l.Lib.Name)
+					return libsAddedError
 				}
 			}
 		}
@@ -1084,14 +1120,6 @@ func ExpandManifestConds(
 
 		// Apply submanifest if present
 		if cond.Apply != nil {
-			if len(cond.Apply.Libs) > 0 {
-				return errors.Errorf(
-					"conds can't contain libs; if the lib is platform-specific, "+
-						"please add it to the arch-specific manifest instead (mos_%s.yml)",
-					refManifest.Platform,
-				)
-			}
-
 			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", "", interp, &extendManifestOptions{
 				skipFailedExpansions: true,
 			}); err != nil {

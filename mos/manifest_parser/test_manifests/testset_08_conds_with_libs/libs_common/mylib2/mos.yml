@@ -1,0 +1,15 @@
+author: mongoose-os
+description: Mylib2
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+conds:
+  - when: mos.platform == "esp8266"
+    apply:
+      libs:
+        - origin: https://github.com/mongoose-os-libs/mylib1
+
+manifest_version: 2017-09-29
