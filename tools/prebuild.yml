@@ -94,6 +94,10 @@
       platform: cc3200
     - name: cc3220
       platform: cc3220
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
     - name: stm32-DISCO-F746NG
       platform: stm32
       build_vars:
@@ -119,6 +123,10 @@
       platform: esp32
     - name: cc3220
       platform: cc3220
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
     - name: stm32-DISCO-F746NG
       platform: stm32
       build_vars:
