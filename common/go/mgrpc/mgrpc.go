@@ -171,6 +171,9 @@ func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, er
 	}
 	config.Protocol = []string{codec.WSProtocol}
 	config.TlsConfig = opts.tlsConfig
+	if config.Location.User != nil {
+		config.Header["Authorization"] = []string{"Bearer " + config.Location.User.String()}
+	}
 	conn, err := wsDialConfig(config)
 	if err != nil {
 		return nil, errors.Trace(err)
