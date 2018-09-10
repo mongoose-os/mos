@@ -14,7 +14,7 @@ makedepends=(
     'govendor'
     'jshon'
 )
-conflicts=('mos-latest')
+conflicts=('mos')
 
 source=(git+https://github.com/cesanta/mos-tool.git#branch=master)
 
