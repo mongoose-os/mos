@@ -172,6 +172,7 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
         tgt_dir = repo_dir
     tgt_name = os.path.split(tgt_dir)[-1]
     assets = []
+    common = e.get("common", {})
     # Build all the variants, collect assets
     for v in e["variants"]:
         logging.info(" %s %s", tgt_name, v["name"])
@@ -180,12 +181,15 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
         if libs_dir:
             mos_cmd.append("--libs-dir=%s" % libs_dir)
         mos_cmd.append("--platform=%s" % v["platform"])
-        for bvk, bvv in sorted(v.get("build_vars", {}).items()):
+        for bvk, bvv in sorted(list(common.get("build_vars", {}).items()) +
+                               list(v.get("build_vars", {}).items())):
             mos_cmd.append("--build-var=%s=%s" % (bvk, bvv))
-        if "cflags" in v:
-            mos_cmd.append("--cflags-extra=%s" % v["cflags"])
-        if "cxxflags" in v:
-            mos_cmd.append("--cxxflags-extra=%s" % v["cxxflags"])
+        cflags = (common.get("cflags", "") + " " + v.get("cflags", "")).strip()
+        if cflags:
+            mos_cmd.append("--cflags-extra=%s" % cflags)
+        cxxflags = (common.get("cxxflags", "") + " " + v.get("cxxflags", "")).strip()
+        if cflags:
+            mos_cmd.append("--cxxflags-extra=%s" % cflags)
         RunCmd(mos_cmd)
         bl = os.path.join(tmp_dir, "%s-%s-build.log" % (tgt_name, v["name"]))
         logging.info("  Saving build log to %s", bl)

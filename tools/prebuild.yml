@@ -5,10 +5,12 @@
     - git@github.com:cesanta/mos-libs.git/cron
     - git@github.com:cesanta/mos-libs.git/crontab
     - git@github.com:cesanta/mos-libs.git/dash
-    - git@github.com:cesanta/mos-libs.git/mongoose
   out:
     github:
       repo: mongoose-os-libs/%(repo_subdir)s
+  common:
+    cflags: -DMGOS_FREE_BUILD
+    cxxflags: -DMGOS_FREE_BUILD
   variants:
     - name: esp8266
       platform: esp8266
@@ -26,8 +28,37 @@
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
-      cflags: -DMGOS_FREE_BUILD
-      cxxflags: -DMGOS_FREE_BUILD
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+
+- location: git@github.com:cesanta/mos-libs.git/mongoose
+  out:
+    github:
+      repo: mongoose-os-libs/%(repo_subdir)s
+  common:
+    cflags: -DMGOS_FREE_BUILD
+    cxxflags: -DMGOS_FREE_BUILD
+  variants:
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+        # This board does not use LwIP and uses ISM43XXX net_if instead.
+        MGOS_MG_NET_IF: -1
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
     - name: stm32-NUCLEO-F746ZG
       platform: stm32
       build_vars:
@@ -41,6 +72,9 @@
   out:
     github:
       repo: mongoose-os-libs/%(repo_subdir)s
+  common:
+    cflags: -DMGOS_FREE_BUILD
+    cxxflags: -DMGOS_FREE_BUILD
   variants:
     - name: esp8266
       platform: esp8266
@@ -56,8 +90,6 @@
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
-      cflags: -DMGOS_FREE_BUILD
-      cxxflags: -DMGOS_FREE_BUILD
     - name: stm32-NUCLEO-F746ZG
       platform: stm32
       build_vars:
