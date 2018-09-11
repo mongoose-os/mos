@@ -55,14 +55,17 @@
         BOARD: B-L475E-IOT01A
         # This board does not use LwIP and uses ISM43XXX net_if instead.
         MGOS_MG_NET_IF: -1
+        MGOS_ENABLE_LWIP: 0
     - name: stm32-DISCO-F746NG
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
+        MGOS_ENABLE_LWIP: 1
     - name: stm32-NUCLEO-F746ZG
       platform: stm32
       build_vars:
         BOARD: NUCLEO-F746ZG
+        MGOS_ENABLE_LWIP: 1
 
 - locations:
     - git@github.com:cesanta/mos-libs.git/ota-shadow
