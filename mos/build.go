@@ -49,10 +49,7 @@ import (
 
 // mos build specific advanced flags
 var (
-	buildImages = flag.String("docker_images",
-		"esp8266=docker.cesanta.com/mg-iot-cloud-project-esp8266:release,"+
-			"cc3200=docker.cesanta.com/mg-iot-cloud-project-cc3200:release",
-		"build images, arch1=image1,arch2=image2")
+	buildImageFlag     = flag.String("build-image", "", "Override the Docker image used for build.")
 	cleanBuild         = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
 	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
 	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
@@ -588,14 +585,19 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 		sdkVersionFile := filepath.Join(fp.MosDirEffective, "fw/platforms", manifest.Platform, "sdk.version")
 
-		// Get build image name and tag
-		sdkVersionBytes, err := ioutil.ReadFile(sdkVersionFile)
-		if err != nil {
-			return errors.Annotatef(err, "failed to read sdk version file %q", sdkVersionFile)
+		buildImage := *buildImageFlag
+
+		if buildImage == "" {
+			// Get build image name and tag from the repo.
+			sdkVersionBytes, err := ioutil.ReadFile(sdkVersionFile)
+			if err != nil {
+				return errors.Annotatef(err, "failed to read sdk version file %q", sdkVersionFile)
+			}
+
+			buildImage = strings.TrimSpace(string(sdkVersionBytes))
 		}
 
-		sdkVersion := strings.TrimSpace(string(sdkVersionBytes))
-		dockerRunArgs = append(dockerRunArgs, sdkVersion)
+		dockerRunArgs = append(dockerRunArgs, buildImage)
 
 		makeArgs, err := getMakeArgs(
 			filepath.ToSlash(fmt.Sprintf("%s%s", dockerAppPath, appSubdir)),
