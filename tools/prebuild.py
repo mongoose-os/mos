@@ -48,6 +48,9 @@ import git
 # NB: only support building from master right now.
 
 
+g_cur_rel_id = None
+
+
 def RunCmd(cmd):
     logging.info("  %s", " ".join(cmd))
     subprocess.check_call(cmd)
@@ -59,17 +62,16 @@ def CallReleasesAPI(
     return github_api.call_releases_api(**locals())
 
 
-def CreateGitHubRelease(spec, tag, token_file, tmp_dir):
-    if not token_file:
-        logging.debug("Token file not set, GH uploads disabled")
-        return
-    if not os.path.isfile(token_file):
-        logging.error("Token file %s does not exist", token_file)
-        exit(1)
-    logging.debug("Using token file at %s", token_file)
-    with open(token_file, 'r') as f:
-        token = f.read().strip()
+def DeleteRelease(repo, token, release_id):
+    logging.info("    Deleting release %d", release_id)
+    CallReleasesAPI(
+        repo, token,
+        method="DELETE",
+        releases_url=("/%d" % release_id),
+        decode_json=False)
 
+
+def CreateGitHubRelease(spec, tag, token, tmp_dir):
     logging.debug("GH release spec: %s", spec)
     repo = spec["repo"]
     draft_rel_name = "%s_draft" % tag
@@ -83,8 +85,10 @@ def CreateGitHubRelease(spec, tag, token_file, tmp_dir):
     })
     if not ok:
         logging.error("Failed to create a release draft: %s", r)
-        exit(1)
+        raise RuntimeError
     new_rel_id = r["id"]
+    global g_cur_rel_id
+    g_cur_rel_id = new_rel_id
     logging.debug("New release id: %d", new_rel_id)
     for asset_name, asset_file in spec["assets"]:
         ct = "application/zip" if asset_name.endswith(".zip") else "application/octet-stream"
@@ -97,17 +101,13 @@ def CreateGitHubRelease(spec, tag, token_file, tmp_dir):
                 params = {"name": asset_name})
             if not ok:
                 logging.error("Failed to upload %s: %s", asset_name, r)
-                exit(1)
+                raise RuntimeError
 
     # If target release already exists, delete it {{{
     r, ok = CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
     if ok:
-        logging.info("  Deleting old %s release %d", tag, r["id"])
-        CallReleasesAPI(
-            repo, token,
-            method="DELETE",
-            releases_url=("/%d" % r["id"]),
-            decode_json=False)
+        logging.info("  Deleting old %s release", tag)
+        DeleteRelease(repo, token, r["id"])
         # Also remove the tag itself, so that when we save release below
         # with that tag, it'll be created on master branch.
         # Since we are not necessarily publishing from the same repo,
@@ -131,8 +131,9 @@ def CreateGitHubRelease(spec, tag, token_file, tmp_dir):
         })
     if not ok:
         logging.error("Failed to create a release: %s", r)
-        exit(1)
+        raise RuntimeError
     logging.info("Created release %s / %s (%d)", repo, tag, r["id"])
+    g_cur_rel_id = None
 
 
 def MakeAsset(an, asf, tmp_dir):
@@ -213,7 +214,23 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
     if gh_out:
         gh_out["assets"] = assets
         gh_out["repo"] = gh_out["repo"] % {"repo_subdir": repo_subdir}
-        CreateGitHubRelease(gh_out, gh_release_tag, gh_token_file, tmp_dir)
+
+        if not gh_token_file:
+            logging.info("Token file not set, GH uploads disabled")
+            return
+        if not os.path.isfile(gh_token_file):
+            logging.error("Token file %s does not exist", gh_token_file)
+            exit(1)
+        logging.debug("Using token file at %s", gh_token_file)
+        with open(gh_token_file, "r") as f:
+            token = f.read().strip()
+
+        try:
+            CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+        except (Exception, KeyboardInterrupt):
+            if g_cur_rel_id:
+                DeleteRelease(gh_out["repo"], token, g_cur_rel_id)
+            raise
 
 
 def ProcessEntry(e, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
