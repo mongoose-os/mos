@@ -160,13 +160,18 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
     else:
         logging.info("== %s", repo_loc)
     repo_dir = os.path.join(tmp_dir, pre, name)
-    if not os.path.exists(repo_dir):
-        logging.info("Cloning into %s", repo_dir)
-        git_cmd = ["git", "clone", repo_loc, repo_dir]
+    if os.path.exists(repo_loc):
+        rl = repo_loc + ("/" if not repo_loc.endswith("/") else "")
+        os.makedirs(repo_dir, exist_ok=True)
+        cmd = ["rsync", "-a", "--delete", rl, repo_dir + "/"]
     else:
-        logging.info("Pulling %s", repo_dir)
-        git_cmd = ["git", "-C", repo_dir, "pull"]
-    RunCmd(git_cmd)
+        if not os.path.exists(repo_dir):
+            logging.info("Cloning into %s", repo_dir)
+            cmd = ["git", "clone", repo_loc, repo_dir]
+        else:
+            logging.info("Pulling %s", repo_dir)
+            cmd = ["git", "-C", repo_dir, "pull"]
+    RunCmd(cmd)
     if repo_subdir:
         tgt_dir = os.path.join(repo_dir, repo_subdir)
     else:
