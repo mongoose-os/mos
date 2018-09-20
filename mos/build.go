@@ -1119,7 +1119,9 @@ func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 }
 
 func getBuildVarsFromCLI() (map[string]string, error) {
-	m := make(map[string]string)
+	m := map[string]string{
+		"BOARD": *boardFlag,
+	}
 
 	// Add build vars from CLI flags
 	for _, v := range buildVarsSlice {

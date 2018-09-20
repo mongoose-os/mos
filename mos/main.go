@@ -44,6 +44,7 @@ const (
 var (
 	// --arch was deprecated at 2017/08/15 and should eventually be removed.
 	archOld    = flag.String("arch", "", "Deprecated, please use --platform instead")
+	boardFlag  = flag.String("board", "", "Board name.")
 	platform   = flag.String("platform", "", "Hardware platform. Possible values: cc3200, esp32, esp8266, stm32")
 	user       = flag.String("user", "", "Cloud username")
 	pass       = flag.String("pass", "", "Cloud password or token")
