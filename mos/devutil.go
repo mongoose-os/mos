@@ -110,7 +110,7 @@ func createDevConnWithJunkHandler(
 		// processes trying to access /dev/cu.usbmodemX get stuck and the only re-plugging
 		// (or re-enumerating) gets it out of this state.
 		// Hence, the following kludge.
-		if *platform == "stm32" && runtime.GOOS == "darwin" {
+		if runtime.GOOS == "darwin" && strings.Contains(port, "cu.usbmodem") {
 			codecOpts.Serial.SendChunkSize = 6
 		}
 	}
