@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"io/ioutil"
+	"runtime"
 	"strings"
 	"time"
 
@@ -104,6 +105,14 @@ func createDevConnWithJunkHandler(
 	if codecOpts.Serial.BaudRate <= 115200 {
 		codecOpts.Serial.SendChunkSize = 16
 		codecOpts.Serial.SendChunkDelay = 5 * time.Millisecond
+		// So, this is weird. ST-Link serial device seems to have issues on Mac OS X if we write too fast.
+		// Yes, even 16 bytes at 5 ms interval is too fast, and 8 bytes too. It looks like this:
+		// processes trying to access /dev/cu.usbmodemX get stuck and the only re-plugging
+		// (or re-enumerating) gets it out of this state.
+		// Hence, the following kludge.
+		if *platform == "stm32" && runtime.GOOS == "darwin" {
+			codecOpts.Serial.SendChunkSize = 6
+		}
 	}
 	devConn, err := c.CreateDevConnWithOpts(ctx, addr, *reconnect, tlsConfig, codecOpts)
 	return devConn, errors.Trace(err)
