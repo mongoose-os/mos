@@ -107,9 +107,12 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		defer devConn.Connect(ctx, devConn.Reconnect)
 	}
 
-	port, err := getPort()
-	if err != nil {
-		return errors.Trace(err)
+	port := ""
+	if fw.Platform != "stm32" {
+		port, err = getPort()
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	espFlashOpts.InvertedControlLines = *invertedControlLines
@@ -128,6 +131,19 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		espFlashOpts.ControlPort = port
 		err = espFlasher.Flash(esp.ChipESP8266, fw, &espFlashOpts)
 	case "stm32":
+		// Ideally we'd like to find mounted directory corresponding to the selected port.
+		// But for now, we'll just find a share that sort of looks like STM...
+		port = *portFlag
+		if port == "auto" {
+			mm, err := stm32.FindSTMMounts()
+			if err != nil {
+				return errors.Trace(err)
+			}
+			if len(mm) == 0 {
+				return errors.Errorf("No STM32 devices found")
+			}
+			port = mm[0]
+		}
 		stm32FlashOpts.ShareName = port
 		err = stm32.Flash(fw, &stm32FlashOpts)
 	default:
