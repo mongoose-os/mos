@@ -9,15 +9,12 @@ import (
 	"runtime"
 	"strings"
 
+	"cesanta.com/common/go/ourutil"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
 
-var (
-	stlinkDevPrefixes = []string{"DIS_", "NODE_"}
-)
-
-func FindSTMMounts() ([]string, error) {
+func FindSTLinkMounts() ([]string, error) {
 	dir := ""
 	switch runtime.GOOS {
 	case "linux":
@@ -37,7 +34,7 @@ func FindSTMMounts() ([]string, error) {
 		for _, p := range stlinkDevPrefixes {
 			if strings.HasPrefix(e.Name(), p) {
 				n := filepath.Join(dir, e.Name())
-				glog.V(1).Infof("  %q", n)
+				ourutil.Reportf("Found STLink mount: %s", n)
 				res = append(res, n)
 			}
 		}

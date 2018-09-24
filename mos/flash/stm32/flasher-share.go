@@ -8,6 +8,11 @@ import (
 
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
+)
+
+var (
+	stlinkDevPrefixes = []string{"DIS_", "NODE_"}
 )
 
 type FlashOpts struct {
@@ -40,7 +45,10 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 				// File is disappeared: operation ok
 				return nil
 			} else {
-				return errors.Annotatef(err, "flash failed")
+				// On Windows, this sometimes raises spurious errors, like CreateFile error.
+				// In fact, flashing went just fine.
+				glog.Infof("Error during Stat (most likely benign): %s", err)
+				return nil
 			}
 		}
 

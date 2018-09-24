@@ -132,10 +132,10 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		err = espFlasher.Flash(esp.ChipESP8266, fw, &espFlashOpts)
 	case "stm32":
 		// Ideally we'd like to find mounted directory corresponding to the selected port.
-		// But for now, we'll just find a share that sort of looks like STM...
+		// But for now, we'll just find mountpoints that sort of look like STLink...
 		port = *portFlag
 		if port == "auto" {
-			mm, err := stm32.FindSTMMounts()
+			mm, err := stm32.FindSTLinkMounts()
 			if err != nil {
 				return errors.Trace(err)
 			}
