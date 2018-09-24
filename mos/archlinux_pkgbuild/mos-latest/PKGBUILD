@@ -11,6 +11,7 @@ makedepends=(
     'git'
     'python2'
     'python2-gitpython'
+    'python2-six'
     'govendor'
     'jshon'
 )
