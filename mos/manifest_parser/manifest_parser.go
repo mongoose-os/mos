@@ -41,8 +41,9 @@ const (
 	// - 2018-06-20: added no_implicit_init_deps
 	// - 2018-08-13: added support for non-GitHub Git repos
 	// - 2018-08-29: added support for adding libs under conds
+	// - 2018-09-24: added special handling of the "boards" lib
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2018-08-29"
+	maxManifestVersion = "2018-09-24"
 
 	depsApp = "app"
 

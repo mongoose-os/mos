@@ -43,7 +43,19 @@ const (
 )
 
 var (
-	gitSSHShortRegex = regexp.MustCompile(`(?:(\w+)@)?(\S+?):(\S+)`)
+	gitSSHShortRegex = regexp.MustCompile(`^(?:(\w+)@)?(\S+?):(\S+)`)
+	validNameRegex   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-_]`)
+	// If the lib is called "boards", we silently rename it to "zz_boards".
+	// The goal here is to naturally sink this lib, which contains various overrides
+	// for board configuration, down to the bottom of the list of libs so that
+	// overrides actually have something to override.
+	// It is for all intents and purposes equivalent to the following stanza under libs:
+	//   - origin: https://github.com/mongoose-os-libs/boards
+	//     name: zz_boards
+	// ...but without the ugly and cryptic second line.
+	// I'm not proud of this hack, but it's better than the alternatives.
+	boardsLibName    = "boards"
+	boardsLibNewName = "zz_boards"
 )
 
 func parseGitLocation(loc string) (string, string, string, string, error) {
@@ -338,8 +350,18 @@ func (m *SWModule) FetchableFromWeb() (bool, error) {
 }
 
 func (m *SWModule) GetName() (string, error) {
+	n, err := m.getName()
+	if err == nil && n == boardsLibName {
+		n = boardsLibNewName
+	}
+	return n, err
+}
+
+func (m *SWModule) getName() (string, error) {
 	if m.Name != "" {
-		// TODO(dfrank): check that m.Name does not contain slashes and other junk
+		if !validNameRegex.MatchString(m.Name) {
+			return "", errors.Errorf("%q is not a valid library name", m.Name)
+		}
 		return m.Name, nil
 	}
 
