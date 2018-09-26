@@ -96,6 +96,8 @@ type buildParams struct {
 	BuildTarget           string
 	CustomLibLocations    map[string]string
 	CustomModuleLocations map[string]string
+	CFlagsExtra           []string
+	CXXFlagsExtra         []string
 }
 
 func init() {
@@ -126,6 +128,8 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 		BuildTarget:           *buildTarget,
 		CustomLibLocations:    cll,
 		CustomModuleLocations: cml,
+		CFlagsExtra:           *cflagsExtra,
+		CXXFlagsExtra:         *cxxflagsExtra,
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
@@ -328,6 +332,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		appDir, &manifest_parser.ManifestAdjustments{
 			Platform:  bParams.Platform,
 			BuildVars: buildVarsCli,
+			CFlags:    bParams.CFlagsExtra,
+			CXXFlags:  bParams.CXXFlagsExtra,
 		}, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, true, *preferPrebuiltLibs,
 	)
@@ -394,10 +400,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	if !found {
 		return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Platform, manifest.Platforms)
 	}
-
-	// Amend cflags and cxxflags with the values given in command line
-	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
-	manifest.CXXFlags = append(manifest.CXXFlags, *cxxflagsExtra...)
 
 	appSources, err := absPathSlice(manifest.Sources)
 	if err != nil {
@@ -722,6 +724,8 @@ func buildRemote(bParams *buildParams) error {
 	manifest, _, err := manifest_parser.ReadManifest(tmpCodeDir, &manifest_parser.ManifestAdjustments{
 		Platform:  bParams.Platform,
 		BuildVars: buildVarsCli,
+		CFlags:    bParams.CFlagsExtra,
+		CXXFlags:  bParams.CXXFlagsExtra,
 	}, interp)
 	if err != nil {
 		return errors.Trace(err)
@@ -771,10 +775,6 @@ func buildRemote(bParams *buildParams) error {
 
 	// Print a warning if APP_CONF_SCHEMA is set in manifest manually
 	printConfSchemaWarn(manifest)
-
-	// Amend cflags and cxxflags with the values given in command line
-	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
-	manifest.CXXFlags = append(manifest.CXXFlags, *cxxflagsExtra...)
 
 	manifest.Name, err = fixupAppName(manifest.Name)
 	if err != nil {

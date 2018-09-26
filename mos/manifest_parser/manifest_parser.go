@@ -83,7 +83,8 @@ type ReadManifestCallbacks struct {
 type ManifestAdjustments struct {
 	Platform  string
 	BuildVars map[string]string
-	// TODO(dfrank): add CFlags and CxxFlags here as well
+	CFlags    []string
+	CXXFlags  []string
 }
 
 type RMFOut struct {
@@ -390,6 +391,9 @@ func readManifestWithLibs(
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
+
+	manifest.CFlags = append(manifest.CFlags, adjustments.CFlags...)
+	manifest.CXXFlags = append(manifest.CXXFlags, adjustments.CXXFlags...)
 
 	// Set the mos.platform variable
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
