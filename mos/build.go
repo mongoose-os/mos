@@ -1460,7 +1460,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 		return "", errors.Trace(err)
 	}
 
-	libsDir := getDepsDir(appDir)
+	libsDir := paths.GetDepsDir(appDir)
 
 	libDirAbs, ok := lpr.bParams.CustomLibLocations[name]
 	if !ok {
@@ -1584,7 +1584,7 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 			return "", errors.Trace(err)
 		}
 
-		targetDir, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, modulesDefVersion, *libsUpdateInterval, 0)
+		targetDir, err = m.PrepareLocalDir(paths.GetModulesDir(appDir), logWriter, true, modulesDefVersion, *libsUpdateInterval, 0)
 		if err != nil {
 			return "", errors.Annotatef(err, "preparing local copy of the module %q", name)
 		}
@@ -1606,22 +1606,6 @@ func (lpr *compProviderReal) GetMongooseOSLocalPath(
 	return targetDir, nil
 }
 
-func getDepsDir(projectDir string) string {
-	if paths.LibsDir != "" {
-		return paths.LibsDir
-	} else {
-		return moscommon.GetDepsDir(projectDir)
-	}
-}
-
-func getModulesDir(projectDir string) string {
-	if paths.ModulesDir != "" {
-		return paths.ModulesDir
-	} else {
-		return filepath.Join(moscommon.GetDepsDir(projectDir), "modules")
-	}
-}
-
 func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) (string, error) {
 	var mosDirEffective string
 	if *mosRepo != "" {
@@ -1634,7 +1618,7 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 			return "", errors.Trace(err)
 		}
 
-		md := getModulesDir(appDir)
+		md := paths.GetModulesDir(appDir)
 
 		m := build.SWModule{
 			// TODO(dfrank) get upstream repo URL from a flag

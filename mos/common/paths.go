@@ -15,10 +15,6 @@ func init() {
 	flag.StringVar(&genDirFlag, "gen-dir", "", "Directory to put build output under. Default is build_dir/gen")
 }
 
-func GetDepsDir(projectDir string) string {
-	return filepath.Join(projectDir, "deps")
-}
-
 func GetBuildDir(projectDir string) string {
 	return filepath.Join(projectDir, "build")
 }

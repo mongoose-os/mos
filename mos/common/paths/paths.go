@@ -18,24 +18,19 @@ var (
 
 	AppsDirTpl = fmt.Sprintf("~/.mos/apps-%s", dirTplMosVersion)
 
-	TmpDir     = ""
-	LibsDir    = ""
-	AppsDir    = ""
-	ModulesDir = ""
-
-	// TODO(dfrank): remove them after a while (2017/08/03)
-	LibsDirOld    = "~/.mos/libs"
-	AppsDirOld    = "~/.mos/apps"
-	ModulesDirOld = "~/.mos/modules"
+	TmpDir         = ""
+	libsDirFlag    = ""
+	AppsDir        = ""
+	modulesDirFlag = ""
 
 	StateFilepath = ""
 )
 
 func init() {
 	flag.StringVar(&TmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
-	flag.StringVar(&LibsDir, "libs-dir", "", "Directory to store libraries into")
+	flag.StringVar(&libsDirFlag, "libs-dir", "", "Directory to store libraries into")
 	flag.StringVar(&AppsDir, "apps-dir", AppsDirTpl, "Directory to store apps into")
-	flag.StringVar(&ModulesDir, "modules-dir", "", "Directory to store modules into")
+	flag.StringVar(&modulesDirFlag, "modules-dir", "", "Directory to store modules into")
 
 	flag.StringVar(&StateFilepath, "state-file", "~/.mos/state.json", "Where to store internal mos state")
 }
@@ -48,7 +43,7 @@ func Init() error {
 		return errors.Trace(err)
 	}
 
-	LibsDir, err = NormalizePath(LibsDir, version.GetMosVersion())
+	libsDirFlag, err = NormalizePath(libsDirFlag, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -58,27 +53,10 @@ func Init() error {
 		return errors.Trace(err)
 	}
 
-	ModulesDir, err = NormalizePath(ModulesDir, version.GetMosVersion())
+	modulesDirFlag, err = NormalizePath(modulesDirFlag, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	// TODO(dfrank) remove after a while (2017/08/03) {{{
-	LibsDirOld, err = NormalizePath(LibsDirOld, "")
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	AppsDirOld, err = NormalizePath(AppsDirOld, "")
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	ModulesDirOld, err = NormalizePath(ModulesDirOld, "")
-	if err != nil {
-		return errors.Trace(err)
-	}
-	// }}}
 
 	StateFilepath, err = NormalizePath(StateFilepath, version.GetMosVersion())
 	if err != nil {
@@ -120,4 +98,20 @@ func NormalizePath(p, version string) (string, error) {
 	}
 
 	return p, nil
+}
+
+func GetDepsDir(projectDir string) string {
+	if libsDirFlag != "" {
+		return libsDirFlag
+	} else {
+		return filepath.Join(projectDir, "deps")
+	}
+}
+
+func GetModulesDir(projectDir string) string {
+	if modulesDirFlag != "" {
+		return modulesDirFlag
+	} else {
+		return filepath.Join(GetDepsDir(projectDir), "modules")
+	}
 }

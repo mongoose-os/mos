@@ -246,23 +246,7 @@ func Init() error {
 func migrateData() error {
 	mosVersion := version.GetMosVersion()
 
-	// If old libs/apps/modules dirs exist, convert them to a new form
-	var err error
-
 	convertedVersions := []string{}
-
-	if !state.GetState().OldDirsConverted {
-		var curVersions []string
-		if curVersions, err = convertOldDir(paths.AppsDirOld, paths.AppsDirTpl); err != nil {
-			return errors.Trace(err)
-		}
-		convertedVersions = append(convertedVersions, curVersions...)
-
-		state.GetState().OldDirsConverted = true
-		if err := state.SaveState(); err != nil {
-			return errors.Trace(err)
-		}
-	}
 
 	if len(convertedVersions) > 0 {
 		// We've converted some old dir(s) into the new versioned shape, let's
@@ -320,72 +304,6 @@ func migrateData() error {
 	}
 
 	return nil
-}
-
-func convertOldDir(oldDir, newTpl string) ([]string, error) {
-	retVersions := []string{}
-
-	si, err := os.Stat(oldDir)
-	if err != nil {
-		// No old dir is present, nothing to do
-		return retVersions, nil
-	}
-
-	if !si.IsDir() {
-		// oldDir is not a directory, weird but we won't do anything
-		return retVersions, nil
-	}
-
-	ourutil.Reportf("Converting old directory %s into new versioned shape...", oldDir)
-
-	entries, err := ioutil.ReadDir(oldDir)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			// We expect only dirs here, but encountered non-dir; skip it
-			ourutil.Reportf("Skipping %s", entry.Name())
-			continue
-		}
-
-		oldEntryDir := filepath.Join(oldDir, entry.Name())
-
-		basename, projectVersion, dirVersion := parseProjectDirname(oldEntryDir)
-
-		newDir, err := paths.NormalizePath(newTpl, dirVersion)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-
-		if err := os.MkdirAll(newDir, 0755); err != nil {
-			return nil, errors.Trace(err)
-		}
-
-		newEntryDir := filepath.Join(
-			newDir, fmt.Sprint(basename, moscommon.GetVersionSuffix(projectVersion)),
-		)
-
-		if _, err := os.Stat(newEntryDir); err != nil {
-			// Target directory does not exist, so, move the old one as a target
-			if err := os.Rename(oldEntryDir, newEntryDir); err != nil {
-				ourutil.Reportf("Failed to rename %s to %s: %s", oldEntryDir, newEntryDir, err)
-			}
-		} else {
-			// Target directory already exists, do nothing
-			ourutil.Reportf("%s already exists, leaving %s intact", newEntryDir, oldEntryDir)
-		}
-
-		retVersions = append(retVersions, dirVersion)
-	}
-
-	// Try to remove old dir, ignoring any errors: like, if we skipped some
-	// items, directory will be non-empty and the deletion will fails, that's
-	// just what we want.
-	os.Remove(oldDir)
-
-	return retVersions, nil
 }
 
 // migrateProjects migrates all projects from the given oldVer to newVer,

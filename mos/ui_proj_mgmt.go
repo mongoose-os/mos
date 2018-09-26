@@ -31,7 +31,7 @@ func getRootByProjectType(pt projectType) (string, error) {
 	case projectTypeApp:
 		return paths.AppsDir, nil
 	case projectTypeLib:
-		return paths.LibsDir, nil
+		return "~/.mos/libs", nil
 	}
 	return "", errors.Errorf("invalid project type: %q", pt)
 }
@@ -44,7 +44,7 @@ func getProjectRootPath(r *http.Request) (string, error) {
 	} else if pt == "app" {
 		rootDir = paths.AppsDir
 	} else if pt == "lib" {
-		rootDir = paths.LibsDir
+		rootDir = "~/.mos/libs"
 	} else {
 		return "", errors.Errorf("type must be either app or lib")
 	}
