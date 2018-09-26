@@ -93,7 +93,7 @@ func usage() {
 		}
 	}
 
-	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", version.BuildId)
+	fmt.Fprintf(w, "The Mongoose OS command line tool %s.\n", version.Version)
 
 	if !version.LooksLikeDistrBuildId(version.BuildId) {
 		fmt.Fprintf(w, "Update channel: %q. Checking updates... ", update.GetUpdateChannel())
@@ -106,7 +106,7 @@ func usage() {
 			if serverVersion.BuildId != version.BuildId {
 				color.New(color.FgRed).Fprintf(
 					w, "\nOut of date: new version available: %s\nPlease run \"mos update\"\n",
-					serverVersion.BuildId,
+					serverVersion.BuildVersion,
 				)
 			} else {
 				color.New(color.FgGreen).Fprintf(w, "Up to date.\n")

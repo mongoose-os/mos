@@ -54,14 +54,15 @@ var (
 	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
 	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
 	keepTempFiles      = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
-	modules            = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
-	libs               = flag.StringSlice("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
+	modules            = flag.StringArray("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
+	libs               = flag.StringArray("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
 	libsUpdateInterval = flag.Duration("libs-update-interval", time.Minute*30, "how often to update already fetched libs")
 
-	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
-	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
-	cflagsExtra      = flag.StringSlice("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
-	cxxflagsExtra    = flag.StringSlice("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
+	buildDockerExtra = flag.StringArray("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
+	buildCmdExtra    = flag.StringArray("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
+	cflagsExtra      = flag.StringArray("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
+	cxxflagsExtra    = flag.StringArray("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
+	libsExtraFlag    = flag.StringArray("lib-extra", []string{}, "Extra libs to add to the app being built. Value should be a YAML string. Can be used multiple times.")
 	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
@@ -92,12 +93,10 @@ const (
 )
 
 type buildParams struct {
-	Platform              string
+	manifest_parser.ManifestAdjustments
 	BuildTarget           string
 	CustomLibLocations    map[string]string
 	CustomModuleLocations map[string]string
-	CFlagsExtra           []string
-	CXXFlagsExtra         []string
 }
 
 func init() {
@@ -123,13 +122,27 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 		cml[parts[0]] = parts[1]
 	}
 
+	buildVarsFromCLI, err := getBuildVarsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	libsFromCLI, err := getLibsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	bParams := buildParams{
-		Platform:              *platform,
+		ManifestAdjustments: manifest_parser.ManifestAdjustments{
+			Platform:  *platform,
+			BuildVars: buildVarsFromCLI,
+			CFlags:    *cflagsExtra,
+			CXXFlags:  *cxxflagsExtra,
+			ExtraLibs: libsFromCLI,
+		},
 		BuildTarget:           *buildTarget,
 		CustomLibLocations:    cll,
 		CustomModuleLocations: cml,
-		CFlagsExtra:           *cflagsExtra,
-		CXXFlagsExtra:         *cxxflagsExtra,
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
@@ -323,18 +336,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	buildVarsCli, err := getBuildVarsFromCLI()
-	if err != nil {
-		return errors.Trace(err)
-	}
-
 	manifest, fp, err := manifest_parser.ReadManifestFinal(
-		appDir, &manifest_parser.ManifestAdjustments{
-			Platform:  bParams.Platform,
-			BuildVars: buildVarsCli,
-			CFlags:    bParams.CFlagsExtra,
-			CXXFlags:  bParams.CXXFlagsExtra,
-		}, logWriter, interp,
+		appDir, &bParams.ManifestAdjustments, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, true, *preferPrebuiltLibs,
 	)
 	if err != nil {
@@ -714,19 +717,9 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
-	buildVarsCli, err := getBuildVarsFromCLI()
-	if err != nil {
-		return errors.Trace(err)
-	}
-
 	interp := interpreter.NewInterpreter(newMosVars())
 
-	manifest, _, err := manifest_parser.ReadManifest(tmpCodeDir, &manifest_parser.ManifestAdjustments{
-		Platform:  bParams.Platform,
-		BuildVars: buildVarsCli,
-		CFlags:    bParams.CFlagsExtra,
-		CXXFlags:  bParams.CXXFlagsExtra,
-	}, interp)
+	manifest, _, err := manifest_parser.ReadManifest(tmpCodeDir, &bParams.ManifestAdjustments, interp)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -1148,6 +1141,18 @@ func getBuildVarsFromCLI() (map[string]string, error) {
 	return m, nil
 }
 
+func getLibsFromCLI() ([]build.SWModule, error) {
+	var res []build.SWModule
+	for _, v := range *libsExtraFlag {
+		var m build.SWModule
+		if err := yaml.Unmarshal([]byte(v), &m); err != nil {
+			return nil, errors.Annotatef(err, "invalid --libs-extra value %q", v)
+		}
+		res = append(res, m)
+	}
+	return res, nil
+}
+
 // runCmd runs given command and redirects its output to the given log file.
 // if --verbose flag is set, then the output also goes to the stdout.
 func runCmd(cmd *exec.Cmd, logWriter io.Writer) error {
@@ -1466,8 +1471,6 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	if !ok {
 
 		for {
-			ourutil.Freportf(lpr.logWriter, "The --lib flag was not given for %q, checking repository", name)
-
 			needUpdate := true
 
 			localDir, err := m.GetLocalDir(libsDir, libsDefVersion)
@@ -1479,7 +1482,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				// lib's local dir already exists
 
 				if *noLibsUpdate {
-					ourutil.Freportf(lpr.logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
+					ourutil.Freportf(lpr.logWriter, "%s: --no-libs-update was given, and %q exists: skipping update", name, localDir)
 					libDirAbs = localDir
 					needUpdate = false
 				}
@@ -1535,12 +1538,12 @@ func (lpr *compProviderReal) GetLibLocalPath(
 						libsDefVersion = "latest"
 						continue
 					}
-					return "", errors.Annotatef(err, "preparing local copy of the lib %q", name)
+					return "", errors.Annotatef(err, "%s: preparing local copy", name)
 				}
 
 				if m.GetType() == build.SWModuleTypeGit {
 					if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
-						freportf(logWriter, "Hash is updated: %q -> %q", curHash, newHash)
+						freportf(logWriter, "%s: Hash is updated: %s -> %s", name, curHash, newHash)
 						// The current repo hash has changed after the pull, so we need to
 						// vanish the lib we might have downloaded before
 						os.RemoveAll(moscommon.GetBinaryLibsDir(localDir))
@@ -1550,17 +1553,18 @@ func (lpr *compProviderReal) GetLibLocalPath(
 						// losing user's local changes, because the fact that hash has
 						// changed means that the repo was clean anyway.
 						gitinst.ResetHard(localDir)
+					} else {
+						freportf(logWriter, "%s: Hash unchanged at %s (dir %q)", name, curHash, libDirAbs)
 					}
 				}
-
 			}
 
 			break
 		}
 	} else {
-		ourutil.Freportf(lpr.logWriter, "Using the location %q as is (given as a --lib flag)", libDirAbs)
+		ourutil.Freportf(lpr.logWriter, "%s: Using the location %q as is (given as a --lib flag)", name, libDirAbs)
 	}
-	ourutil.Freportf(lpr.logWriter, "Prepared local dir: %q", libDirAbs)
+	ourutil.Freportf(lpr.logWriter, "%s: Prepared local dir: %q", name, libDirAbs)
 
 	return libDirAbs, nil
 }

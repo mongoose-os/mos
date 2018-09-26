@@ -31,7 +31,9 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 	expr := args[0]
 
 	bParams := &buildParams{
-		Platform:           *platform,
+		ManifestAdjustments: manifest_parser.ManifestAdjustments{
+			Platform: *platform,
+		},
 		CustomLibLocations: cll,
 	}
 

@@ -28,7 +28,9 @@ func getMosRepoDir(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	bParams := &buildParams{
-		Platform:           *platform,
+		ManifestAdjustments: manifest_parser.ManifestAdjustments{
+			Platform: *platform,
+		},
 		CustomLibLocations: cll,
 	}
 

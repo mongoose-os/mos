@@ -85,6 +85,7 @@ type ManifestAdjustments struct {
 	BuildVars map[string]string
 	CFlags    []string
 	CXXFlags  []string
+	ExtraLibs []build.SWModule
 }
 
 type RMFOut struct {
@@ -392,9 +393,6 @@ func readManifestWithLibs(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.CFlags = append(manifest.CFlags, adjustments.CFlags...)
-	manifest.CXXFlags = append(manifest.CXXFlags, adjustments.CXXFlags...)
-
 	// Set the mos.platform variable
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
@@ -552,6 +550,16 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 				})
 			}
 		}
+
+		for _, l := range pc.adjustments.ExtraLibs {
+			manifest.Libs = append(manifest.Libs, l)
+		}
+		pc.adjustments.ExtraLibs = nil
+
+		manifest.CFlags = append(manifest.CFlags, pc.adjustments.CFlags...)
+		pc.adjustments.CFlags = nil
+		manifest.CXXFlags = append(manifest.CXXFlags, pc.adjustments.CXXFlags...)
+		pc.adjustments.CXXFlags = nil
 	}
 
 	libsMtime, err := prepareLibs(parentNodeName, manifest, pc)
