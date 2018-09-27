@@ -251,7 +251,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	select {
 	case v := <-serverVersionCh:
 		serverVer := v.BuildVersion
-		localVer := version.GetMosVersion()
+		localVer := version.Version
 
 		if serverVer != localVer {
 			freportf(logWriterStderr, "By the way, there is a newer version available: %q (you use %q). Run \"mos update\" to upgrade.", serverVer, localVer)
