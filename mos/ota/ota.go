@@ -1,10 +1,10 @@
 package ota
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"os"
 	"time"
 
 	"cesanta.com/common/go/ourutil"
@@ -37,15 +37,11 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("extra arguments")
 	}
 
-	fwFile, err := os.Open(fwFilename)
+	fwFileData, err := ourutil.ReadOrFetchFile(fwFilename)
 	if err != nil {
-		return errors.Annotatef(err, "unable to open fw file")
+		return errors.Trace(err)
 	}
-	defer fwFile.Close()
-	fi, err := fwFile.Stat()
-	if err != nil {
-		return errors.Annotatef(err, "unable to stat fw file")
-	}
+	fwFileSize := len(fwFileData)
 
 	ourutil.Reportf("Getting current OTA status...")
 	s, err := dev.CallDeviceService(ctx, devConn, "OTA.Status", "")
@@ -70,7 +66,7 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 		}{
 			Timeout:       int64(*updateTimeoutFlag) / 1000000000,
 			CommitTimeout: int64(*commitTimeoutFlag) / 1000000000,
-			Size:          fi.Size(),
+			Size:          int64(fwFileSize),
 		}
 		baJSON, _ := json.Marshal(&ba)
 		beginArgs = string(baJSON)
@@ -82,6 +78,7 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	ourutil.Reportf("Writing data...")
+	fwFile := bytes.NewBuffer(fwFileData)
 	data := make([]byte, *fs.ChunkSizeFlag)
 	total := int64(0)
 	lastReport := time.Now()
@@ -106,7 +103,7 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		total += int64(n)
 		if total%65536 == 0 || time.Since(lastReport) > 5*time.Second {
-			ourutil.Reportf("  %d of %d (%.2f%%)", total, fi.Size(), float64(total)*100.0/float64(fi.Size()))
+			ourutil.Reportf("  %d of %d (%.2f%%)", total, fwFileSize, float64(total)*100.0/float64(fwFileSize))
 			lastReport = time.Now()
 		}
 	}

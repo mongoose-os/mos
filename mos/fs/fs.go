@@ -1,16 +1,17 @@
 package fs
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"os"
 	"path"
 	"sort"
 	"strings"
 
 	"cesanta.com/common/go/lptr"
+	"cesanta.com/common/go/ourutil"
 	fwfs "cesanta.com/fw/defs/fs"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -149,13 +150,12 @@ func Put(ctx context.Context, devConn *dev.DevConn) error {
 }
 
 func PutFile(ctx context.Context, devConn *dev.DevConn, hostFilename, devFilename string) error {
-	file, err := os.Open(hostFilename)
+	fileData, err := ourutil.ReadOrFetchFile(hostFilename)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	defer file.Close()
 
-	return PutData(ctx, devConn, file, devFilename)
+	return PutData(ctx, devConn, bytes.NewBuffer(fileData), devFilename)
 }
 
 func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename string) error {
