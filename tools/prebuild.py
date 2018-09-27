@@ -196,6 +196,9 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
         cxxflags = (common.get("cxxflags", "") + " " + v.get("cxxflags", "")).strip()
         if cflags:
             mos_cmd.append("--cxxflags-extra=%s" % cflags)
+        mos_args = (common.get("mos_args", []) + v.get("mos_args", []))
+        if mos_args:
+            mos_cmd.extend(mos_args)
         RunCmd(mos_cmd)
         bl = os.path.join(tmp_dir, "%s-%s-build.log" % (tgt_name, v["name"]))
         logging.info("  Saving build log to %s", bl)

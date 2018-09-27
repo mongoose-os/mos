@@ -11,6 +11,7 @@
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
+    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
   variants:
     - name: esp8266
       platform: esp8266
@@ -40,6 +41,7 @@
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
+    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
   variants:
     - name: esp8266
       platform: esp8266
@@ -78,6 +80,7 @@
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
+    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
   variants:
     - name: esp8266
       platform: esp8266
