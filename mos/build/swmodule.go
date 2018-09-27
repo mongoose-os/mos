@@ -201,9 +201,9 @@ func (m *SWModule) PrepareLocalDir(
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		_, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
+		_, libName, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
-		if err = prepareLocalCopyGit(repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
+		if err = prepareLocalCopyGit(libName, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
 			return "", errors.Trace(err)
 		}
 
@@ -423,7 +423,7 @@ var (
 )
 
 func prepareLocalCopyGit(
-	origin, version, targetDir string,
+	name, origin, version, targetDir string,
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
 ) (retErr error) {
@@ -437,11 +437,11 @@ func prepareLocalCopyGit(
 	repoLocksLock.Unlock()
 	lock.Lock()
 	defer lock.Unlock()
-	return prepareLocalCopyGitLocked(origin, version, targetDir, logWriter, deleteIfFailed, pullInterval, cloneDepth)
+	return prepareLocalCopyGitLocked(name, origin, version, targetDir, logWriter, deleteIfFailed, pullInterval, cloneDepth)
 }
 
 func prepareLocalCopyGitLocked(
-	origin, version, targetDir string,
+	name, origin, version, targetDir string,
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
 ) (retErr error) {
@@ -479,7 +479,7 @@ func prepareLocalCopyGitLocked(
 	}
 
 	if !repoExists {
-		freportf(logWriter, "Repository %q does not exist, cloning from %q...\n", targetDir, origin)
+		freportf(logWriter, "%s: Does not exist, cloning from %q...", name, origin)
 		cloneOpts := ourgit.CloneOptions{
 			Depth: cloneDepth,
 		}
@@ -502,7 +502,7 @@ func prepareLocalCopyGitLocked(
 		}
 
 		if !isClean {
-			freportf(logWriter, "Repository %q is dirty, leaving it intact\n", targetDir)
+			freportf(logWriter, "%s exists and is dirty, leaving it intact\n", targetDir)
 			return nil
 		}
 	}
@@ -532,7 +532,7 @@ func prepareLocalCopyGitLocked(
 				}
 
 				glog.V(2).Infof("calling prepareLocalCopyGit() again")
-				retErr = prepareLocalCopyGitLocked(origin, version, targetDir, logWriter, false, pullInterval, cloneDepth)
+				retErr = prepareLocalCopyGitLocked(name, origin, version, targetDir, logWriter, false, pullInterval, cloneDepth)
 			}
 		}()
 	}
@@ -623,7 +623,7 @@ func prepareLocalCopyGitLocked(
 	}
 
 	// Try to checkout to the requested version
-	glog.V(2).Infof("checking out..")
+	freportf(logWriter, "%s: Checking out %s...", name, version)
 	err = gitinst.Checkout(targetDir, version, refType)
 	if err != nil {
 		return errors.Trace(err)
@@ -636,7 +636,7 @@ func prepareLocalCopyGitLocked(
 		}
 
 		if fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
-			glog.V(2).Infof("pulling..")
+			freportf(logWriter, "%s: Pulling...", name)
 			err = gitinst.Pull(targetDir)
 			if err != nil {
 				return errors.Trace(err)
@@ -660,6 +660,9 @@ func prepareLocalCopyGitLocked(
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	curHash, _ = gitinst.GetCurrentHash(targetDir)
+	freportf(logWriter, "%s: Done, hash %s", name, curHash)
 
 	return nil
 }

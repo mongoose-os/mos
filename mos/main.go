@@ -17,6 +17,7 @@ import (
 	"cesanta.com/common/go/pflagenv"
 	"cesanta.com/mos/aws"
 	"cesanta.com/mos/azure"
+	"cesanta.com/mos/clone"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/common/state"
@@ -116,6 +117,7 @@ func init() {
 		{"ui", startUI, `Start GUI`, nil, nil, false},
 		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "platform", "force"}, false},
 		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "platform", "local", "repo", "clean", "server"}, false},
+		{"clone", clone.Clone, `Clone a repo`, nil, []string{}, false},
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
 		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
