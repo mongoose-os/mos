@@ -4,13 +4,16 @@
 package ourgit
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 )
 
 type ourGitShell struct{}
@@ -82,15 +85,20 @@ func (m *ourGitShell) Fetch(localDir string, opts FetchOptions) error {
 
 // IsClean returns true if there are no modified, deleted or untracked files,
 // and no non-pushed commits since the given version.
-func (m *ourGitShell) IsClean(localDir, version string) (bool, error) {
+func (m *ourGitShell) IsClean(localDir, version string, excludeGlobs []string) (bool, error) {
 	// First, check if there are modified, deleted or untracked files
-	resp, err := shellGit(localDir, "ls-files", "--exclude-standard", "--modified", "--others", "--deleted")
+	flags := []string{"--exclude-standard", "--modified", "--others", "--deleted"}
+	for _, g := range excludeGlobs {
+		flags = append(flags, fmt.Sprintf("--exclude=%s", g))
+	}
+	resp, err := shellGit(localDir, "ls-files", flags...)
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to git ls-files")
 	}
 
 	if resp != "" {
 		// Working dir is dirty
+		glog.Errorf("%s: dirty: %s", localDir, resp)
 		return false, nil
 	}
 
@@ -102,8 +110,18 @@ func (m *ourGitShell) IsClean(localDir, version string) (bool, error) {
 		return false, errors.Annotatef(err, "failed to git diff --cached")
 	}
 
-	if resp != "" {
-		// Working dir is dirty
+	s := bufio.NewScanner(bytes.NewBuffer([]byte(resp)))
+scan:
+	for s.Scan() {
+		fn := s.Text()
+		for _, g := range excludeGlobs {
+			m1, _ := path.Match(g, fn)
+			m2, _ := path.Match(g, path.Base(fn))
+			if m1 || m2 {
+				continue scan
+			}
+		}
+		glog.Errorf("%s: dirty 2: %s", localDir, resp)
 		return false, nil
 	}
 
@@ -228,4 +246,11 @@ func shellGit(localDir string, subcmd string, args ...string) (string, error) {
 	}
 	resp := b.String()
 	return strings.TrimRight(resp, "\r\n"), nil
+}
+
+// HaveShellGit checks if "git" command is available.
+func HaveShellGit() bool {
+	// What we need is os/exec.LookupPath("git"), but Go 1.10 doesn't have it yet.
+	_, err := shellGit("", "version")
+	return err == nil
 }

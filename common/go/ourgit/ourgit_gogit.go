@@ -5,13 +5,11 @@ package ourgit
 
 import (
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
-	"strings"
 
-	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	git "gopkg.in/src-d/go-git.v4"
@@ -214,7 +212,7 @@ func (m *ourGitGoGit) Fetch(localDir string, opts FetchOptions) error {
 
 // IsClean returns true if there are no modified, deleted or untracked files,
 // and no non-pushed commits since the given version.
-func (m *ourGitGoGit) IsClean(localDir, version string) (bool, error) {
+func (m *ourGitGoGit) IsClean(localDir, version string, excludeGlobs []string) (bool, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return false, errors.Trace(err)
@@ -230,7 +228,23 @@ func (m *ourGitGoGit) IsClean(localDir, version string) (bool, error) {
 		return false, errors.Trace(err)
 	}
 
-	return isCleanWithLib(status), nil
+	r := true
+s:
+	for fn, fs := range status {
+		for _, g := range excludeGlobs {
+			m1, _ := path.Match(g, fn)
+			m2, _ := path.Match(g, path.Base(fn))
+			if m1 || m2 {
+				continue s
+			}
+		}
+		if fs.Worktree != git.Unmodified || fs.Staging != git.Unmodified {
+			glog.Errorf("%s: dirty: %s %c %c", localDir, fn, fs.Worktree, fs.Staging)
+			r = false
+		}
+	}
+
+	return r, nil
 }
 
 func (m *ourGitGoGit) Clone(srcURL, localDir string, opts CloneOptions) error {
@@ -336,19 +350,4 @@ func newHashSafe(s string) (plumbing.Hash, error) {
 	copy(h[:], b)
 
 	return h, nil
-}
-
-// isCleanWithLib is like s.IsClean(), but ignores binary libs (i.e. files
-// under the dir returned by moscommon.GetBinaryLibsDir())
-func isCleanWithLib(s git.Status) bool {
-	for n, status := range s {
-		if strings.HasPrefix(n, fmt.Sprintf("%s%c", moscommon.GetBinaryLibsDir(""), filepath.Separator)) {
-			continue
-		}
-		if status.Worktree != git.Unmodified || status.Staging != git.Unmodified {
-			return false
-		}
-	}
-
-	return true
 }

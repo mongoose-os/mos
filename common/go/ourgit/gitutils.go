@@ -12,7 +12,7 @@ type OurGit interface {
 	ResetHard(localDir string) error
 	Pull(localDir string) error
 	Fetch(localDir string, opts FetchOptions) error
-	IsClean(localDir, version string) (bool, error)
+	IsClean(localDir, version string, excludeGlobs []string) (bool, error)
 	Clone(srcURL, localDir string, opts CloneOptions) error
 	GetOriginUrl(localDir string) (string, error)
 }

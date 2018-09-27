@@ -166,7 +166,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 
 		// Dir exists, check if the repo is clean
 		gitinst := mosgit.NewOurGit()
-		isClean, err := gitinst.IsClean(rp, m.getVersionGit(defaultVersion))
+		isClean, err := mosgit.IsClean(gitinst, rp, m.getVersionGit(defaultVersion))
 		if err != nil {
 			return false, errors.Trace(err)
 		}
@@ -496,7 +496,7 @@ func prepareLocalCopyGitLocked(
 	} else {
 		// Repo exists, let's check if the working dir is clean. If not, we'll
 		// not do anything.
-		isClean, err := gitinst.IsClean(targetDir, version)
+		isClean, err := mosgit.IsClean(gitinst, targetDir, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
