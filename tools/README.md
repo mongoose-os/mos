@@ -30,19 +30,21 @@ $ sudo systemctl stop publish_repos.timer
     releases for the new version (from the dev repo root)
 
 ```bash
-$ tools/make_release_tags.py --release-tag X.XX
+$ tools/make_release_tags.py --release-tag X.Y.Z
 ```
 
   * Previous command has created a tag X.XX on all our repos. Now you need to
     provide a release notes at least on mongoose-os and mos-tool repos; for
-    that, use `tools/extract_changelog Y.YY`, where `Y.YY` is a previous
-    release. The output is rough, so you need to "file it down" a bit, and then
+    that, use `tools/extract_changelog.py --no-pull --from A.B.C --to X.Y.Z`,
+    where `A.B.C` is the previous release.
+    The output is rough, so you need to "file it down" a bit, and then
     publish as release notes on mongoose-os and mos-tool repos (you can do that
     in parallel with the `tools/deploy_mos.py` command below, which takes a
     long time)
 
   * Make sure you're on mac (You can use a mac in the office, see the section
     in the end)
+
   * From the root of the dev repo, invoke:
 
 ```bash

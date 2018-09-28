@@ -38,24 +38,19 @@ parser.add_argument('repo', type=str, nargs='*', help='Run on specific repos. If
 
 args = parser.parse_args()
 
-if not os.path.isfile(args.token_filepath):
-    print("++ Token file %s does not exist, exiting" % args.token_filepath)
-    exit(1)
-
-with open(args.token_filepath, 'r') as f:
-    token = f.read().strip()
+TOKEN = "file:%s" % args.token_filepath
 
 def call_users_api(
         org, users_url, params = {}, method = "GET", json_data = None, subdomain = "api",
         data = None, headers = {}, decode_json = True
         ):
-    return github_api.call_users_api(token=token, **locals())
+    return github_api.call_users_api(token=TOKEN, **locals())
 
 def call_releases_api(
         repo_name, releases_url, params = {}, method = "GET", json_data = None, subdomain = "api",
         data = None, headers = {}, decode_json = True
         ):
-    return github_api.call_releases_api(token=token, **locals())
+    return github_api.call_releases_api(token=TOKEN, **locals())
 
 
 def get_repos(org):

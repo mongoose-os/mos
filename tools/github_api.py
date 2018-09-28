@@ -37,11 +37,15 @@ def call_api(
         params = {}, method = "GET", json_data = None,
         data = None, headers = {}, decode_json = True
         ):
+
+    if token.startswith("file:"):
+        with open(token[5:], "r") as f:
+            token = f.read().strip()
+
     headers.update({
       "Authorization": "token %s" % token,
     })
 
-    #print('Reaching GitHub %s "%s" with query params %s, json data %s, headers %s' % (method, url, params, json_data, headers))
     resp = requests.request(
         method, url=url, params=params, json=json_data, headers=headers, data=data
         )
