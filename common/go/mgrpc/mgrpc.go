@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"sync"
@@ -300,7 +301,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 			for k, v := range r.reqs {
 				// Use non-blocking send, otherwise we can block and lock this rpc
 				select {
-				case v.errChan <- err:
+				case v.errChan <- io.EOF:
 				default:
 				}
 				delete(r.reqs, k)
