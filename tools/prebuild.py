@@ -211,34 +211,32 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
             else:
                 assets.append(MakeAsset("%s-%s.zip" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "fw.zip"), tmp_dir))
                 assets.append(MakeAsset("%s-%s.elf" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "objs", "fw.elf"), tmp_dir))
-    out = e.get("out", {})
-    if out:
+    outs = e.get("out", [])
+    if not outs and loc.startswith("https://github.com/"):
+        outs = [{"repo": "%s/%s" % (pre, tgt_name), "assets": []}]
+    for out in outs:
         gh_out = copy.deepcopy(out.get("github", {}))
-    elif loc.startswith("https://github.com/"):
-        gh_out = {"repo": "%s/%s" % (pre, tgt_name), "assets": []}
-    else:
-        gh_out = None
-    # Push to GitHub
-    if gh_out:
-        gh_out["assets"] = assets
-        gh_out["repo"] = gh_out["repo"] % {"repo_subdir": repo_subdir}
+        # Push to GitHub
+        if gh_out:
+            gh_out["assets"] = assets
+            gh_out["repo"] = gh_out["repo"] % {"repo_subdir": repo_subdir}
 
-        if not gh_token_file:
-            logging.info("Token file not set, GH uploads disabled")
-            return
-        if not os.path.isfile(gh_token_file):
-            logging.error("Token file %s does not exist", gh_token_file)
-            exit(1)
-        logging.debug("Using token file at %s", gh_token_file)
-        with open(gh_token_file, "r") as f:
-            token = f.read().strip()
+            if not gh_token_file:
+                logging.info("Token file not set, GH uploads disabled")
+                return
+            if not os.path.isfile(gh_token_file):
+                logging.error("Token file %s does not exist", gh_token_file)
+                exit(1)
+            logging.debug("Using token file at %s", gh_token_file)
+            with open(gh_token_file, "r") as f:
+                token = f.read().strip()
 
-        try:
-            CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
-        except (Exception, KeyboardInterrupt):
-            if g_cur_rel_id:
-                DeleteRelease(gh_out["repo"], token, g_cur_rel_id)
-            raise
+            try:
+                CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+            except (Exception, KeyboardInterrupt):
+                if g_cur_rel_id:
+                    DeleteRelease(gh_out["repo"], token, g_cur_rel_id)
+                raise
 
 
 def ProcessEntry(e, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):

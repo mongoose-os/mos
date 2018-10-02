@@ -6,8 +6,8 @@
     - git@github.com:cesanta/mos-libs.git/crontab
     - git@github.com:cesanta/mos-libs.git/dash
   out:
-    github:
-      repo: mongoose-os-libs/%(repo_subdir)s
+    - github:
+        repo: mongoose-os-libs/%(repo_subdir)s
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
@@ -36,8 +36,8 @@
 
 - location: git@github.com:cesanta/mos-libs.git/mongoose
   out:
-    github:
-      repo: mongoose-os-libs/%(repo_subdir)s
+    - github:
+        repo: mongoose-os-libs/%(repo_subdir)s
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
@@ -75,8 +75,8 @@
     - git@github.com:cesanta/mos-libs.git/ota-http-server
     - git@github.com:cesanta/mos-libs.git/rpc-service-ota
   out:
-    github:
-      repo: mongoose-os-libs/%(repo_subdir)s
+    - github:
+        repo: mongoose-os-libs/%(repo_subdir)s
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
