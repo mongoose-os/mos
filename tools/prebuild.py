@@ -213,7 +213,7 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
                 assets.append(MakeAsset("%s-%s.elf" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "objs", "fw.elf"), tmp_dir))
     outs = e.get("out", [])
     if not outs and loc.startswith("https://github.com/"):
-        outs = [{"repo": "%s/%s" % (pre, tgt_name), "assets": []}]
+        outs = [{"github": {"repo": "%s/%s" % (pre, tgt_name)}}]
     for out in outs:
         gh_out = copy.deepcopy(out.get("github", {}))
         # Push to GitHub
