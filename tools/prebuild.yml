@@ -82,7 +82,10 @@
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
-    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
+    mos_args:
+      - '--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"'
+      - '--lib-extra=origin: "https://github.com/mongoose-os-libs/core"'
+      - '--lib-extra=origin: "https://github.com/mongoose-os-libs/vfs-common"'
   variants:
     - name: esp8266
       platform: esp8266
