@@ -5,6 +5,7 @@
     - git@github.com:cesanta/mos-libs.git/cron
     - git@github.com:cesanta/mos-libs.git/crontab
     - git@github.com:cesanta/mos-libs.git/dash
+    - git@github.com:cesanta/mos-libs.git/vfs-dev-encr
   out:
     - github:
         repo: mongoose-os-libs/%(repo_subdir)s
@@ -70,6 +71,7 @@
         MGOS_ENABLE_LWIP: 1
 
 - locations:
+    - git@github.com:cesanta/mos-libs.git/ota-common
     - git@github.com:cesanta/mos-libs.git/ota-shadow
     - git@github.com:cesanta/mos-libs.git/ota-http-client
     - git@github.com:cesanta/mos-libs.git/ota-http-server
