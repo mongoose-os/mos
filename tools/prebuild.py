@@ -39,6 +39,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 import yaml
 
 # Debian/Ubuntu: apt-get install python-git
@@ -94,11 +95,19 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
         ct = "application/zip" if asset_name.endswith(".zip") else "application/octet-stream"
         logging.info("  Uploading %s to %s", asset_file, asset_name)
         with open(asset_file, "rb") as f:
-            r, ok = CallReleasesAPI(
-                repo, token, method="POST", subdomain="uploads", data=f,
-                releases_url=("/%d/assets" % new_rel_id),
-                headers = {"Content-Type": ct},
-                params = {"name": asset_name})
+            i = 1
+            while i <= 3:
+                r, ok = CallReleasesAPI(
+                    repo, token, method="POST", subdomain="uploads", data=f,
+                    releases_url=("/%d/assets" % new_rel_id),
+                    headers = {"Content-Type": ct},
+                    params = {"name": asset_name})
+                if ok:
+                    break
+                else:
+                    logging.error("    Failed to upload %s (attempt %d): %s", asset_name, i, r)
+                    time.sleep(1)
+                    i += 1
             if not ok:
                 logging.error("Failed to upload %s: %s", asset_name, r)
                 raise RuntimeError
