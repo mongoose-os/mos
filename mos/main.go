@@ -41,7 +41,7 @@ const (
 
 // This section contains all "simple" flags, i.e. flags that our great leader loves and cares about.
 // Each command can also register more flags but they should be hidden by default so the tool doesn't seem complex.
-// Full help can be shown with --helpfull anyway.
+// Full help can be shown with --full anyway.
 var (
 	// --arch was deprecated at 2017/08/15 and should eventually be removed.
 	archOld    = flag.String("arch", "", "Deprecated, please use --platform instead")
@@ -63,34 +63,17 @@ var (
 	force     = flag.Bool("force", false, "Use the force")
 	verbose   = flag.Bool("verbose", false, "Verbose output")
 	chdir     = flag.StringP("chdir", "C", "", "Change into this directory first")
+	xFlag     = flag.BoolP("enable-extended", "X", false, "Deprecated. Enable extended commands")
 
 	invertedControlLines = flag.Bool("inverted-control-lines", false, "DTR and RTS control lines use inverted polarity")
+	helpFull             = flag.Bool("full", false, "Show full help, including advanced flags")
 
-	versionFlag = flag.Bool("version", false, "Print version and exit")
-	helpFull    = flag.Bool("helpfull", false, "Show full help, including advanced flags")
-
-	extendedMode = false
-	isUI         = false
+	isUI = false
 )
 
 var (
 	// put all commands here
 	commands []command
-	// These commands are only available when invoked with -X
-	extendedCommands = []command{
-		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, nil, []string{"format", "port"}, true},
-		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, nil, []string{"format", "dry-run", "port"}, true},
-		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, nil, []string{"dry-run", "port"}, true},
-		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, true},
-		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, true},
-		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, true},
-		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, false},
-		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, false},
-		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false},
-		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, false},
-		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, false},
-		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, false},
-	}
 )
 
 type command struct {
@@ -100,6 +83,7 @@ type command struct {
 	required    []string
 	optional    []string
 	needDevConn bool
+	extended    bool
 }
 
 type handler func(ctx context.Context, devConn *dev.DevConn) error
@@ -114,29 +98,58 @@ func unimplemented() error {
 
 func init() {
 	commands = []command{
-		{"ui", startUI, `Start GUI`, nil, nil, false},
-		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "platform", "force"}, false},
-		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "platform", "local", "repo", "clean", "server"}, false},
-		{"clone", clone.Clone, `Clone a repo`, nil, []string{}, false},
-		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
-		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, false},
-		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
-		{"ls", fs.Ls, `List files at the local device's filesystem`, nil, []string{"port"}, true},
-		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
-		{"put", fs.Put, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
-		{"rm", fs.Rm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
-		{"ota", ota.OTA, `Perform an OTA update on a device`, nil, []string{"port"}, true},
-		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true},
-		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true},
-		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
-		{"debug-core-dump", debug_core_dump.DebugCoreDump, `Debug a core dump`, nil, nil, false},
-		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
-		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, true},
-		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true},
-		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, true},
-		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false},
-		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true},
+		{"ui", startUI, `Start GUI`, nil, nil, false, false},
+		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "platform", "local", "repo", "clean", "server"}, false, false},
+		{"clone", clone.Clone, `Clone a repo`, nil, []string{}, false, false},
+		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false, false},
+		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, false, false},
+		{"console", console, `Simple serial port console`, nil, []string{"port"}, false, false}, //TODO: needDevConn
+		{"ls", fs.Ls, `List files at the local device's filesystem`, nil, []string{"port"}, true, false},
+		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true, false},
+		{"put", fs.Put, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true, false},
+		{"rm", fs.Rm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true, false},
+		{"ota", ota.OTA, `Perform an OTA update on a device`, nil, []string{"port"}, true, false},
+		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true, false},
+		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true, false},
+		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true, false},
+		{"debug-core-dump", debug_core_dump.DebugCoreDump, `Debug a core dump`, nil, nil, false, false},
+		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true, false},
+		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, true, false},
+		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true, false},
+		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, true, false},
+		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false, false},
+		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true, false},
+		{"help", showHelp, `Show help. Add --full to show advanced commands`, nil, nil, false, false},
+		{"version", showVersion, `Show version`, nil, nil, false, false},
+
+		// extended commands
+		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, nil, []string{"format", "port"}, true, true},
+		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, nil, []string{"format", "dry-run", "port"}, true, true},
+		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, nil, []string{"dry-run", "port"}, true, true},
+		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, true, true},
+		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, true, true},
+		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, true, true},
+		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, false, true},
+		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, false, true},
+		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false, true},
+		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, false, true},
+		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, false, true},
+		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, false, true},
 	}
+}
+
+func showHelp(ctx context.Context, devConn *dev.DevConn) error {
+	unhideFlags()
+	usage()
+	return nil
+}
+
+func showVersion(ctx context.Context, devConn *dev.DevConn) error {
+	fmt.Printf(
+		"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
+		"The Mongoose OS command line tool", version.GetMosVersion(), version.BuildId, update.GetUpdateChannel(),
+	)
+	return nil
 }
 
 func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
@@ -191,12 +204,6 @@ func main() {
 
 	consoleMsgs = make(chan []byte, 10)
 
-	// -X, if given, must be the first arg.
-	if len(os.Args) > 1 && os.Args[1] == "-X" {
-		os.Args = append(os.Args[:1], os.Args[2:]...)
-		extendedMode = true
-		commands = append(commands, extendedCommands...)
-	}
 	initFlags()
 	flag.Parse()
 
@@ -238,18 +245,6 @@ func main() {
 		aws.IsUI = true
 	}
 
-	if *helpFull {
-		unhideFlags()
-		usage()
-		return
-	} else if *versionFlag {
-		fmt.Printf(
-			"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
-			"The Mongoose OS command line tool", version.GetMosVersion(), version.BuildId, update.GetUpdateChannel(),
-		)
-		return
-	}
-
 	ctx := context.Background()
 	var devConn *dev.DevConn
 
@@ -264,6 +259,11 @@ func main() {
 			fmt.Println(errors.Trace(err))
 			return
 		}
+	}
+
+	if cmd == nil {
+		fmt.Fprintf(os.Stderr, "Unknown command: %s. Run \"mos help\"\n", flag.Arg(0))
+		os.Exit(1)
 	}
 
 	if err := run(cmd, ctx, devConn); err != nil {

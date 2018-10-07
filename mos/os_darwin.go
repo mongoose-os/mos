@@ -39,5 +39,5 @@ func osSpecificInit() {
 }
 
 func webview(url string) {
-	zwebview.Open("Mongoose OS Web UI", url, 1024, 480, true)
+	zwebview.Open("mos tool", url, 1200, 600, true)
 }

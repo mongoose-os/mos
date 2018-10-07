@@ -119,6 +119,9 @@ func usage() {
 	fmt.Fprintf(w, "\nCommands:\n")
 
 	for _, c := range commands {
+		if c.extended && !*helpFull {
+			continue
+		}
 		fmt.Fprintf(w, "  %s\t\t%s\n", c.name, c.short)
 	}
 
@@ -128,7 +131,6 @@ func usage() {
 	} else {
 		printFlag(w, "Optional", "verbose")
 		printFlag(w, "Optional", "logtostderr")
-		printFlag(w, "Optional", "helpfull")
 	}
 
 	w.Flush()

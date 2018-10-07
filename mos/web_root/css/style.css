@@ -1,0 +1,11 @@
+@font-face { font-family: MetropolisRegular; src: url("../fonts/Metropolis-Regular.otf") format("opentype"); }
+@font-face { font-family: MetropolisBold; src: url("../fonts/Metropolis-Bold.otf") format("opentype"); }
+html, body { height: 100%; min-height: 100%; max-height: 100%; margin: 0; padding: 0; }
+* { outline: none !important; }
+body { color: #222; font: 15px/1.4 MetropolisRegular, Helvetica, Arial, sans-serif; }
+h1, h2, h3, h4, h5, h6, b, th, strong, .nav-link { font-family: MetropolisBold, Helvetica, Arial, sans-serif; color: #777;  }
+.btn, input, textarea { outline: none; box-shadow:none !important; border: 1px solid #ccc !important; }
+.oa { overflow: auto; -ms-overflow-style: -ms-autohiding-scrollbar; }
+.tlf { table-layout: fixed; }
+.vat { vertical-align: top; }
+.prewrap { white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word; }

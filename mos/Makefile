@@ -1,4 +1,4 @@
-.PHONY: all all-downloads build clean deploy deploy-fwbuild deploy-mos-binary dmg downloads generate install linux mac win
+.PHONY: all all-downloads build clean deploy deploy-fwbuild deploy-mos-binary downloads generate install linux mac win
 
 TAG ?= latest
 
@@ -65,7 +65,7 @@ downloads: clean
 	cd $(TMP_GOPATH)/src/cesanta.com/mos && \
 	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
 
-all-downloads: dmg linux win
+all-downloads: mac linux win
 	cp version/version.json $(OUTDIR)/downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
@@ -78,22 +78,8 @@ deploy-mos-binary: downloads
 	cd ../tools/ansible && \
     ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t mos
 
-APPNAME = mos
-DMGDIR = dmg/$(APPNAME).app
-dmg: mac
-	rm -rf dmg a.dmg mos.dmg
-	mkdir -p $(DMGDIR)/Contents/{MacOS,Resources}
-	install -m 644 $(APPNAME).icns $(DMGDIR)/Contents/Resources/
-	install -m 644 Info.plist $(DMGDIR)/Contents/
-	install -m 755 $(OUTDIR)/downloads/mos/mac/mos $(DMGDIR)/Contents/MacOS/_$(APPNAME)
-	install -m 755 downloads/mos/libusb-1.0.0.dylib $(DMGDIR)/Contents/MacOS/
-	install -m 755 downloads/mos/libftdi1.2.dylib  $(DMGDIR)/Contents/MacOS/
-	install -m 755 mac_app_wrapper.sh $(DMGDIR)/Contents/MacOS/$(APPNAME)
-	ln -fs /Applications dmg/
-	hdiutil create a.dmg -volname mos -srcfolder dmg -ov
-	mkdir -p $(OUTDIR)/downloads/mos/dmg
-	hdiutil convert a.dmg -format UDRW -o $(OUTDIR)/downloads/mos/dmg/mos.dmg
-	rm -rf a.dmg dmg
+uglify:
+	uglifyjs --compress --mangle -- web_root/js/main.js web_root/js/util.js > /dev/null
 
 clean:
-	rm -rf dmg mos_* mos.exe mos gobuild-cache downloads/mos/{dmg,mac,linux,win} version/version.*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{dmg,mac,linux,win} version/version.*

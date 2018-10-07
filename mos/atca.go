@@ -31,9 +31,6 @@ var (
 )
 
 func initATCAFlags() {
-	if !extendedMode {
-		return
-	}
 	flag.StringVar(&format, "format", "", "Config format, hex or json")
 	flag.StringVar(&writeKey, "write-key", "", "Write key file")
 	flag.StringVar(&csrTemplate, "csr-template", "", "CSR template to use")

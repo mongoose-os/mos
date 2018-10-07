@@ -134,7 +134,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		// Ideally we'd like to find mounted directory corresponding to the selected port.
 		// But for now, we'll just find mountpoints that sort of look like STLink...
 		port = *portFlag
-		if port == "auto" {
+		if port == "auto" || (strings.HasPrefix(port, "/dev/") || strings.HasPrefix(port, "COM")) {
 			mm, err := stm32.FindSTLinkMounts()
 			if err != nil {
 				return errors.Trace(err)

@@ -47,10 +47,9 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 	if err != nil {
 		return nil, errors.Annotatef(
 			err,
-			"Failed to talk to bootloader. See "+
-				"https://mongoose-os.com/docs/quickstart/setup.md"+
-				"for wiring instructions or put the device into flashing mode manually by "+
-				"pulling GPIO0 low and resetting.",
+			"Failed to talk to bootloader.\nSee "+
+				"https://github.com/espressif/esptool/wiki/ESP8266-Boot-Mode-Selection\n"+
+				"for wiring instructions or pull GPIO0 low and reset.",
 		)
 	}
 	ownROMClient := true

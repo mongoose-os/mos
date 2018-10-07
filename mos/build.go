@@ -253,7 +253,8 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 				freportf(logWriter, "Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
 			}
 
-			freportf(logWriterStderr, "Firmware saved to %s", fwFilename)
+			fullPath, _ := filepath.Abs(fwFilename)
+			freportf(logWriterStderr, "Firmware saved to %s", fullPath)
 		}
 	} else if p := moscommon.GetOrigLibArchiveFilePath(buildDir, bParams.Platform); bParams.BuildTarget == p {
 		freportf(logWriterStderr, "Lib saved to %s", moscommon.GetLibArchiveFilePath(buildDir))

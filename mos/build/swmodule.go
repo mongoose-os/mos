@@ -364,7 +364,7 @@ func (m *SWModule) GetName() (string, error) {
 func (m *SWModule) getName() (string, error) {
 	if m.Name != "" {
 		if !validNameRegex.MatchString(m.Name) {
-			return "", errors.Errorf("%q is not a valid library name", m.Name)
+			return "", errors.Errorf("%q is not a valid name", m.Name)
 		}
 		return m.Name, nil
 	}

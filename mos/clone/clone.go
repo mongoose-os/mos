@@ -3,6 +3,7 @@ package clone
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
@@ -21,8 +22,12 @@ func Clone(ctx context.Context, devConn *dev.DevConn) error {
 	case 2:
 		m.Location = args[1]
 	case 3:
-		m.Name = args[2]
 		m.Location = args[1]
+		os.MkdirAll(filepath.Dir(args[2]), 0755)
+		if err := os.Chdir(filepath.Dir(args[2])); err != nil {
+			return errors.Trace(err)
+		}
+		m.Name = filepath.Base(args[2])
 	default:
 		return errors.Errorf("extra arguments")
 	}
