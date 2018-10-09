@@ -27,8 +27,16 @@ func Clone(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("extra arguments")
 	}
 
-	_, err := m.PrepareLocalDir(".", os.Stderr, false, /* deleteIfFailed */
+	d, err := m.PrepareLocalDir(".", os.Stderr, false, /* deleteIfFailed */
 		version.GetMosVersion() /* defaultVersion */, 0 /* pullInterval */, 0 /* cloneDepth */)
+
+	// Chdir is needed for the Web UI mode: immediately go into the cloned repo.
+	if m.Name != "" {
+		os.Rename(d, m.Name)
+		os.Chdir(m.Name)
+	} else {
+		os.Chdir(d)
+	}
 
 	return err
 }
