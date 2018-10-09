@@ -21,8 +21,8 @@ func Clone(ctx context.Context, devConn *dev.DevConn) error {
 	case 2:
 		m.Location = args[1]
 	case 3:
+		m.Name = args[2]
 		m.Location = args[1]
-		m.Version = args[2]
 	default:
 		return errors.Errorf("extra arguments")
 	}

@@ -201,9 +201,13 @@ func (m *SWModule) PrepareLocalDir(
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		_, libName, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
+		n, err := m.GetName()
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+		_, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
-		if err = prepareLocalCopyGit(libName, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
+		if err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
 			return "", errors.Trace(err)
 		}
 
