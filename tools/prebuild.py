@@ -94,9 +94,9 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
     for asset_name, asset_file in spec["assets"]:
         ct = "application/zip" if asset_name.endswith(".zip") else "application/octet-stream"
         logging.info("  Uploading %s to %s", asset_file, asset_name)
-        with open(asset_file, "rb") as f:
-            i = 1
-            while i <= 3:
+        i = 1
+        while i <= 3:
+            with open(asset_file, "rb") as f:
                 r, ok = CallReleasesAPI(
                     repo, token, method="POST", subdomain="uploads", data=f,
                     releases_url=("/%d/assets" % new_rel_id),
@@ -108,9 +108,9 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
                     logging.error("    Failed to upload %s (attempt %d): %s", asset_name, i, r)
                     time.sleep(1)
                     i += 1
-            if not ok:
-                logging.error("Failed to upload %s: %s", asset_name, r)
-                raise RuntimeError
+        if not ok:
+            logging.error("Failed to upload %s: %s", asset_name, r)
+            raise RuntimeError
 
     # If target release already exists, delete it {{{
     r, ok = CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
