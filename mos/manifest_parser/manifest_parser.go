@@ -1,4 +1,3 @@
-//go:generate go-bindata -pkg manifest_parser -nocompress -modtime 1 -mode 420 data/
 //go:generate go-bindata-assetfs -pkg manifest_parser -nocompress -modtime 1 -mode 420 data/
 
 // Check README.md for detailed explanation of parsing steps, limitations etc.

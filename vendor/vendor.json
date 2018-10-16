@@ -391,6 +391,12 @@
 			"revisionTime": "2018-02-23T16:03:09Z"
 		},
 		{
+			"checksumSHA1": "XVoGgJ+7OwmLnt9desmE09xSoGM=",
+			"path": "github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs",
+			"revision": "38087fe4dafb822e541b3f7955075cc1c30bd294",
+			"revisionTime": "2018-02-23T16:03:09Z"
+		},
+		{
 			"checksumSHA1": "IlDHv+GrkfH+xp1pdKzOqws1sLY=",
 			"path": "github.com/emirpasic/gods/containers",
 			"revision": "1615341f118ae12f353cc8a983f35b584342c9b3",
@@ -493,6 +499,18 @@
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "6e42625fcba9345ab67b42b6744284e8f7e3e79d",
 			"revisionTime": "2018-10-15T21:27:28Z"
+		},
+		{
+			"checksumSHA1": "KCKXDLsu/NrrzJc540ylOgwsakE=",
+			"path": "github.com/jteeuwen/go-bindata",
+			"revision": "6025e8de665b31fa74ab1a66f2cddd8c0abf887e",
+			"revisionTime": "2018-03-05T03:04:58Z"
+		},
+		{
+			"checksumSHA1": "1E4XSPmZqO/s20/WWJKXsyGTfm4=",
+			"path": "github.com/jteeuwen/go-bindata/go-bindata",
+			"revision": "6025e8de665b31fa74ab1a66f2cddd8c0abf887e",
+			"revisionTime": "2018-03-05T03:04:58Z"
 		},
 		{
 			"checksumSHA1": "gEjGS03N1eysvpQ+FCHTxPcbxXc=",
