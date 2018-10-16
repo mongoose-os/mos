@@ -13,7 +13,6 @@ import (
 
 	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 )
 
 const (
@@ -48,7 +47,6 @@ func (mv *MosVars) Copy() *MosVars {
 }
 
 func (mv *MosVars) SetVar(name string, value interface{}) {
-	glog.V(4).Infof("Set '%s'='%s'", name, value)
 	mv.data.Set(name, value)
 }
 

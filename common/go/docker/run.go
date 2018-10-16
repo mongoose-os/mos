@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/cesanta/errors"
 	"github.com/fsouza/go-dockerclient"
@@ -16,7 +17,7 @@ type ExitError struct {
 }
 
 func (e *ExitError) Error() string {
-	return fmt.Sprintf("container exited with %d status code", e.code)
+	return fmt.Sprintf("container exited with status code %d", e.code)
 }
 
 func (e *ExitError) Code() int {
@@ -89,7 +90,7 @@ func Run(ctx context.Context, image string, out io.Writer, opts ...RunOption) er
 	}
 
 	glog.Infof("Creating container: image=%q, cmd=%v, volumes=%v user=%q", image, options.cmd, options.binds, options.user)
-	cont, err := cli.CreateContainer(docker.CreateContainerOptions{
+	runOpts := docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Cmd:        options.cmd,
 			Image:      image,
@@ -99,9 +100,34 @@ func Run(ctx context.Context, image string, out io.Writer, opts ...RunOption) er
 		HostConfig: &docker.HostConfig{
 			Binds: options.binds,
 		},
-	})
-	if err != nil {
-		return errors.Trace(err)
+		Context: ctx,
+	}
+	var cont *docker.Container
+	for {
+		cont, err = cli.CreateContainer(runOpts)
+		if err == nil {
+			break
+		}
+		switch err {
+		case docker.ErrNoSuchImage:
+			parts := strings.Split(image, ":")
+			tag := "latest"
+			if len(parts) > 1 {
+				tag = parts[1]
+			}
+			pullOpts := docker.PullImageOptions{
+				Repository: parts[0],
+				Tag:        tag,
+				Context:    ctx,
+			}
+			authOpts := docker.AuthConfiguration{}
+			glog.Infof("Puling %s...", image)
+			if err := cli.PullImage(pullOpts, authOpts); err != nil {
+				return errors.Annotatef(err, "image not found and pull failed")
+			}
+		default:
+			return errors.Trace(err)
+		}
 	}
 
 	defer func() {

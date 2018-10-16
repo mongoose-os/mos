@@ -560,6 +560,10 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		pc.adjustments.CFlags = nil
 		manifest.CXXFlags = append(manifest.CXXFlags, pc.adjustments.CXXFlags...)
 		pc.adjustments.CXXFlags = nil
+
+		// Apply vars from the app manifest.
+		// Since this we are at the top level, we can do it right now.
+		interpreter.SetManifestVars(pc.interp.MVars, manifest)
 	}
 
 	libsMtime, err := prepareLibs(parentNodeName, manifest, pc)

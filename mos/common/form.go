@@ -7,5 +7,5 @@ const (
 	FormCleanName              = "clean"
 	FormPreferPrebuildLibsName = "prefer_prebuilt_libs"
 	FormSourcesZipName         = "file"
-	FormBuildTargetName        = "build_target"
+	FormBuildParamsName        = "build_params"
 )

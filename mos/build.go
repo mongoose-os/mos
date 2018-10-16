@@ -52,6 +52,7 @@ var (
 	buildImageFlag     = flag.String("build-image", "", "Override the Docker image used for build.")
 	cleanBuild         = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
 	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
+	buildParamsFlag    = flag.String("build-params", "", "build params file")
 	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
 	keepTempFiles      = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	modules            = flag.StringArray("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
@@ -109,40 +110,51 @@ func init() {
 
 // Build command handler {{{
 func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
-	// Create map of given lib locations, via --lib flag(s)
-	cll, err := getCustomLibLocations()
-	if err != nil {
-		return errors.Trace(err)
-	}
+	var bParams buildParams
+	if *buildParamsFlag != "" {
+		buildParamsBytes, err := ioutil.ReadFile(*buildParamsFlag)
+		if err != nil {
+			return errors.Annotatef(err, "error reading --build-params file")
+		}
+		if err := yaml.Unmarshal(buildParamsBytes, &bParams); err != nil {
+			return errors.Annotatef(err, "error parsing --build-params file")
+		}
+	} else {
+		// Create map of given lib locations, via --lib flag(s)
+		cll, err := getCustomLibLocations()
+		if err != nil {
+			return errors.Trace(err)
+		}
 
-	// Create map of given module locations, via --module flag(s)
-	cml := map[string]string{}
-	for _, m := range *modules {
-		parts := strings.SplitN(m, ":", 2)
-		cml[parts[0]] = parts[1]
-	}
+		// Create map of given module locations, via --module flag(s)
+		cml := map[string]string{}
+		for _, m := range *modules {
+			parts := strings.SplitN(m, ":", 2)
+			cml[parts[0]] = parts[1]
+		}
 
-	buildVarsFromCLI, err := getBuildVarsFromCLI()
-	if err != nil {
-		return errors.Trace(err)
-	}
+		buildVarsFromCLI, err := getBuildVarsFromCLI()
+		if err != nil {
+			return errors.Trace(err)
+		}
 
-	libsFromCLI, err := getLibsFromCLI()
-	if err != nil {
-		return errors.Trace(err)
-	}
+		libsFromCLI, err := getLibsFromCLI()
+		if err != nil {
+			return errors.Trace(err)
+		}
 
-	bParams := buildParams{
-		ManifestAdjustments: manifest_parser.ManifestAdjustments{
-			Platform:  *platform,
-			BuildVars: buildVarsFromCLI,
-			CFlags:    *cflagsExtra,
-			CXXFlags:  *cxxflagsExtra,
-			ExtraLibs: libsFromCLI,
-		},
-		BuildTarget:           *buildTarget,
-		CustomLibLocations:    cll,
-		CustomModuleLocations: cml,
+		bParams = buildParams{
+			ManifestAdjustments: manifest_parser.ManifestAdjustments{
+				Platform:  *platform,
+				BuildVars: buildVarsFromCLI,
+				CFlags:    *cflagsExtra,
+				CXXFlags:  *cxxflagsExtra,
+				ExtraLibs: libsFromCLI,
+			},
+			BuildTarget:           *buildTarget,
+			CustomLibLocations:    cll,
+			CustomModuleLocations: cml,
+		}
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
@@ -151,6 +163,10 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
 	buildDir := moscommon.GetBuildDir(projectDir)
+
+	if bParams.BuildTarget == "" {
+		bParams.BuildTarget = moscommon.BuildTargetDefault
+	}
 
 	start := time.Now()
 
@@ -479,14 +495,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	// If config schema file was generated, set APP_CONF_SCHEMA appropriately.
-	// If not, then check if APP_CONF_SCHEMA was set manually, and warn about
-	// that.
 	if curConfSchemaFName != "" {
 		if err := addBuildVar(manifest, "APP_CONF_SCHEMA", ourutil.GetPathForDocker(curConfSchemaFName)); err != nil {
 			return errors.Trace(err)
 		}
-	} else {
-		printConfSchemaWarn(manifest)
 	}
 
 	appPath, err := getCodeDirAbs()
@@ -766,9 +778,6 @@ func buildRemote(bParams *buildParams) error {
 	}
 	// }}}
 
-	// Print a warning if APP_CONF_SCHEMA is set in manifest manually
-	printConfSchemaWarn(manifest)
-
 	manifest.Name, err = fixupAppName(manifest.Name)
 	if err != nil {
 		return errors.Trace(err)
@@ -861,7 +870,11 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
-	if err := mpw.WriteField(moscommon.FormBuildTargetName, bParams.BuildTarget); err != nil {
+	bParamsYAML, err := yaml.Marshal(bParams)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if err := mpw.WriteField(moscommon.FormBuildParamsName, string(bParamsYAML)); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -1023,19 +1036,6 @@ func zipUp(
 // }}}
 
 // }}}
-
-// printConfSchemaWarn checks if APP_CONF_SCHEMA is set in the manifest
-// manually, and prints a warning if so.
-func printConfSchemaWarn(manifest *build.FWAppManifest) {
-	if _, ok := manifest.BuildVars["APP_CONF_SCHEMA"]; ok {
-		freportf(logWriterStderr, "===")
-		freportf(logWriterStderr, "WARNING: Setting build variable %q in %q "+
-			"is deprecated, use \"config_schema\" property instead.",
-			"APP_CONF_SCHEMA", moscommon.GetManifestFilePath(""),
-		)
-		freportf(logWriterStderr, "===")
-	}
-}
 
 func getMakeVars(vars map[string]string) []string {
 	kk := []string{}

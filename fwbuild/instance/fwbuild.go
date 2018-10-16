@@ -76,9 +76,6 @@ const (
 	updateSharedReposInterval = time.Minute * 30
 
 	buildCtxInfoFilename = "build_ctx_info.json"
-
-	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2017-09-29"
 )
 
 // buildCtxItem represents a file which is present in at least source or
@@ -345,12 +342,6 @@ func buildFirmware() error {
 
 	preferPrebuildLibs := reqPar.FormValue(moscommon.FormPreferPrebuildLibsName) == "1"
 
-	buildTarget := reqPar.FormValue(moscommon.FormBuildTargetName)
-	if buildTarget == "" {
-		// Old mos client which does not provide make target: assume "all"
-		buildTarget = moscommon.BuildTargetDefault
-	}
-
 	// we need to unpack sources to temp dir first, because the actual
 	// destination depends on the app name which is set into the manifest
 	tmpCodeDir, err := ioutil.TempDir(*volumesDir, "tmp_src_")
@@ -381,21 +372,6 @@ func buildFirmware() error {
 	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestSrc, &manifest); err != nil {
 		return errors.Trace(err)
-	}
-
-	// Check if manifest manifest version is supported
-	if manifest.ManifestVersion < minManifestVersion {
-		return errors.Errorf(
-			"too old manifest_version %q in %s (oldest supported is %q)",
-			manifest.ManifestVersion, moscommon.GetManifestFilePath(""), minManifestVersion,
-		)
-	}
-
-	if manifest.ManifestVersion > maxManifestVersion {
-		return errors.Errorf(
-			"too new manifest_version %q in %s (latest supported is %q)",
-			manifest.ManifestVersion, moscommon.GetManifestFilePath(""), maxManifestVersion,
-		)
 	}
 
 	appsRoot := filepath.Join(*volumesDir, appsRootName)
@@ -562,6 +538,16 @@ func buildFirmware() error {
 	}
 	// }}}
 
+	// Write out build params
+	buildParams := reqPar.FormValue(moscommon.FormBuildParamsName)
+	if buildParams == "" {
+		return errors.Errorf("no build params")
+	}
+	bpFile := filepath.Join(codeDir, "build_params.yml")
+	if err := ioutil.WriteFile(bpFile, []byte(buildParams), 0644); err != nil {
+		return errors.Annotatef(err, "failed to write build params")
+	}
+
 	var buildOutput bytes.Buffer
 	out := io.MultiWriter(&buildOutput, os.Stderr)
 
@@ -576,7 +562,6 @@ func buildFirmware() error {
 		// (read about the "sibling containers" "approach:
 		// https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/)
 		docker.Bind("/var/run/docker.sock", "/var/run/docker.sock", "rw"),
-		docker.Bind("/usr/bin/docker", "/usr/bin/docker", "ro"),
 		// Mount code dir to the same location, because the location should
 		// actually be the same across the host and all the containers which need
 		// to bind it to the "sibling" containers.
@@ -590,10 +575,10 @@ func buildFirmware() error {
 		docker.Bind(sharedMongooseOsPath, sharedMongooseOsPath, "ro"),
 		docker.WorkDir(codeDir),
 		docker.Cmd([]string{
-			"build", "--local", "--verbose", "--use-shell-git",
+			"build", "--local", "--verbose",
 			"--migrate=false",
 			"--save-build-stat=false",
-			fmt.Sprintf("--build-target=%s", buildTarget),
+			fmt.Sprintf("--build-params=%s", bpFile),
 			"--modules-dir", codeModulesDir,
 			"--libs-dir", codeLibsDir,
 			"--temp-dir", codeTmpDir,

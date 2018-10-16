@@ -55,12 +55,6 @@ var (
 	errBuildFailure = errors.New("build failure")
 )
 
-const (
-	formFileName     = "file"
-	formCleanName    = "clean"
-	formBuildCtxName = "build_ctx"
-)
-
 func main() {
 	flag.Parse()
 
@@ -163,8 +157,7 @@ func CreateHandler() (http.Handler, error) {
 func runBuild(version string, reqPar *reqpar.RequestParams) ([]byte, error) {
 	cmdArgs := []string{
 		"--alsologtostderr",
-		"--v", "2", // TODO(dfrank): use the verbosity level of fwbuild_manager itself
-
+		"--v", flag.Lookup("v").Value.String(),
 		"--volumes-dir", path.Join(*volumesDir, version),
 		"--mos-image", fmt.Sprintf("%s:%s", *mosImage, version),
 	}
@@ -212,6 +205,7 @@ func runBuild(version string, reqPar *reqpar.RequestParams) ([]byte, error) {
 		// (read about the "sibling containers" "approach:
 		// https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/)
 		docker.Bind("/var/run/docker.sock", "/var/run/docker.sock", "rw"),
+		// This is no longer necessary post-2.6 but is preserved for backward compatibility.
 		docker.Bind("/usr/bin/docker", "/usr/bin/docker", "ro"),
 
 		docker.Bind(*volumesDir, *volumesDir, "rw"),
@@ -224,6 +218,7 @@ func runBuild(version string, reqPar *reqpar.RequestParams) ([]byte, error) {
 
 	// Return data and a proper error (if any)
 	if buildErr != nil {
+		glog.Errorf("Build error: %+v", errors.ErrorStack(buildErr))
 		exitError, ok := errors.Cause(buildErr).(*docker.ExitError)
 		if ok && exitError.Code() == fwbuildcommon.FwbuildExitCodeBuildFailed {
 			return data, errBuildFailure
