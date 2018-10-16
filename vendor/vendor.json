@@ -658,6 +658,12 @@
 			"revisionTime": "2018-07-03T18:17:07Z"
 		},
 		{
+			"checksumSHA1": "ltabdG+EHOCg+Ej4y+Lhq7qmdww=",
+			"path": "github.com/zserge/webview",
+			"revision": "24af6cb9b33b3a10dce44188aec0c1646247d830",
+			"revisionTime": "2018-08-17T06:57:19Z"
+		},
+		{
 			"checksumSHA1": "OvrNwcBO+xO4FZ7eMbazho1C3t0=",
 			"path": "goji.io",
 			"revision": "0d89ff54b2c18c9c4ba530e32496aef902d3c6cd",
