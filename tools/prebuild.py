@@ -97,16 +97,20 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
         i = 1
         while i <= 3:
             with open(asset_file, "rb") as f:
-                r, ok = CallReleasesAPI(
-                    repo, token, method="POST", subdomain="uploads", data=f,
-                    releases_url=("/%d/assets" % new_rel_id),
-                    headers = {"Content-Type": ct},
-                    params = {"name": asset_name})
+                try:
+                    r, ok = CallReleasesAPI(
+                        repo, token, method="POST", subdomain="uploads", data=f,
+                        releases_url=("/%d/assets" % new_rel_id),
+                        headers = {"Content-Type": ct},
+                        params = {"name": asset_name})
+                except Exception as e:
+                    logging.error("Exception: %s", e)
+                    ok = False
                 if ok:
                     break
                 else:
                     logging.error("    Failed to upload %s (attempt %d): %s", asset_name, i, r)
-                    time.sleep(1)
+                    time.sleep(5)
                     i += 1
         if not ok:
             logging.error("Failed to upload %s: %s", asset_name, r)
