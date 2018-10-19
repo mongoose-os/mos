@@ -1,6 +1,7 @@
 package version
 
-//go:generate sh -c "../../common/tools/fw_meta.py gen_build_info --version=`[ -f version ] && cat version` --tag_as_version=true --id=`[ -f build_id ] && cat build_id` --go_output=version.go  --json_output=version.json"
+// version.go is generated separately in Makefile
+// to avoid update during "blanket" go generate runs
 
 import (
 	"regexp"

@@ -1,4 +1,4 @@
-.PHONY: all all-downloads build clean deploy deploy-fwbuild deploy-mos-binary downloads generate install linux mac win
+.PHONY: all all-downloads build clean clean-version deploy deploy-fwbuild deploy-mos-binary downloads generate install linux mac win
 
 TAG ?= latest
 
@@ -7,7 +7,7 @@ TMP_GOPATH ?= ~/tmp/mos_gopath
 
 all: build
 
-generate version/version.go version/version.json:
+generate: version/version.go
 	@# If we are building a Debian package, use its version.
 	@# Debian package versions look like this:
 	@#   1.12+92e435b~xenial0 (mos) or
@@ -22,6 +22,14 @@ generate version/version.go version/version.json:
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate ./...
+
+version/version.go version/version.json:
+	../common/tools/fw_meta.py gen_build_info \
+		--version=`[ -f version ] && cat version` \
+		--id=`[ -f build_id ] && cat build_id` \
+		--tag_as_version=true \
+		--go_output=version/version.go \
+		--json_output=version/version.json
 	@cat version/version.json
 	@echo
 
@@ -54,8 +62,8 @@ win: generate
 	           go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
 
 # Set up GOPATH on the side and build there. Because Go is awesome.
-downloads: clean
-	@[ `uname -s` == "Darwin" ] || \
+downloads: clean-version version/version.go
+	@test "`uname -s`" == "Darwin" || \
 	  { echo Can only build downloads on a Mac, this is `uname -s`; \
 	   exit 1; }
 	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src
@@ -82,4 +90,7 @@ uglify:
 	uglifyjs --compress --mangle -- web_root/js/main.js web_root/js/util.js > /dev/null
 
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{dmg,mac,linux,win} version/version.*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{dmg,mac,linux,win}
+
+clean-version: clean
+	rm -f version/version.*
