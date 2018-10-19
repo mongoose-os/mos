@@ -225,7 +225,7 @@ var Dropdown = createClass({
     var self = this;
     var cls = state.expanded ? ' show' : '';
     var items = map(props.children, function(value) {
-      if (typeof(value) !== 'string') return value;
+      if (typeof (value) !== 'string') return value;
       return h(
           'a', {
             class: 'dropdown-item my-0 py-0 small',
@@ -347,7 +347,7 @@ var checkPorts = function() {
     var ports = res.data.result.Ports || [];
     app.setState({ports: ports});
     if (ports.length) {
-      -app.state.serial.push('Ports available:\n', ports.join('\n'), '\n\n');
+      app.state.serial.push('Ports available:\n', ports.join('\n'), '\n\n');
     } else {
       app.state.serial.push(h(
           'span', {class: 'text-danger'},
