@@ -180,9 +180,6 @@ var Prompt = function(props) {
     style: 'cursor: pointer;',
     width: 20,
     height: 20,
-    onClick: function() {
-      axios.post(tsURL('/open'), 'cmd=' + encodeURIComponent(app.state.cwd));
-    },
     src: 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgZGF0Y' +
         'S1uYW1lPSJMYXllciAxIiBpZD0iTGF5ZXJfMSIgdmlld0JveD0iMCAwIDY0IDY0IiB4' +
         'bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHR' +
@@ -201,8 +198,14 @@ var Prompt = function(props) {
         '3LjU5LTcuNTloNy44M3YwbDI0LjQ2LDBaIi8+PC9zdmc+',
   });
   var button =
-      h('button',
-        {disabled: app.state.busy, class: 'btn btn-sm btn-outline-secondary'},
+      h('button', {
+        onClick: function() {
+          axios.post(
+              tsURL('/open'), 'cmd=' + encodeURIComponent(app.state.cwd));
+        },
+        disabled: app.state.busy,
+        class: 'btn btn-sm btn-outline-secondary',
+      },
         icon);
   var label =
       h('div', {class: 'input-group-prepend'}, button,
