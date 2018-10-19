@@ -83,7 +83,7 @@ Long story short, we managed to get it going, and here's how to do it, followed 
    * Even if it does you should not do it, because all of it is archived in the source .deb and we don't want that.
  * Set the `PACKAGE` and `DISTR` variables for use in the commands below:
    * `PACKAGE=mos` or `PACKAGE=mos-latest`
-   * `DISTR=xenial` or `DISTR=artful`
+   * `DISTR=xenial` or `DISTR=bionic`
  * Build the source and binary packages (we build `mos-latest` for `xenial` below)
 ```
 [rojer@nbmbp ~/cesanta/mongoose-os master]$ bash mos/ubuntu/build-deb.sh $PACKAGE $DISTR
@@ -161,7 +161,7 @@ Uploading to ppa (via ftp to ppa.launchpad.net):
   Uploading mos-latest_201707270849+a2f2ca8~xenial0_source.changes: done.
 Successfully uploaded packages.
 ```
- * Repeat for `DISTR=artful`.
+ * Repeat for `DISTR=bionic`.
 
 Shortly after upload the package should be queued for building [here](https://launchpad.net/~mongoose-os/+archive/ubuntu/mos/+builds?build_text=&build_state=all) and once finished, will appear in the [package list](https://launchpad.net/~mongoose-os/+archive/ubuntu/mos/+packages).
 
