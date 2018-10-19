@@ -125,14 +125,11 @@ var runCommand = function(cmd, nohistory) {
            data: data,
            timeout: 3600000
          })
-      .then(function(res) {
-        if (cmd.match(/^mos clone/)) setNewApp();
-        return res;
-      })
       .catch(function(err) {
         var obj = (err.response || {}).data || {};
+        var message = obj.error || JSON.stringify(err);
         app.state.messages.push(
-            h('span', {class: 'text-danger'}, obj.error, '\n'));
+            h('span', {class: 'text-danger'}, message, '\n'));
         app.setState(app.state);
         scrollToBottom(app.logWindow);
       })
@@ -147,7 +144,8 @@ var runCommand = function(cmd, nohistory) {
           app.setState({cwd: cwd});
           app.ls.mos_cwd = app.state.cwd;
         }
-        if (cmd.match(/^mos\sclone/i)) runCommand('cd .');
+        var m = cmd.match(/^mos\s+clone\s+(\S+)\s+(.+)/i);
+        if (m) runCommand('cd "' + m[2] + '"', true);
         return res;
       });
 };
@@ -283,7 +281,7 @@ var Header = function() {
     if (!boards[k]) boardKeys.push(h('h6', {class: 'dropdown-header'}, k));
   }
   var boardsDropdown = h(
-      Dropdown, {onSelect: setBoard}, boardKeys,
+      Dropdown, {onSelect: setBoard, disabled: app.state.busy}, boardKeys,
       h('h6', {disabled: app.state.busy, class: 'dropdown-divider'}), 'Clear');
 
   var mkSelector = function(caption, dropdown, key) {
