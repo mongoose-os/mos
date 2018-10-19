@@ -8,6 +8,11 @@ TMP_GOPATH ?= ~/tmp/mos_gopath
 all: build
 
 generate: version/version.go
+	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
+	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+	@go generate ./...
+
+version/version.go version/version.json:
 	@# If we are building a Debian package, use its version.
 	@# Debian package versions look like this:
 	@#   1.12+92e435b~xenial0 (mos) or
@@ -16,17 +21,12 @@ generate: version/version.go
 	@# mos-latest (201708051141+e90a9bf~xenial0) xenial; urgency=low
 	@# The part before "+" becomes version, entire string is used as build id.
 	@[ -f ../debian/changelog ] && { \
-	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > version/version; \
-	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > version/build_id; \
-	} || rm -f version/version version/build_id
-	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
-	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-	@go generate ./...
-
-version/version.go version/version.json:
+	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > debian.version; \
+	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > debian.build_id; \
+	} || rm -f debian.version debian.build_id
 	../common/tools/fw_meta.py gen_build_info \
-		--version=`[ -f version ] && cat version` \
-		--id=`[ -f build_id ] && cat build_id` \
+		--version=`[ -f debian.version ] && cat debian.version` \
+		--id=`[ -f debian.build_id ] && cat debian.build_id` \
 		--tag_as_version=true \
 		--go_output=version/version.go \
 		--json_output=version/version.json
