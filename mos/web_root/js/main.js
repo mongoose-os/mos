@@ -31,7 +31,6 @@ var shortcuts = {
     descr: 'Call RPC service',
     cmd: 'mos call RPC.List \'{"param":"value"}\''
   },
-  g: {descr: 'Get device config', cmd: 'mos config-get '},
   l: {descr: 'Reload window', cmd: 'reload', go: true},
 };
 
@@ -66,14 +65,19 @@ var focusCommandInput = function() {
   }, 1);
 };
 
-var scrollToBottom = function(el) {
-  if (!el || !app.state.autoscroll) return;
+var scrollToBottomIgnoreAutoscroll = function(el) {
+  if (!el) return;
   setTimeout(function() {
     var scrollHeight = el.scrollHeight;
     var height = el.clientHeight;
     var maxScrollTop = scrollHeight - height;
     el.scrollTop = maxScrollTop > 0 ? maxScrollTop : 0;
   }, 1);
+};
+
+var scrollToBottom = function(el) {
+  if (!app.state.autoscroll) return;
+  scrollToBottomIgnoreAutoscroll(el);
 };
 
 var setBoard = function(value) {
@@ -87,9 +91,8 @@ var tsURL = function(url) {
 };
 
 var runCommand = function(cmd, nohistory) {
-  app.setState({command: cmd});
-  app.setState({autoscroll: true});
-  if (cmd.match(/^\s*$/)) return;
+  app.setState({command: cmd, autoscroll: true, showHistory: false});
+  if (!cmd || cmd.match(/^\s*$/)) return;
   if (cmd === 'reload') {
     location.reload();
     return;
@@ -98,7 +101,12 @@ var runCommand = function(cmd, nohistory) {
   // Save command to history
   if (!nohistory) {
     var hist = app.state.history;
-    if (hist.length === 0 || hist[hist.length - 1] !== cmd) hist.push(cmd);
+    while (true) {
+      var i = hist.indexOf(cmd);
+      if (i < 0) break;
+      hist.splice(i, 1);
+    }
+    hist.push(cmd);
     if (hist.length > maxHistory) hist.splice(0, hist.length - maxHistory);
     app.ls.mos_history = hist.join(',');
   }
@@ -225,7 +233,7 @@ var Dropdown = createClass({
     var self = this;
     var cls = state.expanded ? ' show' : '';
     var items = map(props.children, function(value) {
-      if (typeof (value) !== 'string') return value;
+      if (typeof(value) !== 'string') return value;
       return h(
           'a', {
             class: 'dropdown-item my-0 py-0 small',
@@ -252,7 +260,17 @@ var Dropdown = createClass({
 });
 
 var mklink = function(url, title) {
-  return h('a', {href: url, target: '_blank', class: 'text-nowrap'}, title);
+  return h(
+      'a', {
+        href: url,
+        target: '_blank',
+        class: 'text-nowrap',
+        onClick: function(ev) {
+          ev.preventDefault();
+          axios.post(tsURL('/open'), 'cmd=' + encodeURIComponent(url));
+        },
+      },
+      title);
 };
 
 var Header = function() {
@@ -415,6 +433,7 @@ var App = createClass({
       serial: ['Serial console\n'],
       messages: [h(HelpMessage)],
       autoscroll: true,
+      showHistory: false,
     };
     app = this;
 
@@ -485,7 +504,10 @@ var App = createClass({
         app.setState({command: cmd});
       }
     }
-    if (key === 'Enter') runCommand(app.state.command);
+    if (key === 'Enter') {
+      app.setState({showHistory: false});
+      runCommand(app.state.command);
+    }
     if (key === 'ArrowUp' || key == 'Up' || key === 'ArrowDown' ||
         key === 'Down') {
       var pos = (key === 'ArrowUp' || key === 'Up') ? ++app.state.historyPos :
@@ -495,6 +517,20 @@ var App = createClass({
       if (pos > n) pos = n;
       app.setState({command: app.state.history[n - pos], historyPos: pos});
       focusCommandInput();
+      if (!app.state.showHistory) {
+        app.setState({showHistory: true});
+        setTimeout(function() {
+          scrollToBottomIgnoreAutoscroll(app.historyWindow);
+        }, 1);
+      }
+      setTimeout(function() {
+        var pos = app.state.history.length - app.state.historyPos;
+        var el = app.historyWindow ? app.historyWindow.childNodes[pos] : null;
+        if (el && el.scrollIntoView) el.scrollIntoView();
+      }, 1);
+    }
+    if (key === 'Escape') {
+      app.setState({showHistory: false});
     }
   },
   render: function(props, state) {
@@ -505,8 +541,33 @@ var App = createClass({
     onscroll = function(ev) {
       app.setState({autoscroll: false});
     };
+    var historyWindow = '';
+    if (app.state.showHistory) {
+      historyWindow = h(
+          'div', {
+            ref: mkref('historyWindow'),
+            class: 'w-100 oa p-0 my-1 border',
+            style: 'height: 15em;',
+          },
+          map(app.state.history, function(cmd, i) {
+            var pos = app.state.history.length - app.state.historyPos;
+            var opts = {
+              class: 'border mw-100 oa m-0 p-0',
+              onClick: function() {
+                app.setState({showHistory: false, historyPos: 0});
+                runCommand(cmd);
+              },
+            };
+            opts.class += i === pos ? ' bg-dark text-white' : ' alert-warning';
+            return h('div', opts, cmd);
+          }));
+    }
     return h(
-        'table', {class: 'w-100 h-100 mw-100 tlf'},
+        'table', {
+          class: 'w-100 h-100 mw-100 tlf',
+          onKeyDown: app.onKeyDown,
+          tabIndex: 0,
+        },
         h('tr', {class: ''}, h('td', {colspan: 2, class: 'p-2'}, h(Header))),
         h('tr', {style: winStyle, ref: mkref('elMain'), class: ''},
           h('td', {class: 'pl-2'},
@@ -536,7 +597,8 @@ var App = createClass({
               onWheel: onscroll,
             },
               h('div', {class: 'my-2'}, app.state.serial)))),
-        h('tr', {}, h('td', {colspan: 2, class: 'p-2'}, h(Prompt))));
+        h('tr', {},
+          h('td', {colspan: 2, class: 'p-2'}, historyWindow, h(Prompt))));
   },
 });
 
