@@ -36,7 +36,8 @@ var (
 	startWebview = true
 	wsClients    = make(map[*websocket.Conn]int)
 	wsClientsMtx = sync.Mutex{}
-	devConnMtx   = sync.Mutex{}
+	lockChan     = make(chan int)
+	unlockChan   = make(chan bool)
 )
 
 type wsmessage struct {
@@ -80,15 +81,6 @@ func httpReply(w http.ResponseWriter, result interface{}, err error) {
 }
 
 func wsSend(ws *websocket.Conn, m wsmessage) {
-	// message := ""
-	// for i, b := range m.Data {
-	// if !inLogLine[m.Cmd] {
-	// 	message += FormatTimestampNow()
-	// }
-	// message += string(m.Data[i : i+1])
-	// inLogLine[m.Cmd] = (b != '\n')
-	// }
-	// m.Data = message
 	t, _ := json.Marshal(m)
 	websocket.Message.Send(ws, string(t))
 }
@@ -122,29 +114,6 @@ func wsHandler(ws *websocket.Conn) {
 	}
 }
 
-func devlock(devConn *dev.DevConn) {
-	if devConn == nil {
-		glog.Infof("Locking device NIL")
-	} else {
-		glog.Infof("Locking device %v", devConn.IsConnected())
-	}
-	devConnMtx.Lock()
-	glog.Infof("Locked.")
-}
-
-func devunlock() {
-	glog.Infof("Unlocking device")
-	devConnMtx.Unlock()
-}
-
-func MqttLogHandler(topic string, data []byte) {
-	wsBroadcast(wsmessage{"uart", string(data)})
-}
-
-func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
-	return createDevConnWithJunkHandler(ctx, consoleJunkHandler, MqttLogHandler)
-}
-
 func init() {
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
@@ -159,17 +128,16 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "start-webview")
 }
 
+type wsWriter struct{}
+
+func (w *wsWriter) Write(p []byte) (int, error) {
+	wsBroadcast(wsmessage{"uart", string(p)})
+	return len(p), nil
+}
+
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	fullMosPath, _ := os.Executable()
 	fullWebRootPath, _ := filepath.Abs(wwwRoot)
-
-	// Send UART data to websocket
-	go func() {
-		for {
-			data := <-consoleMsgs
-			wsBroadcast(wsmessage{"uart", string(data)})
-		}
-	}()
 
 	// Redirect stdio to websocket
 	origStdout, origStderr := os.Stdout, os.Stderr
@@ -185,6 +153,42 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			wsBroadcast(wsmessage{"stdio", string(data[:n])})
 		}
 	}()
+
+	// Run `mos console` when idle and port is chosen
+	go func() {
+		numActiveMosCommands := 0 // mos commands that want serial
+		var cancel context.CancelFunc
+		for {
+			n := <-lockChan
+			if numActiveMosCommands == 0 && cancel != nil {
+				cancel()
+			}
+			if n > 0 {
+				numActiveMosCommands++
+				unlockChan <- true
+			} else if n < 0 {
+				numActiveMosCommands--
+			}
+			if numActiveMosCommands == 0 {
+				if *portFlag == "" {
+					cancel = nil
+				} else {
+					var ctx2 context.Context
+					ctx2, cancel = context.WithCancel(ctx)
+					cmd := exec.CommandContext(ctx2, fullMosPath, "console", "--port", *portFlag)
+					w := wsWriter{}
+					cmd.Stdout = &w
+					cmd.Stderr = &w
+					cmd.Stdin = os.Stdin // This makes `mos console` process close when we exit
+					cmd.Start()
+				}
+			}
+		}
+	}()
+
+	if *portFlag != "" {
+		lockChan <- 0 // Start mos console if port is set
+	}
 
 	http.HandleFunc("/version-tag", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -226,21 +230,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/serial", func(w http.ResponseWriter, r *http.Request) {
 		port := r.FormValue("port")
-
-		devlock(devConn)
-		defer devunlock()
-
-		if devConn != nil {
-			devConn.Disconnect(ctx)
-			devConn = nil
+		if port != *portFlag {
+			*portFlag = port
+			lockChan <- 0 // let console goroutine know the port has changed
 		}
-		*portFlag = port
-		var err error
-		if port != "" {
-			devConn, err = reconnectToDevice(ctx)
-		}
-		// log.Println("SETTING SERIAL TO:", port, err)
-		httpReply(w, true, err)
+		httpReply(w, true, nil)
 	})
 
 	http.HandleFunc("/terminal", func(w http.ResponseWriter, r *http.Request) {
@@ -265,31 +259,20 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 				httpReply(w, true, fmt.Errorf("Unknown command"))
 				return
 			}
-			if (cmd.name == "flash" && *portFlag == "") || (cmd.needDevConn && devConn == nil) {
-				httpReply(w, true, fmt.Errorf("Port not chosen"))
-				return
-			}
 
 			// Release port if mos command wants to grab it
 			if cmd.name == "flash" || cmd.needDevConn {
+				if *portFlag == "" {
+					httpReply(w, true, fmt.Errorf("Port not chosen"))
+					return
+				}
 				args = append(args, "--port")
 				args = append(args, *portFlag)
-
-				devlock(devConn)
-
-				// On MacOS and Windows, sleep for 1 second after we close serial
-				// port. Otherwise, open call fails for some reason we have
-				// no idea about. Thus those time.Sleep() calls below.
-				if devConn != nil {
-					devConn.Disconnect(ctx)
-					devConn = nil
-				}
+				lockChan <- 1
 				defer func() {
-					time.Sleep(time.Second)
-					devConn, _ = reconnectToDevice(ctx)
-					devunlock()
+					lockChan <- -1
 				}()
-				time.Sleep(time.Second)
+				<-unlockChan
 			}
 		}
 

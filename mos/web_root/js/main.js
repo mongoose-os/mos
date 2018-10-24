@@ -158,6 +158,28 @@ var runCommand = function(cmd, nohistory) {
       });
 };
 
+var History = function(props) {
+  if (!app.state.showHistory) return '';
+  return h(
+      'div', {
+        ref: mkref('historyWindow'),
+        class: 'w-75 oa position-absolute',
+        style: 'max-height: 15em; bottom: 100%;',
+      },
+      map(app.state.history, function(cmd, i) {
+        var pos = app.state.history.length - app.state.historyPos;
+        var opts = {
+          class: 'border mw-100 oa m-0 p-0',
+          onClick: function() {
+            app.setState({showHistory: false, historyPos: 0, command: cmd});
+            focusCommandInput();
+          },
+        };
+        opts.class += i === pos ? ' alert-info' : ' alert-warning';
+        return h('div', opts, cmd);
+      }));
+};
+
 var Prompt = function(props) {
   var input = h('input', {
     class: 'form-control text-monospace',
@@ -219,8 +241,11 @@ var Prompt = function(props) {
       h('div', {class: 'input-group-prepend'}, button,
         h('span', {class: 'input-group-text'}, app.state.cwd));
   return h(
-      'div', {class: 'input-group input-group-sm', ref: mkref('elFooter')},
-      label, app.state.busy ? progress : input);
+      'div', {
+        class: 'input-group input-group-sm position-relative',
+        ref: mkref('elFooter')
+      },
+      h(History), label, app.state.busy ? progress : input);
 };
 
 var Dropdown = createClass({
@@ -233,7 +258,7 @@ var Dropdown = createClass({
     var self = this;
     var cls = state.expanded ? ' show' : '';
     var items = map(props.children, function(value) {
-      if (typeof(value) !== 'string') return value;
+      if (typeof (value) !== 'string') return value;
       return h(
           'a', {
             class: 'dropdown-item my-0 py-0 small',
@@ -278,8 +303,7 @@ var Header = function() {
   var links = h(
       'div', {class: 'float-right mt-1 text-muted'},
       h('span', {class: 'd-none d-lg-inline'},
-        mklink('https://mongoose-os.com/docs/userguide/quickstart.md', 'docs'),
-        sep,
+        mklink('https://mongoose-os.com/docs/quickstart/setup.md', 'docs'), sep,
         mklink(
             'https://www.youtube.com/channel/UCZ9lQ7b-4bDbLOLpKwjpSAw/videos',
             'youtube'),
@@ -373,7 +397,7 @@ var checkPorts = function() {
           '  - A device is disconnected. Connect and press Ctrl-l.\n',
           '  - A USB-To-Serial driver is not installed. ', 'To install, see ',
           mklink(
-              'https://mongoose-os.com/docs/userguide/quickstart.md#usb-to-serial-drivers',
+              'https://mongoose-os.com/docs/quickstart/setup.md#usb-to-serial-drivers',
               'instructions'),
           '.\n', '    When done, restart this tool.\n\n'));
     }
@@ -395,11 +419,11 @@ var HelpMessage = function() {
       'div', {class: 'text-muted mx-0 my-1 p-0'}, h('img', img),
       'Mongoose OS\n', 'Welcome to the mos tool!\n', 'New user? Follow the ',
       mklink(
-          'https://mongoose-os.com/docs/userguide/quickstart.md',
+          'https://mongoose-os.com/docs/quickstart/setup.md',
           'quickstart guide'),
       '\n', 'Experienced? Follow the ',
       mklink(
-          'https://mongoose-os.com/docs/userguide/advanced.md',
+          'https://mongoose-os.com/docs/quickstart/develop-in-c.md',
           'advanced usage guide'),
       '\n\n', 'Enter any mos command, e.g.: "mos help"\n',
       'or any system command, e.g.: "cd c:/mos" or "ls -l"\n',
@@ -505,8 +529,8 @@ var App = createClass({
       }
     }
     if (key === 'Enter') {
+      if (!app.state.showHistory) runCommand(app.state.command);
       app.setState({showHistory: false});
-      runCommand(app.state.command);
     }
     if (key === 'ArrowUp' || key == 'Up' || key === 'ArrowDown' ||
         key === 'Down') {
@@ -534,37 +558,16 @@ var App = createClass({
     }
   },
   render: function(props, state) {
-    var wrap = app.state.wrap ? ' prewrap' : ' oa'
-    var cls = 'border rounded bg-light w-100 h-100 px-2 my-0 vat' + wrap;
     var winStyle =
         'height: ' + app.state.mwh + 'px; max-height: ' + app.state.mwh + 'px;';
+    var wrap = app.state.wrap ? ' prewrap' : ' oa'
+    var cls = 'border rounded bg-light w-100 h-100 px-2 my-0 vat' + wrap;
     onscroll = function(ev) {
-      app.setState({autoscroll: false});
+      if (ev.target !== document) app.setState({autoscroll: false});
     };
-    var historyWindow = '';
-    if (app.state.showHistory) {
-      historyWindow = h(
-          'div', {
-            ref: mkref('historyWindow'),
-            class: 'w-100 oa p-0 my-1 border',
-            style: 'height: 15em;',
-          },
-          map(app.state.history, function(cmd, i) {
-            var pos = app.state.history.length - app.state.historyPos;
-            var opts = {
-              class: 'border mw-100 oa m-0 p-0',
-              onClick: function() {
-                app.setState({showHistory: false, historyPos: 0});
-                runCommand(cmd);
-              },
-            };
-            opts.class += i === pos ? ' bg-dark text-white' : ' alert-warning';
-            return h('div', opts, cmd);
-          }));
-    }
     return h(
         'table', {
-          class: 'w-100 h-100 mw-100 tlf',
+          class: 'w-100 h-100 mw-100 tlf position-relative',
           onKeyDown: app.onKeyDown,
           tabIndex: 0,
         },
@@ -591,14 +594,13 @@ var App = createClass({
               'Autoscroll: ' +
                   (app.state.autoscroll ? 'on' : 'off. Click here to enable')),
             h('pre', {
-              class: cls + ' ml-2 position-relative text-muted',
+              class: cls + ' ml-2 text-muted',
               style: winStyle,
               ref: mkref('serialWindow'),
               onWheel: onscroll,
             },
               h('div', {class: 'my-2'}, app.state.serial)))),
-        h('tr', {},
-          h('td', {colspan: 2, class: 'p-2'}, historyWindow, h(Prompt))));
+        h('tr', {}, h('td', {colspan: 2, class: 'p-2'}, h(Prompt))));
   },
 });
 
