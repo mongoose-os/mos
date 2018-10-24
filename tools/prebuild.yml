@@ -126,11 +126,11 @@
     - name: esp8266-1M
       platform: esp8266
       build_vars:
-        FLASH_SIZE: 1048576
+        BOARD: esp8266-1M
     - name: esp8266-2M
       platform: esp8266
       build_vars:
-        FLASH_SIZE: 2097152
+        BOARD: esp8266-2M
     - name: esp32
       platform: esp32
     - name: cc3200
@@ -157,11 +157,11 @@
     - name: esp8266-1M
       platform: esp8266
       build_vars:
-        FLASH_SIZE: 1048576
+        BOARD: esp8266-1M
     - name: esp8266-2M
       platform: esp8266
       build_vars:
-        FLASH_SIZE: 2097152
+        BOARD: esp8266-2M
     - name: esp32
       platform: esp32
     - name: cc3220
