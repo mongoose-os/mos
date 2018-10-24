@@ -440,7 +440,7 @@ func readManifestWithLibs(
 			sort.Strings(nodeDepsResolved)
 			lhp[node].InitDeps = nodeDepsResolved
 			initDepsResolved.AddNodeWithDeps(node, nodeDepsResolved)
-			glog.Infof("%s: %s", node, nodeDepsResolved)
+			glog.V(1).Infof("%s init deps: %s", node, nodeDepsResolved)
 		}
 
 		initDepsTopo, cycle := initDepsResolved.Topological(true)
@@ -456,6 +456,14 @@ func readManifestWithLibs(
 		for _, v := range depsTopo {
 			manifest.LibsHandled = append(manifest.LibsHandled, *lhp[v])
 		}
+
+		var lhNames []string
+		for _, lh := range manifest.LibsHandled {
+			lhn, _ := lh.Lib.GetName()
+			lhNames = append(lhNames, lhn)
+		}
+		glog.Infof("libs_handled: %s", lhNames)
+		glog.Infof("init_deps: %s", manifest.InitDeps)
 
 		if err := expandManifestLibsAndConds(manifest, interp, adjustments); err != nil {
 			if errors.Cause(err) == libsAddedError {
