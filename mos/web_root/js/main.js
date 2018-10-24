@@ -529,7 +529,7 @@ var App = createClass({
         if (el && el.scrollIntoView) el.scrollIntoView();
       }, 1);
     }
-    if (key === 'Escape') {
+    if (key === 'Escape' || ev.keyCode === 27) {
       app.setState({showHistory: false});
     }
   },
