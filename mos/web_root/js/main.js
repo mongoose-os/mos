@@ -15,9 +15,10 @@ var boards = {
   'TI CC3200': '--platform cc3200',
   'Espressif Systems': false,
   'ESP32': '--platform esp32',
+  'ESP32 Olimex EVB': '--platform esp32 --build-var BOARD=ESP32-EVB',
   'ESP8266': '--platform esp8266',
-  'ESP8266, flash 1M': '--platform esp8266 --build-var FLASH_SIZE=1048576',
-  'ESP8266, flash 2M': '--platform esp8266 --build-var FLASH_SIZE=2097152',
+  'ESP8266, flash 1M': '--platform esp8266 --build-var BOARD=esp8266-1M',
+  'ESP8266, flash 2M': '--platform esp8266 --build-var BOARD=esp8266-2M',
 };
 
 var shortcuts = {
