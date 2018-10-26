@@ -163,6 +163,7 @@ func (c *serialCodec) connWrite(buf []byte) (written int, err error) {
 	// details.
 	c.closeLock.RLock()
 	defer c.closeLock.RUnlock()
+	time.Sleep(c.opts.SendChunkDelay)
 	return c.conn.Write(buf)
 }
 
@@ -245,7 +246,6 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 				return written, errors.Trace(err)
 			}
 			glog.V(4).Infof("sent %d [%s]", n, string(b[i:i+n]))
-			time.Sleep(c.opts.SendChunkDelay)
 		}
 	} else {
 		for written < len(b) {
