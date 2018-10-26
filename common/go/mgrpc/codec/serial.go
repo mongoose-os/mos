@@ -156,15 +156,50 @@ func (c *serialCodec) unblockWrite() {
 	c.xonLock.Unlock()
 }
 
-func (c *serialCodec) connWrite(buf []byte) (written int, err error) {
+func (c *serialCodec) connWriteWithFC(ctx context.Context, data []byte) (written int, err error) {
+	// Check SW flow control first
+	c.xonLock.Lock()
+	xonChan := c.xonChan
+	c.xonLock.Unlock()
+	select {
+	case <-xonChan:
+		// channel is closed, sending is allowed
+	case <-ctx.Done():
+		return written, ctx.Err()
+	}
+	glog.V(4).Infof("sent %d %q", len(data), string(data))
+	return c.conn.Write(data)
+}
+
+func (c *serialCodec) connWrite(ctx context.Context, buf []byte) (written int, err error) {
 	// Lock closeLock for reading.
 	// NOTE: don't be confused by the fact that we're going to Write to the port,
 	// but we lock closeLock for reading. See comments for closeLock above for
 	// details.
 	c.closeLock.RLock()
 	defer c.closeLock.RUnlock()
-	time.Sleep(c.opts.SendChunkDelay)
-	return c.conn.Write(buf)
+	chunkSize := c.opts.SendChunkSize
+	if chunkSize > 0 {
+		for i := 0; i < len(buf); i += chunkSize {
+			n, err := c.connWriteWithFC(ctx, buf[i:min(i+chunkSize, len(buf))])
+			written += n
+			if err != nil {
+				return written, errors.Trace(err)
+			}
+			time.Sleep(c.opts.SendChunkDelay)
+		}
+		return written, nil
+	} else {
+		for written < len(buf) {
+			n, err := c.connWriteWithFC(ctx, buf[written:])
+			written += n
+			if err != nil {
+				c.Close()
+				return written, errors.Trace(err)
+			}
+		}
+		return written, nil
+	}
 }
 
 func (c *serialCodec) connClose() error {
@@ -198,67 +233,23 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 	c.setHandsShaken(false)
+	hs := []byte(streamFrameDelimiter1 + string(eofChar) + streamFrameDelimiter1 + streamFrameDelimiter2 + streamFrameDelimiter2)
 	for !c.areHandsShaken() {
-		if _, err := c.connWrite([]byte(streamFrameDelimiter1)); err != nil {
+		glog.V(1).Infof("sending handshake...")
+		if _, err := c.connWrite(ctx, hs); err != nil {
 			return 0, errors.Trace(err)
 		}
-		if _, err := c.connWrite([]byte{eofChar}); err != nil {
-			return 0, errors.Trace(err)
-		}
-		if _, err := c.connWrite([]byte(streamFrameDelimiter1)); err != nil {
-			return 0, errors.Trace(err)
-		}
-		if _, err := c.connWrite([]byte(streamFrameDelimiter2)); err != nil {
-			return 0, errors.Trace(err)
-		}
-		if _, err := c.connWrite([]byte(streamFrameDelimiter2)); err != nil {
-			return 0, errors.Trace(err)
-		}
-		glog.V(1).Infof(" ...sent frame delimiter.")
-		time.Sleep(handshakeInterval)
-
 		select {
 		case <-ctx.Done():
 			return 0, ctx.Err()
-		default:
+		case <-time.After(handshakeInterval):
+			break
 		}
 	}
 	// Device is ready, send data.
 	// We start with writes unblocked, since we just had a successful sync.
 	c.unblockWrite()
-	chunkSize := c.opts.SendChunkSize
-	if chunkSize > 0 {
-		for i := 0; i < len(b); i += chunkSize {
-			// Check SW flos control first
-			c.xonLock.Lock()
-			xonChan := c.xonChan
-			c.xonLock.Unlock()
-			select {
-			case <-xonChan:
-				// channel is closed, sending is allowed
-			case <-ctx.Done():
-				return written, ctx.Err()
-			}
-			n, err := c.connWrite(b[i:min(i+chunkSize, len(b))])
-			written += n
-			if err != nil {
-				c.Close()
-				return written, errors.Trace(err)
-			}
-			glog.V(4).Infof("sent %d [%s]", n, string(b[i:i+n]))
-		}
-	} else {
-		for written < len(b) {
-			n, err := c.connWrite(b[written:])
-			glog.V(4).Infof("sent %d [%s]", n, string(b[written:written+n]))
-			written += n
-			if err != nil {
-				c.Close()
-				return written, errors.Trace(err)
-			}
-		}
-	}
-	return written, nil
+	return c.connWrite(ctx, b)
 }
 
 func (c *serialCodec) Close() error {
@@ -281,12 +272,12 @@ func (c *serialCodec) PreprocessFrame(frameData []byte) (bool, error) {
 		if c.hsCounter >= 2 {
 			c.setHandsShaken(true)
 		}
-		if _, err := c.connWrite([]byte(streamFrameDelimiter2)); err != nil {
+		if _, err := c.connWrite(context.TODO(), []byte(streamFrameDelimiter2)); err != nil {
 			return true, errors.Trace(err)
 		}
 	case len(frameData) == 1 && frameData[0] == eofChar:
 		// A single-byte frame consisting of just EOF char: we need to send a delimiter back.
-		if _, err := c.connWrite([]byte(streamFrameDelimiter1)); err != nil {
+		if _, err := c.connWrite(context.TODO(), []byte(streamFrameDelimiter1)); err != nil {
 			return true, errors.Trace(err)
 		}
 		c.setHandsShaken(true)
