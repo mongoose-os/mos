@@ -120,8 +120,21 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 }
 
 func (dc *DevConn) GetInfo(ctx context.Context) (*fwsys.GetInfoResult, error) {
-	r, err := dc.CSys.GetInfo(ctx)
-	return r, err
+	attempts := confOpAttempts
+	for {
+		ctx2, cancel := context.WithTimeout(ctx, dc.GetTimeout())
+		defer cancel()
+		r, err := dc.CSys.GetInfo(ctx2)
+		if err != nil {
+			attempts -= 1
+			if attempts > 0 {
+				glog.Warningf("Error: %s", err)
+				continue
+			}
+			return nil, errors.Trace(err)
+		}
+		return r, err
+	}
 }
 
 func (dc *DevConn) Disconnect(ctx context.Context) error {
