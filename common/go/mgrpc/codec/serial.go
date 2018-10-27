@@ -271,16 +271,19 @@ func (c *serialCodec) PreprocessFrame(frameData []byte) (bool, error) {
 		c.hsCounter += 1
 		if c.hsCounter >= 2 {
 			c.setHandsShaken(true)
-		}
-		if _, err := c.connWrite(context.TODO(), []byte(streamFrameDelimiter2)); err != nil {
-			return true, errors.Trace(err)
+		} else {
+			if _, err := c.connWrite(context.TODO(), []byte(streamFrameDelimiter2)); err != nil {
+				return true, errors.Trace(err)
+			}
 		}
 	case len(frameData) == 1 && frameData[0] == eofChar:
 		// A single-byte frame consisting of just EOF char: we need to send a delimiter back.
-		if _, err := c.connWrite(context.TODO(), []byte(streamFrameDelimiter1)); err != nil {
-			return true, errors.Trace(err)
+		if !c.areHandsShaken() {
+			c.setHandsShaken(true)
+			if _, err := c.connWrite(context.TODO(), []byte(streamFrameDelimiter1)); err != nil {
+				return true, errors.Trace(err)
+			}
 		}
-		c.setHandsShaken(true)
 		return true, nil
 	}
 	return false, nil
@@ -297,6 +300,8 @@ func (c *serialCodec) setHandsShaken(shaken bool) {
 	defer c.handsShakenLock.Unlock()
 	if !c.handsShaken && shaken {
 		glog.Infof("handshake complete")
+	} else if !shaken {
+		c.hsCounter = 0
 	}
 	c.handsShaken = shaken
 }
