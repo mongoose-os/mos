@@ -235,6 +235,9 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 	c.setHandsShaken(false)
 	hs := []byte(streamFrameDelimiter1 + string(eofChar) + streamFrameDelimiter1 + streamFrameDelimiter2 + streamFrameDelimiter2)
 	for !c.areHandsShaken() {
+		// Disable SW FC while handshake is taking place.
+		// We'll obey the other side's flow control comands only when we know it's listening.
+		c.unblockWrite()
 		glog.V(1).Infof("sending handshake...")
 		if _, err := c.connWrite(ctx, hs); err != nil {
 			return 0, errors.Trace(err)
