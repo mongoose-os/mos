@@ -154,12 +154,13 @@ def handle_repo(repo_name, from_tag, to_tag):
     new_rel_id = r["id"]
     # }}}
 
+    with open(args.token_filepath) as f:
+        token = f.read().strip()
     for asset in res["assets"]:
-        asset_url = asset["browser_download_url"]
-        print("%s: Downloading %s" % (repo_name, asset_url))
-        r = requests.get(asset_url)
+        asset_url = asset["url"]
+        print("%s: Downloading %s (%s)" % (repo_name, asset["name"], asset_url))
+        r = requests.get(asset_url, auth=(token, ""), headers={"Accept": "application/octet-stream"})
         if r.status_code == 200:
-
             print("%s: Uploading a new asset %s" % (repo_name, asset["name"]))
             r, ok = call_releases_api(
                 repo_name,
