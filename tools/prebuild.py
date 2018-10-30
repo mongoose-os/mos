@@ -94,24 +94,12 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
     for asset_name, asset_file in spec["assets"]:
         ct = "application/zip" if asset_name.endswith(".zip") else "application/octet-stream"
         logging.info("  Uploading %s to %s", asset_file, asset_name)
-        i = 1
-        while i <= 3:
-            with open(asset_file, "rb") as f:
-                try:
-                    r, ok = CallReleasesAPI(
-                        repo, token, method="POST", subdomain="uploads", data=f,
-                        releases_url=("/%d/assets" % new_rel_id),
-                        headers = {"Content-Type": ct},
-                        params = {"name": asset_name})
-                except Exception as e:
-                    logging.error("Exception: %s", e)
-                    ok = False
-                if ok:
-                    break
-                else:
-                    logging.error("    Failed to upload %s (attempt %d): %s", asset_name, i, r)
-                    time.sleep(5)
-                    i += 1
+        with open(asset_file, "rb") as f:
+            r, ok = CallReleasesAPI(
+                repo, token, method="POST", subdomain="uploads", data=f,
+                releases_url=("/%d/assets" % new_rel_id),
+                headers = {"Content-Type": ct},
+                params = {"name": asset_name})
         if not ok:
             logging.error("Failed to upload %s: %s", asset_name, r)
             raise RuntimeError
@@ -243,13 +231,22 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
             logging.debug("Using token file at %s", gh_token_file)
             with open(gh_token_file, "r") as f:
                 token = f.read().strip()
-
-            try:
-                CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
-            except (Exception, KeyboardInterrupt):
-                if g_cur_rel_id:
-                    DeleteRelease(gh_out["repo"], token, g_cur_rel_id)
-                raise
+            i = 1
+            global g_cur_rel_id
+            while True:
+                try:
+                    CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+                    break
+                except (Exception, KeyboardInterrupt) as e:
+                    logging.exception("Exception (attempt %d): %s", i, e)
+                    if g_cur_rel_id:
+                        DeleteRelease(gh_out["repo"], token, g_cur_rel_id)
+                        g_cur_rel_id = None
+                    if not isinstance(e, KeyboardInterrupt) and i < 3:
+                        time.sleep(1)
+                        i += 1
+                    else:
+                        raise
 
 
 def ProcessEntry(e, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
