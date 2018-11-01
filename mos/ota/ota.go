@@ -91,14 +91,19 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		dataB64 := base64.StdEncoding.EncodeToString(data[:n])
 		sta := struct {
-			Data string `json:"data"`
-		}{Data: dataB64}
+			Offset int64  `json:"offset"`
+			Data   string `json:"data"`
+		}{Offset: total, Data: dataB64}
 		staJSON, _ := json.Marshal(&sta)
 		for i := 0; i < 3; i++ {
 			ctx2, _ := context.WithTimeout(ctx, devConn.GetTimeout())
 			_, err = dev.CallDeviceService(ctx2, devConn, "OTA.Write", string(staJSON))
 			if err == nil {
 				break
+			}
+			if i == 2 {
+				dev.CallDeviceService(ctx, devConn, "OTA.End", "null")
+				return errors.Annotatef(err, "write failed at offset %d", total)
 			}
 		}
 		total += int64(n)
@@ -109,6 +114,6 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	ourutil.Reportf("Finalizing update...")
-	s, err = dev.CallDeviceService(ctx, devConn, "OTA.End", beginArgs)
+	s, err = dev.CallDeviceService(ctx, devConn, "OTA.End", "null")
 	return err
 }
