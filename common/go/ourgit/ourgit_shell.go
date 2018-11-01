@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
-	"runtime"
 	"strings"
 
 	"github.com/cesanta/errors"
@@ -183,20 +182,6 @@ func (m *ourGitShell) Clone(srcURL, targetDir string, opts CloneOptions) error {
 	var berr bytes.Buffer
 	args = append(args, srcURL, targetDir)
 	cmd := exec.Command("git", args...)
-
-	// By default, when the user tries to clone non-existing repo, git will
-	// ask for username/password, just in case the repo exists but is private.
-	// We want it to just fail in this case, so we're setting env variable
-	// GIT_TERMINAL_PROMPT to 0.
-	//
-	// However, git on linux goes wild in this case:
-	//   Error in GnuTLS initialization: Failed to acquire random data.
-	//   fatal: unable to access 'https://github.com/mongoose-os-apps/blynk/':
-	//   Couldn't resolve host 'github.com
-	// So we have to avoid setting GIT_TERMINAL_PROMPT on windows.
-	if runtime.GOOS != "windows" {
-		cmd.Env = []string{"GIT_TERMINAL_PROMPT=0"}
-	}
 	cmd.Stderr = &berr
 
 	err := cmd.Run()
