@@ -507,6 +507,12 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	makeVarsFileSupported := false
+	if data, err := ioutil.ReadFile(
+		moscommon.GetPlatformMakefilePath(fp.MosDirEffective, manifest.Platform)); err == nil {
+		makeVarsFileSupported = bytes.Contains(data, []byte("MGOS_VARS_FILE"))
+	}
+
 	// Invoke actual build (docker or make) {{{
 	if os.Getenv("MGOS_SDK_REVISION") == "" && os.Getenv("MIOT_SDK_REVISION") == "" {
 		// We're outside of the docker container, so invoke docker
@@ -601,7 +607,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			dockerRunArgs = append(dockerRunArgs, (*buildDockerExtra)...)
 		}
 
-		sdkVersionFile := filepath.Join(fp.MosDirEffective, "fw/platforms", manifest.Platform, "sdk.version")
+		sdkVersionFile := moscommon.GetSdkVersionFile(fp.MosDirEffective, manifest.Platform)
 
 		buildImage := *buildImageFlag
 
@@ -620,17 +626,13 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		makeArgs, err := getMakeArgs(
 			filepath.ToSlash(fmt.Sprintf("%s%s", dockerAppPath, appSubdir)),
 			bParams.BuildTarget,
+			buildDirAbs,
 			manifest,
+			makeVarsFileSupported,
 		)
 		if err != nil {
 			return errors.Trace(err)
 		}
-
-		// Write make vars file. It's not critical but may be useful.
-		ioutil.WriteFile(
-			moscommon.GetMakeVarsFilePath(buildDirAbs),
-			[]byte(strings.Join(getMakeVars(manifest.BuildVars), "\n")),
-			0644)
 
 		dockerRunArgs = append(dockerRunArgs,
 			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
@@ -647,7 +649,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 		manifest.BuildVars["MGOS_PATH"] = fp.MosDirEffective
 
-		makeArgs, err := getMakeArgs(appPath, bParams.BuildTarget, manifest)
+		makeArgs, err := getMakeArgs(appPath, bParams.BuildTarget, buildDirAbs, manifest, makeVarsFileSupported)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -1038,7 +1040,7 @@ func zipUp(
 
 // }}}
 
-func getMakeVars(vars map[string]string) []string {
+func getMakeVars(vars map[string]string, escHash bool) []string {
 	kk := []string{}
 	for k, _ := range vars {
 		kk = append(kk, k)
@@ -1046,16 +1048,18 @@ func getMakeVars(vars map[string]string) []string {
 	sort.Strings(kk)
 	vv := []string{}
 	for _, k := range kk {
-		vv = append(vv, fmt.Sprintf(
-			"%s=%s",
-			k,
-			strings.Replace(strings.Replace(vars[k], "\n", " ", -1), "\r", " ", -1),
-		))
+		v := vars[k]
+		v = strings.Replace(v, "\r", " ", -1)
+		v = strings.Replace(v, "\n", " ", -1)
+		if escHash {
+			v = strings.Replace(v, "#", `\#`, -1)
+		}
+		vv = append(vv, fmt.Sprintf("%s=%s", k, v))
 	}
 	return vv
 }
 
-func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, error) {
+func getMakeArgs(dir, target, buildDirAbs string, manifest *build.FWAppManifest, makeVarsFileSupported bool) ([]string, error) {
 	j := *buildParalellism
 	if j == 0 {
 		j = runtime.NumCPU()
@@ -1078,17 +1082,26 @@ func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, e
 		"-C", dir,
 		// NOTE that we use path instead of filepath, because it'll run in a docker
 		// container, and thus will use Linux path separator
-		"-f", path.Join(
-			manifest.BuildVars["MGOS_PATH"],
-			"fw/platforms",
-			manifest.BuildVars["PLATFORM"],
-			"Makefile.build",
-		),
+		"-f", ourutil.GetPathForDocker(moscommon.GetPlatformMakefilePath(
+			manifest.BuildVars["MGOS_PATH"], manifest.BuildVars["PLATFORM"])),
 		target,
 	}
 
-	makeArgs = append(makeArgs, getMakeVars(manifest.BuildVars)...)
+	// Write make vars file.
+	if err := ioutil.WriteFile(
+		moscommon.GetMakeVarsFilePath(buildDirAbs),
+		[]byte(strings.Join(getMakeVars(manifest.BuildVars, true /* escHash */), "\n")),
+		0644); err != nil {
+		return nil, errors.Annotatef(err, "writing vars file")
+	}
 
+	if makeVarsFileSupported {
+		makeArgs = append(makeArgs, fmt.Sprintf(
+			"MGOS_VARS_FILE=%s",
+			ourutil.GetPathForDocker(moscommon.GetMakeVarsFilePath(buildDirAbs))))
+	} else {
+		makeArgs = append(makeArgs, getMakeVars(manifest.BuildVars, false /* escHash */)...)
+	}
 	// Add extra make args
 	if buildCmdExtra != nil {
 		makeArgs = append(makeArgs, (*buildCmdExtra)...)

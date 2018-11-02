@@ -1555,7 +1555,7 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 }
 
 func getAllSupportedPlatforms(mosDir string) ([]string, error) {
-	paths, err := filepath.Glob(moscommon.GetSdkVersionGlob(mosDir))
+	paths, err := filepath.Glob(moscommon.GetSdkVersionFile(mosDir, "*"))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

@@ -48,6 +48,10 @@ func GetFilesystemStagingDir(buildDir string) string {
 	return filepath.Join(buildDir, "fs")
 }
 
+func GetPlatformMakefilePath(mosDir, platform string) string {
+	return filepath.Join(mosDir, "fw", "platforms", platform, "Makefile.build")
+}
+
 func GetBuildCtxFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "build_ctx.txt")
 }
@@ -112,6 +116,6 @@ func GetBinaryLibFilePath(libDir, name, platform string) string {
 	return filepath.Join(GetBinaryLibsPlatformDir(libDir, platform), fmt.Sprintf("lib%s.a", name))
 }
 
-func GetSdkVersionGlob(mosDir string) string {
-	return filepath.Join(mosDir, "fw", "platforms", "*", "sdk.version")
+func GetSdkVersionFile(mosDir, platform string) string {
+	return filepath.Join(mosDir, "fw", "platforms", platform, "sdk.version")
 }

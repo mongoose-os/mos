@@ -27,9 +27,10 @@ import (
 
 // GetPathForDocker replaces OS-dependent separators in a given path with "/"
 func GetPathForDocker(p string) string {
+	isWindows := (runtime.GOOS == "windows")
 	ret := path.Join(strings.Split(p, string(filepath.Separator))...)
-	if filepath.IsAbs(p) {
-		if runtime.GOOS == "windows" && ret[1] == ':' {
+	if filepath.IsAbs(p) || (isWindows && strings.HasPrefix(p, string(filepath.Separator))) {
+		if isWindows && ret[1] == ':' {
 			// Remove the colon after drive letter, also lowercase the drive letter
 			// (the lowercasing part is important for docker toolbox: there, host
 			// paths like C:\foo\bar don't work, this path becomse /c/foo/bar)
