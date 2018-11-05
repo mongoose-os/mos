@@ -16,8 +16,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Enumerate drives and find ones that have name start with one of the known prefixes.
-func FindSTLinkMounts() ([]string, error) {
+// GetSTLinkMounts enumerated drives and finds ones that have
+// a name starting with one of the known prefixes.
+func GetSTLinkMounts() ([]string, error) {
 	drivesBitMask, err := windows.GetLogicalDrives()
 	if err != nil {
 		return nil, errors.Annotatef(err, "GetLogicalDrives")
@@ -62,4 +63,9 @@ func getDriveInfo(drive string) (string, string, uint32, error) {
 	}
 
 	return syscall.UTF16ToString(volName), syscall.UTF16ToString(fsName), volSerial, nil
+}
+
+func GetSTLinkMountForPort(port string) (string, error) {
+	// TODO(rojer)
+	return "", errors.NotImplementedf("GetSTLinkMountForPort")
 }

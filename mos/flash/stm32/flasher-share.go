@@ -4,8 +4,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -14,6 +16,25 @@ import (
 var (
 	stlinkDevPrefixes = []string{"DIS_", "NODE_"}
 )
+
+func getSTLinkMountsInDir(dir string) ([]string, error) {
+	glog.V(1).Infof("Looking for ST-Link devices under %q", dir)
+	ee, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to list %q", dir)
+	}
+	var res []string
+	for _, e := range ee {
+		for _, p := range stlinkDevPrefixes {
+			if strings.HasPrefix(e.Name(), p) {
+				n := filepath.Join(dir, e.Name())
+				ourutil.Reportf("Found STLink mount: %s", n)
+				res = append(res, n)
+			}
+		}
+	}
+	return res, nil
+}
 
 type FlashOpts struct {
 	ShareName string

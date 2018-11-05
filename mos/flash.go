@@ -18,6 +18,7 @@ import (
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
 	"cesanta.com/mos/flash/stm32"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
@@ -135,14 +136,20 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		// But for now, we'll just find mountpoints that sort of look like STLink...
 		port = *portFlag
 		if port == "auto" || (strings.HasPrefix(port, "/dev/") || strings.HasPrefix(port, "COM")) {
-			mm, err := stm32.FindSTLinkMounts()
+			port, err = stm32.GetSTLinkMountForPort(port)
 			if err != nil {
-				return errors.Trace(err)
+				glog.Infof("Did not find port corresponding to %s: %s", *portFlag, err)
+				mm, err := stm32.GetSTLinkMounts()
+				if err != nil {
+					return errors.Trace(err)
+				}
+				if len(mm) == 0 {
+					return errors.Errorf("No STM32 devices found")
+				}
+				port = mm[0]
+			} else {
+				glog.Infof("%s -> %s", *portFlag, port)
 			}
-			if len(mm) == 0 {
-				return errors.Errorf("No STM32 devices found")
-			}
-			port = mm[0]
 		}
 		stm32FlashOpts.ShareName = port
 		err = stm32.Flash(fw, &stm32FlashOpts)
