@@ -234,9 +234,17 @@ func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 
 	// If the firmware is compiler with RPC over MQTT support, configure it to work with Watson.
 	if _, err := devConf.Get("rpc.mqtt"); err == nil {
-		newConf["rpc.mqtt.pub_topic"] = "iot-2/evt/mgrpc-%.*s/fmt/json"
-		newConf["rpc.mqtt.sub_topic"] = "iot-2/cmd/mgrpc-%.*s/fmt/json"
-		newConf["rpc.mqtt.sub_wc"] = "false"
+		if orgID != quickStartOrgID {
+			newConf["rpc.mqtt.enable"] = "true"
+			newConf["rpc.mqtt.pub_topic"] = "iot-2/evt/mgrpc-%.*s/fmt/json"
+			newConf["rpc.mqtt.sub_topic"] = "iot-2/cmd/mgrpc-%.*s/fmt/json"
+			newConf["rpc.mqtt.sub_wc"] = "false"
+		} else {
+			// Subscribing to commands is not supported on Quickstart
+			// and trying to do so results in immediate disconnection.
+			newConf["rpc.mqtt.enable"] = "false"
+			ourutil.Reportf("Note: RPC is not supported on Quickstart service, disabling")
+		}
 	}
 
 	if err = config.ApplyDiff(devConf, newConf); err != nil {
