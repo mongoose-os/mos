@@ -182,7 +182,7 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
-	if *cleanBuild {
+	if *cleanBuildFlag {
 		if err := mpw.WriteField(moscommon.FormCleanName, "1"); err != nil {
 			return errors.Trace(err)
 		}

@@ -35,7 +35,7 @@ import (
 // mos build specific advanced flags
 var (
 	buildImageFlag     = flag.String("build-image", "", "Override the Docker image used for build.")
-	cleanBuild         = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
+	cleanBuildFlag     = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
 	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
 	buildParamsFlag    = flag.String("build-params", "", "build params file")
 	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")

@@ -36,23 +36,29 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		freportf(logWriterStderr, "Docker Toolbox detected")
 	}
 
+	buildDir := moscommon.GetBuildDir(projectDir)
+
+	buildErr := buildLocal2(ctx, bParams, *cleanBuildFlag)
+
+	if !*verbose && err != nil {
+		log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
+		if err != nil {
+			glog.Errorf("can't read build log: %s", err)
+		} else {
+			io.Copy(os.Stdout, log)
+		}
+	}
+
+	return buildErr
+}
+
+func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err error) {
+	dockerAppPath := "/app"
+	dockerMgosPath := "/mongoose-os"
+
 	gitinst := mosgit.NewOurGit()
 
 	buildDir := moscommon.GetBuildDir(projectDir)
-
-	defer func() {
-		if !*verbose && err != nil {
-			log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
-			if err != nil {
-				glog.Errorf("can't read build log: %s", err)
-				return
-			}
-			io.Copy(os.Stdout, log)
-		}
-	}()
-
-	dockerAppPath := "/app"
-	dockerMgosPath := "/mongoose-os"
 
 	buildDirAbs, err := filepath.Abs(buildDir)
 	if err != nil {
@@ -72,7 +78,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	elfFilename := moscommon.GetFirmwareElfFilePath(buildDir)
 
 	// Perform cleanup before the build {{{
-	if *cleanBuild {
+	if clean {
 		// Cleanup build dir, but leave build log intact, because we're already
 		// writing to it.
 		if err := ourio.RemoveFromDir(buildDir, []string{moscommon.GetBuildLogFilePath("")}); err != nil {
@@ -110,6 +116,17 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	// Write final manifest to build dir
+	manifestUpdated, err := ourio.WriteYAMLFileIfDifferent(moscommon.GetMosFinalFilePath(buildDirAbs), manifest, 0666)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	// Force clean rebuild if manifest was updated
+	if manifestUpdated && !clean {
+		freportf(logWriter, "== Manifest has changed, forcing a clean rebuild...")
+		return buildLocal2(ctx, bParams, true /* clean */)
+	}
+
 	switch manifest.Type {
 	case build.AppTypeApp:
 		// Fine
@@ -120,18 +137,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 	default:
 		return errors.Errorf("invalid project type: %q", manifest.Type)
-	}
-
-	// Write final manifest to build dir
-	{
-		d, err := yaml.Marshal(manifest)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		if err := ourio.WriteFileIfDiffers(moscommon.GetMosFinalFilePath(buildDirAbs), d, 0666); err != nil {
-			return errors.Trace(err)
-		}
 	}
 
 	curConfSchemaFName := ""
