@@ -10,6 +10,7 @@ import (
 	"math/big"
 	mRand "math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"context"
@@ -135,6 +136,7 @@ func init() {
 		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, false, true},
 		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, false, true},
 		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, false, true},
+		{"ports", showPorts, `Show serial ports`, nil, nil, false, false},
 	}
 }
 
@@ -149,6 +151,11 @@ func showVersion(ctx context.Context, devConn *dev.DevConn) error {
 		"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
 		"The Mongoose OS command line tool", version.GetMosVersion(), version.BuildId, update.GetUpdateChannel(),
 	)
+	return nil
+}
+
+func showPorts(ctx context.Context, devConn *dev.DevConn) error {
+	fmt.Printf("%s\n", strings.Join(enumerateSerialPorts(), "\n"))
 	return nil
 }
 
