@@ -264,7 +264,7 @@ func main() {
 		devConn, err = createDevConn(ctx)
 		if err != nil {
 			fmt.Println(errors.Trace(err))
-			return
+			os.Exit(1)
 		}
 	}
 
