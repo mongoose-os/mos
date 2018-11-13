@@ -19,13 +19,12 @@ import (
 
 type MQTTCodecOptions struct {
 	// Note: user:password in the connect URL, if set, will take precedence over these.
-	User        string
-	Password    string
-	ClientID    string
-	PubTopic    string
-	SubTopic    string
-	Src         string
-	LogCallback func(topic string, data []byte)
+	User     string
+	Password string
+	ClientID string
+	PubTopic string
+	SubTopic string
+	Src      string
 }
 
 type mqttCodec struct {
@@ -40,39 +39,26 @@ type mqttCodec struct {
 	pubTopic    string
 }
 
-func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error) {
-	u, err := url.Parse(dst)
+func MQTTClientOptsFromURL(us, clientID, user, pass string) (*mqtt.ClientOptions, string, error) {
+	u, err := url.Parse(us)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, "", errors.Trace(err)
 	}
 
-	clientID := co.ClientID
 	if clientID == "" {
 		clientID = fmt.Sprintf("mos-%v", time.Now().Unix())
 	}
 
-	c := &mqttCodec{
-		dst:         u.Path[1:],
-		closeNotify: make(chan struct{}),
-		ready:       make(chan struct{}),
-		rchan:       make(chan frame.Frame),
-		src:         co.Src,
-		pubTopic:    co.PubTopic,
-	}
-	if c.src == "" {
-		c.src = clientID
-	}
+	topic := u.Path[1:]
 
 	u.Path = ""
 	if u.Scheme == "mqtts" {
 		u.Scheme = "tcps"
-		c.isTLS = true
 		if u.Port() == "" {
 			u.Host = fmt.Sprintf("%s:%d", u.Host, 8883)
 		}
 	} else {
 		u.Scheme = "tcp"
-		c.isTLS = false
 		if u.Port() == "" {
 			u.Host = fmt.Sprintf("%s:%d", u.Host, 1883)
 		}
@@ -83,8 +69,6 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(broker)
 	opts.SetClientID(clientID)
-	user := co.User
-	pass := co.Password
 	if u.User != nil {
 		user = u.User.Username()
 		passwd, isset := u.User.Password()
@@ -94,9 +78,34 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 	}
 	opts.SetUsername(user)
 	opts.SetPassword(pass)
+
+	return opts, topic, nil
+}
+
+func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error) {
+	opts, topic, err := MQTTClientOptsFromURL(dst, co.ClientID, co.User, co.Password)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
 	if tlsConfig != nil {
 		opts.SetTLSConfig(tlsConfig)
 	}
+
+	u, _ := url.Parse(dst)
+
+	c := &mqttCodec{
+		dst:         topic[1:],
+		closeNotify: make(chan struct{}),
+		ready:       make(chan struct{}),
+		rchan:       make(chan frame.Frame),
+		src:         co.Src,
+		pubTopic:    co.PubTopic,
+		isTLS:       (u.Scheme == "mqtts"),
+	}
+	if c.src == "" {
+		c.src = opts.ClientID
+	}
+
 	opts.SetConnectionLostHandler(c.onConnectionLost)
 
 	c.cli = mqtt.NewClient(opts)
@@ -108,26 +117,13 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 
 	subTopic := co.SubTopic
 	if subTopic == "" {
-		subTopic = fmt.Sprintf("%s/rpc", clientID)
+		subTopic = fmt.Sprintf("%s/rpc", opts.ClientID)
 	}
 	glog.V(1).Infof("Subscribing to [%s]", subTopic)
 	token = c.cli.Subscribe(subTopic, 1 /* qos */, c.onMessage)
 	token.Wait()
 	if err := token.Error(); err != nil {
 		return nil, errors.Annotatef(err, "MQTT subscribe error")
-	}
-
-	if co.LogCallback != nil {
-		logTopic := fmt.Sprintf("%s/log", c.dst)
-		glog.V(1).Infof("Subscribing to [%s]", logTopic)
-		token = c.cli.Subscribe(logTopic, 1 /* qos */, func(cli mqtt.Client, msg mqtt.Message) {
-			glog.V(4).Infof("Got MQTT message, topic [%s], message [%s]", msg.Topic(), msg.Payload())
-			co.LogCallback(msg.Topic(), msg.Payload())
-		})
-		token.Wait()
-		if err := token.Error(); err != nil {
-			return nil, errors.Annotatef(err, "MQTT subscribe error")
-		}
 	}
 
 	return c, nil

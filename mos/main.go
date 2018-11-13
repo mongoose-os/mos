@@ -168,7 +168,7 @@ func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
 
 		// run the handler
 		if err := c.handler(ctx, devConn); err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "%s failed", c.name)
 		}
 		return nil
 	}

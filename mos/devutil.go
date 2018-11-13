@@ -33,12 +33,41 @@ func init() {
 }
 
 func createDevConn(ctx context.Context) (*dev.DevConn, error) {
-	return createDevConnWithJunkHandler(ctx, func(junk []byte) {}, func(topic string, data []byte) {})
+	return createDevConnWithJunkHandler(ctx, func(junk []byte) {})
 }
 
-func createDevConnWithJunkHandler(
-	ctx context.Context, junkHandler func(junk []byte), logHandler func(string, []byte),
-) (*dev.DevConn, error) {
+func tlsConfigFromFlags() (*tls.Config, error) {
+	tlsConfig := &tls.Config{
+		// TODO(rojer): Ship default CA bundle with mos.
+		InsecureSkipVerify: caFile == "",
+	}
+
+	// Load client cert / key if specified
+	if certFile != "" && keyFile == "" {
+		return nil, errors.Errorf("Please specify --key-file")
+	}
+	if certFile != "" {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	// Load CA cert if specified
+	if caFile != "" {
+		caCert, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		tlsConfig.RootCAs = x509.NewCertPool()
+		tlsConfig.RootCAs.AppendCertsFromPEM(caCert)
+	}
+
+	return tlsConfig, nil
+}
+
+func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []byte)) (*dev.DevConn, error) {
 	port, err := getPort()
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -51,33 +80,12 @@ func createDevConnWithJunkHandler(
 	addr := prefix + port
 
 	// Init and pass TLS config if --cert-file and --key-file are specified
-	var tlsConfig *tls.Config = nil
+	var tlsConfig *tls.Config
 	if certFile != "" || strings.HasPrefix(port, "wss") || strings.HasPrefix(port, "https") || strings.HasPrefix(port, "mqtts") {
 
-		tlsConfig = &tls.Config{
-			InsecureSkipVerify: caFile == "",
-		}
-
-		// Load client cert / key if specified
-		if certFile != "" && keyFile == "" {
-			return nil, errors.Errorf("Please specify --key-file")
-		}
-		if certFile != "" {
-			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-			if err != nil {
-				return nil, errors.Trace(err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		}
-
-		// Load CA cert if specified
-		if caFile != "" {
-			caCert, err := ioutil.ReadFile(caFile)
-			if err != nil {
-				return nil, errors.Trace(err)
-			}
-			tlsConfig.RootCAs = x509.NewCertPool()
-			tlsConfig.RootCAs.AppendCertsFromPEM(caCert)
+		tlsConfig, err = tlsConfigFromFlags()
+		if err != nil {
+			return nil, errors.Trace(err)
 		}
 	}
 
@@ -85,9 +93,7 @@ func createDevConnWithJunkHandler(
 		AzureDM: codec.AzureDMCodecOptions{
 			ConnectionString: azureConnectionString,
 		},
-		MQTT: codec.MQTTCodecOptions{
-			LogCallback: logHandler,
-		},
+		MQTT: codec.MQTTCodecOptions{},
 		Serial: codec.SerialCodecOptions{
 			BaudRate:             baudRateFlag,
 			HardwareFlowControl:  hwFCFlag,

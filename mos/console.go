@@ -4,11 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"io"
 	"io/ioutil"
+	"net"
+	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
+	"cesanta.com/common/go/mgrpc/codec"
 	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/timestamp"
@@ -98,32 +104,145 @@ func analyzeCoreDump(out io.Writer, cd []byte) error {
 	return debug_core_dump.DebugCoreDumpF(tfn, "", true)
 }
 
+type chanReader struct {
+	rch   chan []byte
+	rdata []byte
+}
+
+func (chr *chanReader) Read(buf []byte) (int, error) {
+	if chr.rch == nil {
+		return 0, io.EOF
+	}
+	if len(chr.rdata) == 0 {
+		rdata, ok := <-chr.rch
+		if !ok {
+			return 0, io.EOF
+		}
+		chr.rdata = rdata
+	}
+	b := bytes.NewBuffer(chr.rdata)
+	n, err := b.Read(buf)
+	if err == nil {
+		chr.rdata = chr.rdata[n:]
+	}
+	return n, err
+}
+
+func (chr *chanReader) Write(buf []byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (chr *chanReader) Close() error {
+	rch := chr.rch
+	chr.rch = nil
+	if rch != nil {
+		close(rch)
+	}
+	return nil
+}
+
 func console(ctx context.Context, devConn *dev.DevConn) error {
+
+	var r io.Reader
+	var w io.Writer
+
+	purl, err := url.Parse(*portFlag)
+	switch {
+	case err == nil && (purl.Scheme == "mqtt" || purl.Scheme == "mqtts"):
+		chr := &chanReader{rch: make(chan []byte)}
+		opts, topic, err := codec.MQTTClientOptsFromURL(*portFlag, "", "", "")
+		if err != nil {
+			return errors.Errorf("invalid MQTT port URL format")
+		}
+		tlsConfig, err := tlsConfigFromFlags()
+		if err != nil {
+			return errors.Annotatef(err, "inavlid TLS config")
+		}
+		opts.SetTLSConfig(tlsConfig)
+		opts.SetConnectionLostHandler(func(c mqtt.Client, err error) {
+			reportf("MQTT connection closed")
+			chr.Close()
+		})
+		cli := mqtt.NewClient(opts)
+		reportf("Connecting to %s...", opts.Servers[0])
+		token := cli.Connect()
+		token.Wait()
+		if err := token.Error(); err != nil {
+			return errors.Annotatef(err, "MQTT connect error")
+		}
+		topic += "/log"
+		token = cli.Subscribe(topic, 0 /* qos */, func(c mqtt.Client, m mqtt.Message) {
+			chr.rch <- m.Payload()
+		})
+		token.Wait()
+		if err := token.Error(); err != nil {
+			return errors.Annotatef(err, "MQTT subscribe error")
+		}
+		reportf("Subscribed to %s", topic)
+		r = chr
+
+	case err == nil && purl.Scheme == "udp":
+		hpp := strings.Split(purl.Host, ":")
+		if len(hpp) != 2 {
+			return errors.Errorf("invalid UDP port URL format, must be udp://:port/ or udp://ip:port/ %q %d", purl.Host, len(hpp))
+		}
+		p, err := strconv.Atoi(hpp[1])
+		if err != nil {
+			return errors.Errorf("invalid UDP port format, must be udp://:port/ or udp://ip:port/")
+		}
+		addr := net.UDPAddr{
+			IP:   net.ParseIP(hpp[0]),
+			Port: p,
+		}
+		udpc, err := net.ListenUDP("udp", &addr)
+		if err != nil {
+			return errors.Annotatef(err, "failed to open listner at %+v", addr)
+		}
+		if addr.IP != nil {
+			reportf("Listening on UDP %s:%d...", addr.IP, addr.Port)
+		} else {
+			reportf("Listening on UDP port %d...", addr.Port)
+		}
+		defer udpc.Close()
+		r, w = udpc, udpc
+
+	case err == nil && (purl.Scheme == "ws" || purl.Scheme == "wss"):
+		// TODO(rojer): add Dash log support
+		return errors.NotImplementedf("Dash console")
+
+	default:
+		// Everything else is treated as a serial port.
+		port, err := getPort()
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		sp, err := serial.Open(serial.OpenOptions{
+			PortName:            port,
+			BaudRate:            baudRateFlag,
+			HardwareFlowControl: hwFCFlag,
+			DataBits:            8,
+			ParityMode:          serial.PARITY_NONE,
+			StopBits:            1,
+			MinimumReadSize:     1,
+		})
+		if err != nil {
+			return errors.Annotatef(err, "failed to open %s", port)
+		}
+		if setControlLines || *invertedControlLines {
+			bFalse := *invertedControlLines
+			sp.SetDTR(bFalse)
+			sp.SetRTS(bFalse)
+		}
+		defer sp.Close()
+		r, w = sp, sp
+	}
+
+	return consoleReadWrite(ctx, r, w)
+}
+
+func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 	in, out := os.Stdin, os.Stdout
-	port, err := getPort()
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	s, err := serial.Open(serial.OpenOptions{
-		PortName:            port,
-		BaudRate:            baudRateFlag,
-		HardwareFlowControl: hwFCFlag,
-		DataBits:            8,
-		ParityMode:          serial.PARITY_NONE,
-		StopBits:            1,
-		MinimumReadSize:     1,
-	})
-	if err != nil {
-		return errors.Annotatef(err, "failed to open %s", port)
-	}
-
-	if setControlLines || *invertedControlLines {
-		bFalse := *invertedControlLines
-		s.SetDTR(bFalse)
-		s.SetRTS(bFalse)
-	}
-
 	cctx, cancel := context.WithCancel(ctx)
 	go func() { // Serial -> Stdout
 		var curLine []byte
@@ -133,8 +252,8 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		cont := false
 
 		for {
-			buf := make([]byte, 100)
-			n, err := s.Read(buf)
+			buf := make([]byte, 1500)
+			n, err := r.Read(buf)
 			if err != nil {
 				reportf("read err %s", err)
 				cancel()
@@ -202,23 +321,21 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 			curLine = append(curLine, buf...)
 		}
 	}()
-	go func() { // Stdin -> Serial
-		// If no input, just block forever
-		if noInput {
-			select {}
-		}
-		for {
-			buf := make([]byte, 1)
-			n, err := in.Read(buf)
-			if n > 0 {
-				s.Write(buf[:n])
+	if w != nil && !noInput {
+		go func() { // Stdin -> Serial
+			for {
+				buf := make([]byte, 1)
+				n, err := in.Read(buf)
+				if n > 0 {
+					w.Write(buf[:n])
+				}
+				if err != nil {
+					cancel()
+					return
+				}
 			}
-			if err != nil {
-				cancel()
-				return
-			}
-		}
-	}()
+		}()
+	}
 	<-cctx.Done()
 	return nil
 }
