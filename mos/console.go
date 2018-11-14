@@ -14,7 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"cesanta.com/common/go/mgrpc"
 	"cesanta.com/common/go/mgrpc/codec"
+	"cesanta.com/common/go/mgrpc/frame"
+	"cesanta.com/common/go/ourjson"
 	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/timestamp"
@@ -207,8 +210,40 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		r, w = udpc, udpc
 
 	case err == nil && (purl.Scheme == "ws" || purl.Scheme == "wss"):
-		// TODO(rojer): add Dash log support
-		return errors.NotImplementedf("Dash console")
+		// Connect to mDash and activate event forwarding.
+		chr := &chanReader{rch: make(chan []byte)}
+		devConn, err = createDevConn(ctx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		if _, err = dev.CallDeviceService(ctx, devConn, "Dash.Console.Subscribe", ""); err != nil {
+			return errors.Trace(err)
+		}
+		devConn.RPC.AddHandler("Dash.Console.Event", func(c mgrpc.MgRPC, f *frame.Frame) *frame.Frame {
+			var ev struct {
+				DevId string             `json:"id"`
+				Name  string             `json:"name"`
+				Data  ourjson.RawMessage `json:"data"`
+			}
+			f.Params.UnmarshalInto(&ev)
+			var s string
+			if ev.Name == "rpc.out.Log" {
+				var logEv struct {
+					Timestamp float64 `json:"t"`
+					FD        int     `json:"fd"`
+					Seq       int     `json:"seq"`
+					Data      string  `json:"data"`
+				}
+				ev.Data.UnmarshalInto(&logEv)
+				s = fmt.Sprintf("%d %.3f %d|%s", logEv.Seq, logEv.Timestamp, logEv.FD, logEv.Data)
+			} else {
+				b, _ := ev.Data.MarshalJSON()
+				s = fmt.Sprintf("%s %s\n", ev.Name, string(b))
+			}
+			chr.rch <- []byte(s)
+			return nil
+		})
+		r = chr
 
 	default:
 		// Everything else is treated as a serial port.
