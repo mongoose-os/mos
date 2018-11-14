@@ -173,8 +173,8 @@ func (c *azureDMCodec) Send(ctx context.Context, f *frame.Frame) error {
 		MethodName:       f.Method,
 		TimeoutInSeconds: int64(c.client.Timeout),
 	}
-	if f.Args != nil {
-		rq.Payload = &f.Args
+	if f.Params != nil {
+		rq.Payload = &f.Params
 	}
 	body, err := json.Marshal(&rq)
 	if err != nil {

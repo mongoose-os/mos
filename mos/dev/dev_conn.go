@@ -16,6 +16,7 @@ import (
 	"cesanta.com/mos/rpccreds"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	flag "github.com/spf13/pflag"
 )
 
 const (
@@ -24,6 +25,10 @@ const (
 	debugDevId = ""
 
 	confOpAttempts = 3
+)
+
+var (
+	mgrpcCompatArgsFlag = flag.Bool("mgrpc-compat-args", false, "Use args field in the RPC frame, for compatibility with older firmware")
 )
 
 type DevConn struct {
@@ -176,6 +181,7 @@ func (dc *DevConn) ConnectWithOpts(ctx context.Context, reconnect bool, tlsConfi
 		mgrpc.LocalID("mos"),
 		mgrpc.Reconnect(reconnect),
 		mgrpc.TlsConfig(tlsConfig),
+		mgrpc.CompatArgs(*mgrpcCompatArgsFlag),
 		mgrpc.CodecOptions(dc.codecOpts),
 	}
 

@@ -12,19 +12,20 @@ import (
 )
 
 type connectOptions struct {
-	proto           transport
-	connectAddress  string
-	localID         string
-	serverHost      string
-	defaultRoute    bool
-	useTLS          bool
-	cert            *tls.Certificate
-	caPool          *x509.CertPool
-	tlsConfig       *tls.Config
-	psk             string
-	enableTracing   bool
-	enableReconnect bool
-	codecOptions    codec.Options
+	proto            transport
+	connectAddress   string
+	localID          string
+	serverHost       string
+	defaultRoute     bool
+	useTLS           bool
+	cert             *tls.Certificate
+	caPool           *x509.CertPool
+	tlsConfig        *tls.Config
+	psk              string
+	enableTracing    bool
+	enableReconnect  bool
+	enableCompatArgs bool
+	codecOptions     codec.Options
 }
 
 // ConnectOption is an optional argument to Instance.Connect which affects the
@@ -197,6 +198,13 @@ func CodecOptions(co codec.Options) ConnectOption {
 func Reconnect(enable bool) ConnectOption {
 	return func(c *connectOptions) error {
 		c.enableReconnect = enable
+		return nil
+	}
+}
+
+func CompatArgs(enable bool) ConnectOption {
+	return func(c *connectOptions) error {
+		c.enableCompatArgs = enable
 		return nil
 	}
 }

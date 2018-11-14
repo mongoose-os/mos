@@ -47,7 +47,7 @@ func InboundHTTP(rw http.ResponseWriter, req *http.Request, cloudHost string) Co
 		}
 		f.Method = req.URL.Path
 		if req.ContentLength > 0 {
-			if err := json.NewDecoder(req.Body).Decode(&f.Args); err != nil {
+			if err := json.NewDecoder(req.Body).Decode(&f.Params); err != nil {
 				http.Error(rw, fmt.Sprintf("Invalid args: %s", err), http.StatusBadRequest)
 				return nil
 			}

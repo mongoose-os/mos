@@ -31,7 +31,7 @@ type Frame struct {
 
 	// Request
 	Method string             `json:"method,omitempty"`
-	Args   ourjson.RawMessage `json:"args,omitempty"`
+	Params ourjson.RawMessage `json:"params,omitempty"`
 	// Timestamp (as number of seconds since Epoch) of when the command result is no longer relevant.
 	Deadline int64 `json:"deadline,omitempty"`
 	// Number of seconds after reception of the command after when the command result is no longer relevant.
@@ -50,6 +50,8 @@ type Frame struct {
 
 	// Send no response to this frame
 	NoResponse bool `json:"nr,omitempty"`
+
+	DeprecatedArgs ourjson.RawMessage `json:"args,omitempty"`
 }
 
 type Error struct {
@@ -122,13 +124,13 @@ func (f *Frame) String() string {
 	fmt.Fprintf(lim, "%q -> %q v=%d id=%d ", f.Src, f.Dst, f.Version, f.ID)
 	if f.SizeHint < frameSizeStringifyLimit {
 		if f.IsRequest() {
-			fmt.Fprintf(lim, "%s args=%v %d", f.Method, f.Args, f.SizeHint)
+			fmt.Fprintf(lim, "%s params=%v %d", f.Method, f.Params, f.SizeHint)
 		} else {
 			fmt.Fprintf(lim, "result=%v error=%v %d", f.Result, f.Error, f.SizeHint)
 		}
 	} else {
 		if f.IsRequest() {
-			fmt.Fprintf(lim, "%s args=(too big) %d", f.Method, f.SizeHint)
+			fmt.Fprintf(lim, "%s params=(too big) %d", f.Method, f.SizeHint)
 		} else {
 			fmt.Fprintf(lim, "result=(too big) error=%v %d", f.Error, f.SizeHint)
 		}
@@ -167,14 +169,28 @@ func (r Response) String() string {
 	return ret + "}"
 }
 
-func NewRequestFrame(src string, dst string, key string, cmd *Command) *Frame {
+func NewRequestFrame(src string, dst string, key string, cmd *Command, compatArgs bool) *Frame {
+	if compatArgs {
+		return &Frame{
+			Src:            src,
+			Dst:            dst,
+			Key:            key,
+			ID:             cmd.ID,
+			Method:         cmd.Cmd,
+			DeprecatedArgs: cmd.Args,
+			Auth:           cmd.Auth,
+			Deadline:       cmd.Deadline,
+			Timeout:        cmd.Timeout,
+			Trace:          cmd.Trace,
+		}
+	}
 	return &Frame{
 		Src:      src,
 		Dst:      dst,
 		Key:      key,
 		ID:       cmd.ID,
 		Method:   cmd.Cmd,
-		Args:     cmd.Args,
+		Params:   cmd.Args,
 		Auth:     cmd.Auth,
 		Deadline: cmd.Deadline,
 		Timeout:  cmd.Timeout,
@@ -198,10 +214,16 @@ func NewResponseFrame(src string, dst string, key string, resp *Response) *Frame
 }
 
 func NewCommandFromFrame(f *Frame) *Command {
+	var p ourjson.RawMessage
+	if f.Params != nil {
+		p = f.Params
+	} else {
+		p = f.DeprecatedArgs
+	}
 	return &Command{
 		Cmd:      f.Method,
 		ID:       f.ID,
-		Args:     f.Args,
+		Args:     p,
 		Deadline: f.Deadline,
 		Timeout:  f.Timeout,
 		Trace:    f.Trace,

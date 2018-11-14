@@ -369,7 +369,7 @@ func (r *mgRPCImpl) Call(
 	r.reqsLock.Unlock()
 	glog.V(2).Infof("created a request with id %d", cmd.ID)
 
-	f := frame.NewRequestFrame(r.opts.localID, dst, "", cmd)
+	f := frame.NewRequestFrame(r.opts.localID, dst, "", cmd, r.opts.enableCompatArgs)
 	if err := r.codec.Send(ctx, f); err != nil {
 		return nil, errors.Trace(err)
 	}
