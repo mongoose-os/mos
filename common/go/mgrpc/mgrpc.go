@@ -87,7 +87,8 @@ func New(ctx context.Context, connectAddr string, opts ...ConnectOption) (MgRPC,
 	opts = append(opts, connectTo(connectAddr))
 
 	rpc := mgRPCImpl{
-		reqs: make(map[int64]req),
+		reqs:     make(map[int64]req),
+		handlers: make(map[string]Handler),
 	}
 	if err := rpc.connect(ctx, opts...); err != nil {
 		return nil, errors.Trace(err)
@@ -333,7 +334,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 				}
 			}
 			resp := callback(r, f)
-			if !f.NoResponse {
+			if !f.NoResponse && resp != nil {
 				c.Send(ctx, resp)
 			}
 			continue
