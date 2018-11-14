@@ -37,6 +37,12 @@ import (
 
 var (
 	migrateFlag = flag.Bool("migrate", true, "Migrate data from the previous version if needed")
+
+	ubuntuPackageNames = map[string]string{
+		"release": "mos",
+		"latest":  "mos-latest",
+	}
+	ubuntuRepoName = "ppa:mongoose-os/mos"
 )
 
 // mosVersion can be either exact mos version like "1.6", or update channel
@@ -70,26 +76,37 @@ func GetServerMosVersion(mosVersion string) (*version.VersionJson, error) {
 	return &serverVersion, nil
 }
 
-func Update(ctx context.Context, devConn *dev.DevConn) error {
-	if version.LooksLikeUbuntuBuildId(version.BuildId) {
-		// It looks like this binary is from Ubuntu's deb, so, use apt to update
-		if err := ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt", "update"); err != nil {
+func doUbuntuUpdate(oldUpdChannel, newUpdChannel string) error {
+	oldPkg := ubuntuPackageNames[oldUpdChannel]
+	newPkg := ubuntuPackageNames[newUpdChannel]
+
+	// Start with an apt-get update.
+	// Do not fail because some unrelated repo may be screwed up
+	// but our PPA might still be ok.
+	ourutil.RunCmd(ourutil.CmdOutOnError, "sudo", "apt-get", "update")
+
+	// Check if mos and mos-latest are among the available packages.
+	output, err := ourutil.GetCommandOutput("apt-cache", "showpkg", newPkg)
+	if err != nil {
+		return errors.Annotatef(err, "faild to get package info")
+	}
+	if !strings.Contains(output, "/lists/") {
+		// No package info in repo lists - we should (re-)add our repo.
+		// This can happen, for example, after release upgrade which disables 3rd-party repos.
+		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "sudo", "apt-add-repository", "-y", "-u", ubuntuRepoName); err != nil {
 			return errors.Trace(err)
 		}
-
-		if err := ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt", "install", "--only-upgrade", version.GetUbuntuPackageName(version.BuildId)); err != nil {
-			return errors.Trace(err)
-		}
-
-		return nil
-	} else if version.LooksLikeBrewBuildId(version.BuildId) {
-		ourutil.Reportf("Please use brew to update mos.")
-		return nil
-	} else if version.LooksLikeDistrBuildId(version.BuildId) {
-		ourutil.Reportf("Mos was installed via some package manager, please use it to update.")
-		return nil
 	}
 
+	if oldPkg != newPkg {
+		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "sudo", "apt-get", "remove", "-y", oldPkg); err != nil {
+			return errors.Trace(err)
+		}
+	}
+	return ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt-get", "install", "-y", newPkg)
+}
+
+func Update(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
 
 	// updChannel and newUpdChannel are needed for the logging, so that it's
@@ -111,6 +128,16 @@ func Update(ctx context.Context, devConn *dev.DevConn) error {
 		ourutil.Reportf("Changing update channel from %q to %q", updChannel, newUpdChannel)
 	} else {
 		ourutil.Reportf("Update channel: %s", updChannel)
+	}
+
+	if version.LooksLikeUbuntuBuildId(version.BuildId) {
+		return doUbuntuUpdate(updChannel, newUpdChannel)
+	} else if version.LooksLikeBrewBuildId(version.BuildId) {
+		ourutil.Reportf("Please use brew to update mos.")
+		return nil
+	} else if version.LooksLikeDistrBuildId(version.BuildId) {
+		ourutil.Reportf("Mos was installed via some package manager, please use it to update.")
+		return nil
 	}
 
 	var mosUrls = map[string]string{

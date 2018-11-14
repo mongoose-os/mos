@@ -63,7 +63,7 @@ func RunCmd(outMode CmdOutMode, args ...string) error {
 }
 
 func GetCommandOutput(command string, args ...string) (string, error) {
-	Reportf("Running %s", strings.Join(args, " "))
+	Reportf("Running %s %s", command, strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
 	output, err := cmd.Output()
 	if err != nil {

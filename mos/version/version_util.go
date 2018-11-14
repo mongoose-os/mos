@@ -55,7 +55,7 @@ func LooksLikeDistrBuildId(s string) bool {
 }
 
 func LooksLikeUbuntuBuildId(s string) bool {
-	return GetUbuntuPackageName(s) != ""
+	return GetUbuntuUpdateChannel(s) != ""
 }
 
 func LooksLikeBrewBuildId(s string) bool {
@@ -63,25 +63,20 @@ func LooksLikeBrewBuildId(s string) bool {
 }
 
 // GetUbuntuPackageName parses given build id string, and if it looks like a
-// debian build id, returns either "mos-latest" or "mos". Otherwise, returns
+// debian build id, returns either "latest" or "release". Otherwise, returns
 // an empty string.
-func GetUbuntuPackageName(buildId string) string {
+func GetUbuntuUpdateChannel(buildId string) string {
 	matches := ourutil.FindNamedSubmatches(regexpBuildIdDistr, buildId)
 	if matches != nil {
 		for _, v := range ubuntuDistrNames {
 			if strings.HasPrefix(matches["distr"], v) {
 				if LooksLikeVersionNumber(matches["version"]) {
-					return "mos"
+					return "release"
 				} else {
-					return "mos-latest"
+					return "latest"
 				}
 			}
 		}
-
-		// Some distro other than Ubuntu
-		return ""
-	} else {
-		// Doesn't look like distro build id
-		return ""
 	}
+	return ""
 }
