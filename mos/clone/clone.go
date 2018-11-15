@@ -2,8 +2,10 @@ package clone
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
@@ -30,6 +32,20 @@ func Clone(ctx context.Context, devConn *dev.DevConn) error {
 		m.Name = filepath.Base(args[2])
 	default:
 		return errors.Errorf("extra arguments")
+	}
+
+	switch m.GetType() {
+	case build.SWModuleTypeInvalid:
+		return errors.Errorf("invalid repo path")
+	case build.SWModuleTypeLocal:
+		// Makes no sense to clone local dir, so we assume it's a short GitHub repo name.
+		if strings.Contains(m.Location, "/") {
+			m.Location = fmt.Sprintf("https://github.com/%s", m.Location)
+		} else {
+			m.Location = fmt.Sprintf("https://github.com/mongoose-os-apps/%s", m.Location)
+		}
+	default:
+		// Proceed as usual
 	}
 
 	d, err := m.PrepareLocalDir(".", os.Stderr, false, /* deleteIfFailed */
