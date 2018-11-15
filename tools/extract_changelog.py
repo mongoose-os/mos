@@ -91,10 +91,10 @@ def handle_repo(repo_name, from_tag, to_tag):
 
     ph, ch, ts, cl = 0, None, 0, ""
     for line in log.splitlines():
-        line = str(line.strip(), "utf-8")
+        line = str(line, "utf-8")
         if line == "---CUT---":
             if cl and cl != "none":
-                res.append((ts, "https://github.com/%s/commit/%s" % (repo_name, ch), cl))
+                res.append((ts, "[%s@%s](https://github.com/%s/commit/%s)" % (repo_name, ch[:7], repo_name, ch), cl))
             ph, ch, ts, cl = 0, None, 0, ""
             continue
         if ph == 0:
@@ -157,7 +157,7 @@ for ts, ch, cl in sorted(global_cl, key=lambda e: e[0]):
         cl_map[cl] = (ts, cl, [ch])
 
 for e in sorted(cl_map.values(), key=lambda e: e[0]):
-    print(" * %s (%s)" % (e[1], " ".join(e[2])))
+    print(" * %s (%s)" % ("\n   ".join(e[1].splitlines()), " ".join(e[2])))
 
 if len(errs) != 0:
     print("------------------------------------------------------")
