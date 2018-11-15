@@ -1,9 +1,9 @@
-MOS_TAG=2.7.0
+MOS_TAG=2.8.0
 
 pkgname=mos
 pkgver=${MOS_TAG}
 pkgrel=1
-pkgdesc="Mongoose-OS build tool (latest)"
+pkgdesc="Mongoose-OS build tool (release)"
 arch=('i686' 'x86_64')
 license=('Apache')
 url="https://mongoose-os.com/software.html"
