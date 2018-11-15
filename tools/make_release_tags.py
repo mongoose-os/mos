@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 
 import git       # apt-get install python3-git || pip3 install GitPython
 import requests  # apt-get install python3-requests || pip3 install requests
@@ -30,9 +31,11 @@ import github_api
 token = ""
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--release-tag', required=True, default = "", help = 'Release tag, like 1.12')
+parser.add_argument('--release-tag', required=True, default = "", help="Release tag, like 2.8.0")
 parser.add_argument('--token_filepath', type=str, default='/secrets/github/cesantabot/github_token')
 parser.add_argument('--tmpdir', type=str, default=os.path.expanduser('~/mos_release_tmp'))
+parser.add_argument('--no-cleanup-drafts', action="store_true", default=False,
+                    help="Clean up all existing drafts when creating new release")
 parser.add_argument('--parallelism', type=int, default=32)
 parser.add_argument('repo', type=str, nargs='*', help='Run on specific repos. If not specified, runs on all repos.')
 
@@ -129,6 +132,20 @@ def del_release(repo_name, tag):
 
 # handle_repo {{{
 def handle_repo(repo_name, from_tag, to_tag):
+    if not args.no_cleanup_drafts:
+        rr, ok = call_releases_api(repo_name, method="GET", releases_url="")
+        if not ok:
+            raise Exception("Failed to list releases: %s" % r)
+        for r in rr:
+            if not r["draft"]:
+                continue
+            print("%s: Cleaning up draft release %d (%s)" % (repo_name, r["id"], r["name"]))
+            call_releases_api(
+                repo_name,
+                releases_url = "/%d" % r["id"],
+                method = "DELETE",
+                decode_json = False)
+
     # Delete existing release, if any.
     del_release(repo_name, to_tag)
 
@@ -209,18 +226,33 @@ if not repos:
     repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-libs", "cesanta/mos-tool"])
 
 pool = multiprocessing.Pool(processes=args.parallelism)
-results = []
+tasks = []
 
 # Enqueue repos which need a release to be copied, with all assets etc
 for repo_name in repos:
-    results.append((repo_name, pool.apply_async(handle_repo_noexc, [repo_name, "latest", args.release_tag])))
+    tasks.append((repo_name, pool.apply_async(handle_repo_noexc, [repo_name, "latest", args.release_tag])))
 
 # Wait for all tasks to complete, and collect errors {{{
 errs = []
-for res in results:
-    result = res[1].get()
-    if result != None:
-        errs.append(result)
+while True:
+    new_tasks = []
+    for r in tasks:
+        repo, res = r
+        if res.ready():
+            result = res.get()
+            if result is not None:
+                errs.append(result)
+        else:
+            new_tasks.append(r)
+    if len(new_tasks) == 0:
+        break
+    else:
+        print("%d tasks active (%s%s)" % (
+            len(new_tasks),
+            " ".join(r[0] for r in new_tasks[:5]),
+            " ..." if len(new_tasks) > 5 else ""))
+        tasks = new_tasks
+    time.sleep(2)
 # }}}
 
 if len(errs) == 0:
