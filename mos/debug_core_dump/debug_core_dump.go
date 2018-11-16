@@ -161,6 +161,10 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	if cdFile == "" {
 		return errors.Errorf("cdFile is required")
 	}
+	cdFile, err := filepath.Abs(cdFile)
+	if err != nil {
+		return errors.Annotatef(err, "invalid file name %s", cdFile)
+	}
 	info, err := GetInfoFromCoreDumpFile(cdFile)
 	if err != nil {
 		return errors.Annotatef(err, "unable to parse %s", cdFile)
@@ -189,13 +193,13 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 		cmd = append(cmd, "-i", "--tty=true")
 	}
 	cmd = append(cmd,
-		"-v", fmt.Sprintf("%s:/fw.elf", elfFile),
-		"-v", fmt.Sprintf("%s:/core", cdFile),
+		"-v", fmt.Sprintf("%s:/fw.elf", ourutil.GetPathForDocker(elfFile)),
+		"-v", fmt.Sprintf("%s:/core", ourutil.GetPathForDocker(cdFile)),
 	)
 	mosSrcPath := getMosSrcPath()
 	if mosSrcPath != "" {
 		ourutil.Reportf("Using Mongoose OS souces at: %s", mosSrcPath)
-		cmd = append(cmd, "-v", fmt.Sprintf("%s:/mongoose-os", mosSrcPath))
+		cmd = append(cmd, "-v", fmt.Sprintf("%s:/mongoose-os", ourutil.GetPathForDocker(mosSrcPath)))
 	}
 	if cwd, err := os.Getwd(); err == nil {
 		cmd = append(cmd, "-v", fmt.Sprintf("%s:%s", cwd, ourutil.GetPathForDocker(cwd)))
