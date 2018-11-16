@@ -94,7 +94,7 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 	u, _ := url.Parse(dst)
 
 	c := &mqttCodec{
-		dst:         topic[1:],
+		dst:         topic,
 		closeNotify: make(chan struct{}),
 		ready:       make(chan struct{}),
 		rchan:       make(chan frame.Frame),
@@ -117,7 +117,7 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 
 	subTopic := co.SubTopic
 	if subTopic == "" {
-		subTopic = fmt.Sprintf("%s/rpc", opts.ClientID)
+		subTopic = fmt.Sprintf("%s/rpc", topic)
 	}
 	glog.V(1).Infof("Subscribing to [%s]", subTopic)
 	token = c.cli.Subscribe(subTopic, 1 /* qos */, c.onMessage)
