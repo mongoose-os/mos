@@ -117,7 +117,7 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 
 	subTopic := co.SubTopic
 	if subTopic == "" {
-		subTopic = fmt.Sprintf("%s/rpc", topic)
+		subTopic = fmt.Sprintf("%s/rpc", c.src)
 	}
 	glog.V(1).Infof("Subscribing to [%s]", subTopic)
 	token = c.cli.Subscribe(subTopic, 1 /* qos */, c.onMessage)
