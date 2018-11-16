@@ -220,6 +220,7 @@ repo_root = os.path.realpath(os.path.join(__file__, "..", ".."))
 repos = args.repo
 
 if not repos:
+    print("Getting list of repos...")
     # Get libs and apps repos
     repos = get_repo_names("mongoose-os-libs") + get_repo_names("mongoose-os-apps")
     # Add a few more
@@ -247,10 +248,12 @@ while True:
     if len(new_tasks) == 0:
         break
     else:
-        print("%d tasks active (%s%s)" % (
+        print("%d active (%s%s)" % (
             len(new_tasks),
             " ".join(r[0] for r in new_tasks[:5]),
             " ..." if len(new_tasks) > 5 else ""))
+        if errs:
+            print("%d errors (%s)" % (len(errs), " ".join(err[0] for err in errs)))
         tasks = new_tasks
     time.sleep(2)
 # }}}

@@ -27,6 +27,10 @@ import sys
 
 import git  # apt-get install python3-git || pip3 install GitPython
 
+# Not used in this script but is used by other scripts.
+# Importing now will catch missing dependencies early.
+import github_api
+
 GPG_KEY_PATH = os.path.join(os.environ["HOME"], ".gnupg-cesantabot")
 BUILD_DEB_PATH = os.path.join("mos", "ubuntu", "build-deb.sh")
 UPLOAD_DEB_PATH = os.path.join("mos", "ubuntu", "upload-deb.sh")
