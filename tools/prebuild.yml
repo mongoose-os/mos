@@ -8,7 +8,7 @@
     - git@github.com:cesanta/mos-libs.git/vfs-dev-encr
   out:
     - github:
-        repo: mongoose-os-libs/%(repo_subdir)s
+        repo: mongoose-os-libs/%(name)s
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
@@ -38,7 +38,7 @@
 - location: git@github.com:cesanta/mos-libs.git/mongoose
   out:
     - github:
-        repo: mongoose-os-libs/%(repo_subdir)s
+        repo: mongoose-os-libs/mongoose
   common:
     cflags: -DMGOS_FREE_BUILD
     cxxflags: -DMGOS_FREE_BUILD
@@ -69,42 +69,6 @@
       build_vars:
         BOARD: NUCLEO-F746ZG
         MGOS_ENABLE_LWIP: 1
-
-- locations:
-    - git@github.com:cesanta/mos-libs.git/ota-common
-    - git@github.com:cesanta/mos-libs.git/ota-shadow
-    - git@github.com:cesanta/mos-libs.git/ota-http-client
-    - git@github.com:cesanta/mos-libs.git/ota-http-server
-    - git@github.com:cesanta/mos-libs.git/rpc-service-ota
-  out:
-    - github:
-        repo: mongoose-os-libs/%(repo_subdir)s
-  common:
-    cflags: -DMGOS_FREE_BUILD
-    cxxflags: -DMGOS_FREE_BUILD
-    mos_args:
-      - '--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"'
-      - '--lib-extra=origin: "https://github.com/mongoose-os-libs/core"'
-      - '--lib-extra=origin: "https://github.com/mongoose-os-libs/vfs-common"'
-  variants:
-    - name: esp8266
-      platform: esp8266
-    - name: esp32
-      platform: esp32
-    - name: cc3200
-      platform: cc3200
-    - name: stm32-B-L475E-IOT01A
-      platform: stm32
-      build_vars:
-        BOARD: B-L475E-IOT01A
-    - name: stm32-DISCO-F746NG
-      platform: stm32
-      build_vars:
-        BOARD: DISCO-F746NG
-    - name: stm32-NUCLEO-F746ZG
-      platform: stm32
-      build_vars:
-        BOARD: NUCLEO-F746ZG
 
 # Bootloader
 - location: https://github.com/mongoose-os-apps/bootloader

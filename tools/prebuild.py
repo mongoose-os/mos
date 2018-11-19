@@ -137,6 +137,41 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
     g_cur_rel_id = None
 
 
+def UpdateGitHubRelease(spec, tag, token, tmp_dir):
+    logging.debug("GH release spec: %s", spec)
+    repo = spec["repo"]
+
+    rel, ok = CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
+    if not ok:
+        logging.error("Failed to get release info for %s/%s: %s; (re)creating", repo, tag, rel)
+        # Assume release doesn't exist and create it.
+        return CreateGitHubRelease(spec, tag, token, tmp_dir)
+
+    logging.info("  Updating release %s / %s (%d)", repo, tag, rel["id"])
+    for asset_name, asset_file in spec["assets"]:
+        ct = "application/zip" if asset_name.endswith(".zip") else "application/octet-stream"
+        for a in rel.get("assets", []):
+            if a["name"] == asset_name:
+                logging.info("    Deleting asset %s (%d)", asset_name, a["id"])
+                CallReleasesAPI(
+                    repo, token,
+                    method="DELETE",
+                    releases_url=("/assets/%d" % a["id"]),
+                    decode_json=False)
+        logging.info("    Uploading %s to %s", asset_file, asset_name)
+        with open(asset_file, "rb") as f:
+            r, ok = CallReleasesAPI(
+                repo, token, method="POST", subdomain="uploads", data=f,
+                releases_url=("/%d/assets" % rel["id"]),
+                headers = {"Content-Type": ct},
+                params = {"name": asset_name})
+        if not ok:
+            logging.error("Failed to upload %s: %s", asset_name, r)
+            raise RuntimeError
+
+    logging.info("  Updated release %s / %s (%d)", repo, tag, rel["id"])
+
+
 def MakeAsset(an, asf, tmp_dir):
     af = os.path.join(tmp_dir, an)
     logging.info("  Copying %s -> %s", asf, af)
@@ -156,15 +191,12 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
             repo_subdir = "/".join(parts[i:])
             name = p[:-4]
             break
-    if repo_subdir:
-        logging.info("== %s / %s", repo_loc, repo_subdir)
-    else:
-        logging.info("== %s", repo_loc)
     repo_dir = os.path.join(tmp_dir, pre, name)
     if os.path.exists(repo_loc):
         rl = repo_loc + ("/" if not repo_loc.endswith("/") else "")
         os.makedirs(repo_dir, exist_ok=True)
         cmd = ["rsync", "-a", "--delete", rl, repo_dir + "/"]
+        name = os.path.basename(repo_loc)
     else:
         if not os.path.exists(repo_dir):
             logging.info("Cloning into %s", repo_dir)
@@ -172,6 +204,12 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
         else:
             logging.info("Pulling %s", repo_dir)
             cmd = ["git", "-C", repo_dir, "pull"]
+    if repo_subdir:
+        name = os.path.basename(repo_subdir)
+        logging.info("== %s: %s / %s", name, repo_loc, repo_subdir)
+    else:
+        name = os.path.basename(repo_loc)
+        logging.info("== %s: %s", name, repo_loc)
     RunCmd(cmd)
     if repo_subdir:
         tgt_dir = os.path.join(repo_dir, repo_subdir)
@@ -183,8 +221,7 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
     # Build all the variants, collect assets
     for v in e["variants"]:
         logging.info(" %s %s", tgt_name, v["name"])
-        os.chdir(tgt_dir)
-        mos_cmd = [mos, "build", "--local", "--clean"]
+        mos_cmd = [mos, "build", "-C", tgt_dir, "--local", "--clean"]
         if libs_dir:
             mos_cmd.append("--libs-dir=%s" % libs_dir)
         mos_cmd.append("--platform=%s" % v["platform"])
@@ -220,7 +257,10 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
         # Push to GitHub
         if gh_out:
             gh_out["assets"] = assets
-            gh_out["repo"] = gh_out["repo"] % {"repo_subdir": repo_subdir}
+            gh_out["repo"] = gh_out["repo"] % {
+                "name": name,
+                "repo_subdir": repo_subdir,
+            }
 
             if not gh_token_file:
                 logging.info("Token file not set, GH uploads disabled")
@@ -235,7 +275,10 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
             global g_cur_rel_id
             while True:
                 try:
-                    CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+                    if not gh_out.get("update", False):
+                        CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+                    else:
+                        UpdateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
                     break
                 except (Exception, KeyboardInterrupt) as e:
                     logging.exception("Exception (attempt %d): %s", i, e)
