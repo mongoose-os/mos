@@ -22,6 +22,7 @@ var (
 	certFile              = ""
 	keyFile               = ""
 	caFile                = ""
+	rpcUARTNoDelayFlag    = false
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 	flag.StringVar(&certFile, "cert-file", "", "Certificate file name")
 	flag.StringVar(&keyFile, "key-file", "", "Key file name")
 	flag.StringVar(&caFile, "ca-cert-file", "", "CA cert for TLS server verification")
+	flag.BoolVar(&rpcUARTNoDelayFlag, "rpc-uart-no-delay", false, "Do not introduce delay into UART over RPC")
 	hiddenFlags = append(hiddenFlags, "ca-cert-file")
 }
 
@@ -107,8 +109,8 @@ func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []b
 		},
 	}
 	// Due to lack of flow control, we send data in chunks and wait after each.
-	// At higher, non-default bad rate we assume user knows what they are doing.
-	if codecOpts.Serial.BaudRate <= 115200 {
+	// At non-default baud rate we assume user knows what they are doing.
+	if !codecOpts.Serial.HardwareFlowControl && codecOpts.Serial.BaudRate == 115200 && !rpcUARTNoDelayFlag {
 		codecOpts.Serial.SendChunkSize = 16
 		codecOpts.Serial.SendChunkDelay = 5 * time.Millisecond
 		// So, this is weird. ST-Link serial device seems to have issues on Mac OS X if we write too fast.
