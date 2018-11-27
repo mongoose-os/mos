@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
@@ -28,7 +29,7 @@ type FirmwareManifest struct {
 	Description    string                   `json:"description,omitempty"`
 	Version        string                   `json:"version"`
 	BuildID        string                   `json:"build_id,omitempty"`
-	BuildTimestamp string                   `json:"build_timestamp,omitempty"` // TODO(rojer): Parse as time.Time
+	BuildTimestamp time.Time                `json:"build_timestamp,omitempty"`
 	Parts          map[string]*FirmwarePart `json:"parts"`
 }
 
