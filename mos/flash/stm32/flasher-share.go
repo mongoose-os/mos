@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -41,7 +42,7 @@ type FlashOpts struct {
 	Timeout   time.Duration
 }
 
-func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
+func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	data, err := fw.GetPartData("app")
 	if err != nil {
 		return errors.Annotatef(err, "invalid manifest")

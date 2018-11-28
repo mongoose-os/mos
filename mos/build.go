@@ -16,12 +16,13 @@ import (
 
 	"context"
 
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flash/common"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/interpreter"
 	"cesanta.com/mos/manifest_parser"
 	"cesanta.com/mos/mosgit"
@@ -130,7 +131,7 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 
 		bParams = buildParams{
 			ManifestAdjustments: manifest_parser.ManifestAdjustments{
-				Platform:  *platform,
+				Platform:  flags.Platform(),
 				BuildVars: buildVarsFromCLI,
 				CFlags:    *cflagsExtra,
 				CXXFlags:  *cxxflagsExtra,
@@ -210,7 +211,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		// firmware around, etc.
 		fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
-		fw, err := common.NewZipFirmwareBundle(fwFilename)
+		fw, err := fwbundle.ReadZipFirmwareBundle(fwFilename)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -266,7 +267,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 
 func getBuildVarsFromCLI() (map[string]string, error) {
 	m := map[string]string{
-		"BOARD": *boardFlag,
+		"BOARD": *flags.Board,
 	}
 
 	// Add build vars from CLI flags

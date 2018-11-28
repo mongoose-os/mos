@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/interpreter"
 	"cesanta.com/mos/manifest_parser"
 	"github.com/cesanta/errors"
@@ -32,7 +33,7 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 
 	bParams := &buildParams{
 		ManifestAdjustments: manifest_parser.ManifestAdjustments{
-			Platform: *platform,
+			Platform: flags.Platform(),
 		},
 		CustomLibLocations: cll,
 	}

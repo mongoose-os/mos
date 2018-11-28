@@ -11,7 +11,7 @@ import (
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/datamap"
 
-	moscommon "cesanta.com/mos/common"
+	"cesanta.com/common/go/ourutil"
 	"github.com/cesanta/errors"
 )
 
@@ -136,7 +136,7 @@ func GetMVarNameManifest() string {
 
 // GetMVarNameModule returns a string like "mos.modules.foo"
 func GetMVarNameModule(moduleName string) string {
-	return GetMVarName(GetMVarNameMos(), "modules", moscommon.IdentifierFromString(moduleName))
+	return GetMVarName(GetMVarNameMos(), "modules", ourutil.IdentifierFromString(moduleName))
 }
 
 // GetMVarNameModulePath returns a string like "mos.modules.foo.path"

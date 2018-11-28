@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
 	"cesanta.com/mos/flash/esp32"
@@ -26,7 +27,7 @@ const (
 type image struct {
 	addr uint32
 	data []byte
-	part *common.FirmwarePart
+	part *fwbundle.FirmwarePart
 }
 
 type imagesByAddr []*image
@@ -37,7 +38,7 @@ func (pp imagesByAddr) Less(i, j int) bool {
 	return pp[i].addr < pp[j].addr
 }
 
-func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) error {
+func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) error {
 
 	cfr, err := ConnectToFlasherClient(ct, opts)
 	if err != nil {
@@ -69,9 +70,9 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 				return errors.Annotatef(err, "%s: failed to get respolve partition %q", p.Name, p.ESP32PartitionName)
 			}
 			glog.V(1).Infof("%s -> %s -> 0x%x", p.Name, p.ESP32PartitionName, pti.Pos.Offset)
-			p.ESPFlashAddress = pti.Pos.Offset
+			p.Addr = pti.Pos.Offset
 		}
-		im := &image{addr: p.ESPFlashAddress, data: data, part: p}
+		im := &image{addr: p.Addr, data: data, part: p}
 		if im.addr == 0 || im.addr == 0x1000 && len(data) >= 4 && data[0] == 0xe9 {
 			im.data[2], im.data[3] = cfr.flashParams.Bytes()
 		}
@@ -180,15 +181,15 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	return nil
 }
 
-func adjustSysParamsLocation(fw *common.FirmwareBundle, flashSize int) {
+func adjustSysParamsLocation(fw *fwbundle.FirmwareBundle, flashSize int) {
 	sysParamsAddr := uint32(flashSize - sysParamsAreaSize)
 	for _, p := range fw.Parts {
 		if p.Type != sysParamsPartType {
 			continue
 		}
-		if p.ESPFlashAddress != sysParamsAddr {
-			glog.Infof("Sys params image moved from 0x%x to 0x%x", p.ESPFlashAddress, sysParamsAddr)
-			p.ESPFlashAddress = sysParamsAddr
+		if p.Addr != sysParamsAddr {
+			glog.Infof("Sys params image moved from 0x%x to 0x%x", p.Addr, sysParamsAddr)
+			p.Addr = sysParamsAddr
 		}
 	}
 }

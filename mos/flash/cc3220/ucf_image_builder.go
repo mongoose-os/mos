@@ -13,9 +13,9 @@ import (
 	"runtime"
 	"sort"
 
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/flash/cc32xx"
-	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -140,7 +140,7 @@ func isKnownPartType(pt string) bool {
 		pt == cc32xx.PartTypeFSContainer
 }
 
-func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity int, mac cc32xx.MACAddress) (string, error) {
+func buildXMLConfigFromFirmwareBundle(fw *fwbundle.FirmwareBundle, storageCapacity int, mac cc32xx.MACAddress) (string, error) {
 	imc := &imageConfigXML{
 		ImageBuilderProp: &imageBuilderProp{
 			StorageCapacityBytes: storageCapacity,
@@ -172,7 +172,7 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 		},
 	}
 
-	parts := []*common.FirmwarePart{}
+	parts := []*fwbundle.FirmwarePart{}
 	for _, p := range fw.Parts {
 		if isKnownPartType(p.Type) {
 			parts = append(parts, p)
@@ -335,7 +335,7 @@ func findBPIBinary() (string, error) {
 	return bpib, err
 }
 
-func buildUCFImageFromFirmwareBundle(fw *common.FirmwareBundle, bpiBinary string, mac cc32xx.MACAddress, storageCapacity int) (string, int, error) {
+func buildUCFImageFromFirmwareBundle(fw *fwbundle.FirmwareBundle, bpiBinary string, mac cc32xx.MACAddress, storageCapacity int) (string, int, error) {
 
 	cfgfn, err := buildXMLConfigFromFirmwareBundle(fw, storageCapacity, mac)
 	if err != nil {

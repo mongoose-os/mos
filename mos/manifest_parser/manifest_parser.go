@@ -694,7 +694,7 @@ func prepareLib(
 
 	// Add a build var and C macro MGOS_HAVE_<lib_name>
 	haveName := fmt.Sprintf(
-		"MGOS_HAVE_%s", strings.ToUpper(moscommon.IdentifierFromString(name)),
+		"MGOS_HAVE_%s", strings.ToUpper(ourutil.IdentifierFromString(name)),
 	)
 
 	pc.mtx.Lock()
@@ -1377,7 +1377,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 		}
 		tplData.Libs = append(tplData.Libs, libsInitDataItem{
 			Name:  v.Lib.Name,
-			Ident: moscommon.IdentifierFromString(v.Lib.Name),
+			Ident: ourutil.IdentifierFromString(v.Lib.Name),
 			Deps:  v.InitDeps,
 		})
 	}

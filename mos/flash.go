@@ -3,20 +3,23 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"time"
 
 	"context"
 
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/cc3200"
 	"cesanta.com/mos/flash/cc3220"
-	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
 	"cesanta.com/mos/flash/stm32"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
@@ -84,6 +87,21 @@ func init() {
 	})
 }
 
+func getFirmwareURL(appName, platformWithVariation string) string {
+	return fmt.Sprintf(
+		"https://github.com/mongoose-os-apps/%s/releases/download/%s/%s-%s.zip",
+		appName, version.GetMosVersion(), appName, platformWithVariation,
+	)
+}
+
+func getDemoAppName(platformWithVariation string) string {
+	appName := "demo-js"
+	if strings.HasPrefix(platformWithVariation, "cc3200") {
+		appName = "demo-c"
+	}
+	return appName
+}
+
 func flash(ctx context.Context, devConn *dev.DevConn) error {
 	fwname := *firmware
 	args := flag.Args()
@@ -91,7 +109,16 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		fwname = args[1]
 	}
 
-	fw, err := common.NewZipFirmwareBundle(fwname)
+	// If firmware name is given but does not end up with .zip, this is
+	// a shortcut for `mos flash esp32`. Transform that into the canonical URL
+	_, err := os.Stat(fwname)
+	if fwname != "" && !strings.HasSuffix(fwname, ".zip") && os.IsNotExist(err) && !strings.Contains(fwname, "/") {
+		platforWithVariation := fwname
+		appName := getDemoAppName(platforWithVariation)
+		fwname = getFirmwareURL(appName, platforWithVariation)
+	}
+
+	fw, err := fwbundle.ReadZipFirmwareBundle(fwname)
 	if err != nil {
 		return errors.Annotatef(err, "failed to load %s", fwname)
 	}

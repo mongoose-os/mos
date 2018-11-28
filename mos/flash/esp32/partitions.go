@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"cesanta.com/mos/flash/common"
+	"cesanta.com/common/go/fwbundle"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -34,7 +34,7 @@ type ESPPartitionInfo struct {
 	Flags   uint32
 }
 
-func GetPartitionInfo(fw *common.FirmwareBundle, name string) (*ESPPartitionInfo, error) {
+func GetPartitionInfo(fw *fwbundle.FirmwareBundle, name string) (*ESPPartitionInfo, error) {
 	data, err := fw.GetPartData(espPartitionTablePartName)
 	if err != nil {
 		return nil, errors.Errorf("no partition table in the fw bundle")

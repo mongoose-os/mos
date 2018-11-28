@@ -23,6 +23,7 @@ import (
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/common/state"
 	"cesanta.com/mos/config"
+	"cesanta.com/mos/create_fw_bundle"
 	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/fs"
@@ -44,10 +45,6 @@ const (
 // Each command can also register more flags but they should be hidden by default so the tool doesn't seem complex.
 // Full help can be shown with --full anyway.
 var (
-	// --arch was deprecated at 2017/08/15 and should eventually be removed.
-	archOld    = flag.String("arch", "", "Deprecated, please use --platform instead")
-	boardFlag  = flag.String("board", "", "Board name.")
-	platform   = flag.String("platform", "", "Hardware platform. Possible values: cc3200, esp32, esp8266, stm32")
 	user       = flag.String("user", "", "Cloud username")
 	pass       = flag.String("pass", "", "Cloud password or token")
 	server     = flag.String("server", "https://mongoose.cloud", "FWBuild server")
@@ -113,6 +110,7 @@ func init() {
 		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true, false},
 		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true, false},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true, false},
+		{"create-fw-bundle", create_fw_bundle.CreateFWBundle, `Create or modify a firmware ZIP bundle from disparate parts.`, nil, nil, false, false},
 		{"debug-core-dump", debug_core_dump.DebugCoreDump, `Debug a core dump`, nil, nil, false, false},
 		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true, false},
 		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, true, false},
@@ -239,10 +237,6 @@ func main() {
 
 	if err := update.Init(); err != nil {
 		log.Fatal(err)
-	}
-
-	if *platform == "" && *archOld != "" {
-		*platform = *archOld
 	}
 
 	consoleInit()

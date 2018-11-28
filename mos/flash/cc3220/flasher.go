@@ -8,6 +8,7 @@
 package cc3220
 
 import (
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/mos/flash/cc32xx"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -26,7 +27,7 @@ const (
 	flashPatchWriteLocation = 33*0x1000 + 8
 )
 
-func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
+func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	if opts.BPIBinary == "" {
 		bpib, err := findBPIBinary()
 		if err != nil {

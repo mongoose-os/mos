@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 
+	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/mos/flash/cc32xx"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -27,7 +28,7 @@ const (
 type fileInfo struct {
 	cc32xx.SLFSFileInfo
 
-	part *common.FirmwarePart
+	part *fwbundle.FirmwarePart
 }
 
 func isKnownPartType(pt string) bool {
@@ -39,10 +40,10 @@ func isKnownPartType(pt string) bool {
 		pt == cc32xx.PartTypeFSContainer
 }
 
-func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
+func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	var files []*fileInfo
 
-	parts := []*common.FirmwarePart{}
+	parts := []*fwbundle.FirmwarePart{}
 	for _, p := range fw.Parts {
 		if isKnownPartType(p.Type) {
 			parts = append(parts, p)

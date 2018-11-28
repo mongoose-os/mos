@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
 	"github.com/cesanta/errors"
@@ -51,9 +52,10 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	var data []byte
-	switch *platform {
+	platform := flags.Platform()
+	switch platform {
 	case "cc3200":
-		err = errors.NotImplementedf("flash reading for %s", *platform)
+		err = errors.NotImplementedf("flash reading for %s", platform)
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP32, uint32(addr), int(length), &espFlashOpts)
@@ -61,9 +63,9 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP8266, uint32(addr), int(length), &espFlashOpts)
 	case "stm32":
-		err = errors.NotImplementedf("flash reading for %s", *platform)
+		err = errors.NotImplementedf("flash reading for %s", platform)
 	default:
-		err = errors.Errorf("unsupported platform '%s'", *platform)
+		err = errors.Errorf("unsupported platform '%s'", platform)
 	}
 
 	if err == nil {

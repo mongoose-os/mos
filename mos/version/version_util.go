@@ -6,15 +6,16 @@ package version
 import (
 	"regexp"
 	"strings"
+	"time"
 
 	"cesanta.com/common/go/ourutil"
 	moscommon "cesanta.com/mos/common"
 )
 
 type VersionJson struct {
-	BuildId        string `json:"build_id"`
-	BuildTimestamp string `json:"build_timestamp"`
-	BuildVersion   string `json:"build_version"`
+	BuildId        string    `json:"build_id"`
+	BuildTimestamp time.Time `json:"build_timestamp"`
+	BuildVersion   string    `json:"build_version"`
 }
 
 const (

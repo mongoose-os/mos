@@ -6,7 +6,7 @@
 package cc32xx
 
 import (
-	"cesanta.com/mos/flash/common"
+	"cesanta.com/common/go/fwbundle"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 	PartTypeSignature        = "sig"
 )
 
-type PartsByTypeAndName []*common.FirmwarePart
+type PartsByTypeAndName []*fwbundle.FirmwarePart
 
 func (pp PartsByTypeAndName) Len() int      { return len(pp) }
 func (pp PartsByTypeAndName) Swap(i, j int) { pp[i], pp[j] = pp[j], pp[i] }
