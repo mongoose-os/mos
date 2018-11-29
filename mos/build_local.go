@@ -31,7 +31,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
+func buildLocal(ctx context.Context, bParams *buildParams) error {
 	if isInDockerToolbox() {
 		freportf(logWriterStderr, "Docker Toolbox detected")
 	}
@@ -40,7 +40,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	buildErr := buildLocal2(ctx, bParams, *cleanBuildFlag)
 
-	if !*verbose && err != nil {
+	if !*verbose && buildErr != nil {
 		log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
 		if err != nil {
 			glog.Errorf("can't read build log: %s", err)
