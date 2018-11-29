@@ -179,7 +179,7 @@ def MakeAsset(an, asf, tmp_dir):
     return [an, af]
 
 
-def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
+def ProcessLoc(e, loc, mos, mos_repo_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
     parts = loc.split("/")
     pre, name, i, repo_loc, repo_subdir = "", "", 0, loc, ""
     for p in parts:
@@ -222,8 +222,12 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
     for v in e["variants"]:
         logging.info(" %s %s", tgt_name, v["name"])
         mos_cmd = [mos, "build", "-C", tgt_dir, "--local", "--clean"]
+        if repo_dir:
+            mos_cmd.append("--repo=%s" % mos_repo_dir)
         if libs_dir:
             mos_cmd.append("--libs-dir=%s" % libs_dir)
+        if no_libs_update:
+            mos_cmd.append("--no-libs-update")
         mos_cmd.append("--platform=%s" % v["platform"])
         for bvk, bvv in sorted(list(common.get("build_vars", {}).items()) +
                                list(v.get("build_vars", {}).items())):
@@ -292,9 +296,10 @@ def ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
                         raise
 
 
-def ProcessEntry(e, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file):
+def ProcessEntry(e, mos, repo_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
     for loc in e.get("locations", []) + [e.get("location")]:
-        if loc: ProcessLoc(e, loc, mos, tmp_dir, libs_dir, gh_release_tag, gh_token_file)
+        if loc:
+            ProcessLoc(e, loc, mos, repo_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file)
 
 
 if __name__ == "__main__":
@@ -303,6 +308,8 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str)
     parser.add_argument("--tmp-dir", type=str, default=os.path.join(os.getenv("TMPDIR", "/tmp"), "mos_prebuild"))
     parser.add_argument("--libs-dir", type=str)
+    parser.add_argument("--repo-dir", type=str)
+    parser.add_argument("--no-libs-update", action="store_true")
     parser.add_argument("--mos", type=str, default="/usr/bin/mos")
     parser.add_argument("--gh-token-file", type=str)
     parser.add_argument("--gh-release-tag", type=str)
@@ -315,5 +322,6 @@ if __name__ == "__main__":
         cfg = yaml.load(f)
 
     for e in cfg:
-        ProcessEntry(e, args.mos, args.tmp_dir, args.libs_dir, args.gh_release_tag, args.gh_token_file)
+        ProcessEntry(e, args.mos, args.repo_dir, args.libs_dir, args.tmp_dir,
+                args.no_libs_update, args.gh_release_tag, args.gh_token_file)
     logging.info("All done")
