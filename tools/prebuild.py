@@ -222,7 +222,7 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, libs_dir, tmp_dir, no_libs_update, gh_
     for v in e["variants"]:
         logging.info(" %s %s", tgt_name, v["name"])
         mos_cmd = [mos, "build", "-C", tgt_dir, "--local", "--clean"]
-        if repo_dir:
+        if mos_repo_dir:
             mos_cmd.append("--repo=%s" % mos_repo_dir)
         if libs_dir:
             mos_cmd.append("--libs-dir=%s" % libs_dir)
