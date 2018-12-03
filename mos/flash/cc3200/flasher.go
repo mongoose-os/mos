@@ -64,10 +64,14 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to get data", p.Name)
 			}
-			if p.CC32XXFileSignature != "" {
-				fs, err := fw.GetPartData(p.CC32XXFileSignature)
+			sig := p.CC32XXFileSignature
+			if sig == "" {
+				sig = p.CC3200FileSignature
+			}
+			if sig != "" {
+				fs, err := fw.GetPartData(sig)
 				if err != nil {
-					return errors.Annotatef(err, "%s: failed to get signature data (%s)", p.Name, p.CC32XXFileSignature)
+					return errors.Annotatef(err, "%s: failed to get signature data (%s)", p.Name, sig)
 				}
 				if len(fs) != cc32xx.FileSignatureLength {
 					return errors.Errorf("%s: invalid signature length (%d)", p.Name, len(fi.Signature))

@@ -36,6 +36,8 @@ type firmwarePart struct {
 	CC32XXFileAllocSize int    `json:"falloc,omitempty"`
 	CC32XXFileSignature string `json:"sig,omitempty"`
 	CC32XXSigningCert   string `json:"sig_cert,omitempty"`
+	// Deprecated, not being used since 2018/12/03.
+	CC3200FileSignature string `json:"sign,omitempty"`
 
 	// Other user-specified properties are preserved here.
 	properties   map[string]interface{}
