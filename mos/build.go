@@ -427,91 +427,81 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	if !ok {
 
 		for {
-			needUpdate := true
-
 			localDir, err := m.GetLocalDir(libsDir, libsDefVersion)
 			if err != nil {
 				return "", errors.Trace(err)
 			}
 
-			if _, err := os.Stat(localDir); err == nil {
-				// lib's local dir already exists
-
-				if *noLibsUpdate {
-					ourutil.Freportf(lpr.logWriter, "%s: --no-libs-update was given, and %q exists: skipping update", name, localDir)
-					libDirAbs = localDir
-					needUpdate = false
-				}
+			updateIntvl := *libsUpdateInterval
+			if *noLibsUpdate {
+				updateIntvl = 0
 			}
 
-			if needUpdate {
+			// Try to get current hash, ignoring errors
+			curHash := ""
+			if m.GetType() == build.SWModuleTypeGit {
+				curHash, _ = gitinst.GetCurrentHash(localDir)
+			}
 
-				// Try to get current hash, ignoring errors
-				curHash := ""
-				if m.GetType() == build.SWModuleTypeGit {
-					curHash, _ = gitinst.GetCurrentHash(localDir)
-				}
+			libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, updateIntvl, 0)
+			if err != nil {
+				if m.Version == "" && libsDefVersion != "latest" {
+					// We failed to fetch lib at the default version (mos.version),
+					// which is not "latest", and the lib in manifest does not have
+					// version specified explicitly. This might happen when some
+					// latest app is built with older mos tool.
 
-				libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, *libsUpdateInterval, 0)
-				if err != nil {
-					if m.Version == "" && libsDefVersion != "latest" {
-						// We failed to fetch lib at the default version (mos.version),
-						// which is not "latest", and the lib in manifest does not have
-						// version specified explicitly. This might happen when some
-						// latest app is built with older mos tool.
+					serverVersion := libsDefVersion
+					v, err := update.GetServerMosVersion(update.GetUpdateChannel())
+					if err == nil {
+						serverVersion = v.BuildVersion
+					}
 
-						serverVersion := libsDefVersion
-						v, err := update.GetServerMosVersion(update.GetUpdateChannel())
-						if err == nil {
-							serverVersion = v.BuildVersion
-						}
+					ourutil.Freportf(logWriterStderr,
+						"WARNING: the lib %q does not have version %s. Resorting to latest, but the build might fail.\n"+
+							"It usually happens if you clone the latest version of some example app, and try to build it with the mos tool which is older than the lib (in this case, %q).", name, libsDefVersion, name,
+					)
+
+					if serverVersion != version.GetMosVersion() {
+						// There is a newer version of the mos tool available, so
+						// suggest upgrading.
 
 						ourutil.Freportf(logWriterStderr,
-							"WARNING: the lib %q does not have version %s. Resorting to latest, but the build might fail.\n"+
-								"It usually happens if you clone the latest version of some example app, and try to build it with the mos tool which is older than the lib (in this case, %q).", name, libsDefVersion, name,
+							"There is a newer version of the mos tool available: %s, try to update mos tool (mos update), and build again. "+
+								"Alternatively, you can build the version %s of the app (git checkout %s).", serverVersion, libsDefVersion, libsDefVersion,
 						)
-
-						if serverVersion != version.GetMosVersion() {
-							// There is a newer version of the mos tool available, so
-							// suggest upgrading.
-
-							ourutil.Freportf(logWriterStderr,
-								"There is a newer version of the mos tool available: %s, try to update mos tool (mos update), and build again. "+
-									"Alternatively, you can build the version %s of the app (git checkout %s).", serverVersion, libsDefVersion, libsDefVersion,
-							)
-						} else {
-							// Current mos is at the newest released version, so the only
-							// alternatives are: build older (released) version of the app,
-							// or use latest mos.
-
-							ourutil.Freportf(logWriterStderr,
-								"Consider using the version %s of the app (git checkout %s), or using latest mos tool (mos update latest).", libsDefVersion, libsDefVersion,
-							)
-						}
-
-						// In any case, retry with the latest lib version and cross fingers.
-
-						libsDefVersion = "latest"
-						continue
-					}
-					return "", errors.Annotatef(err, "%s: preparing local copy", name)
-				}
-
-				if m.GetType() == build.SWModuleTypeGit {
-					if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
-						freportf(logWriter, "%s: Hash is updated: %s -> %s", name, curHash, newHash)
-						// The current repo hash has changed after the pull, so we need to
-						// vanish the lib we might have downloaded before
-						os.RemoveAll(moscommon.GetBinaryLibsDir(localDir))
-
-						// But in case the lib dir is a part of the repo itself, we have to
-						// do "git checkout ." on the repo. We shouldn't be afraid of
-						// losing user's local changes, because the fact that hash has
-						// changed means that the repo was clean anyway.
-						gitinst.ResetHard(localDir)
 					} else {
-						freportf(logWriter, "%s: Hash unchanged at %s (dir %q)", name, curHash, libDirAbs)
+						// Current mos is at the newest released version, so the only
+						// alternatives are: build older (released) version of the app,
+						// or use latest mos.
+
+						ourutil.Freportf(logWriterStderr,
+							"Consider using the version %s of the app (git checkout %s), or using latest mos tool (mos update latest).", libsDefVersion, libsDefVersion,
+						)
 					}
+
+					// In any case, retry with the latest lib version and cross fingers.
+
+					libsDefVersion = "latest"
+					continue
+				}
+				return "", errors.Annotatef(err, "%s: preparing local copy", name)
+			}
+
+			if m.GetType() == build.SWModuleTypeGit {
+				if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
+					freportf(logWriter, "%s: Hash is updated: %s -> %s", name, curHash, newHash)
+					// The current repo hash has changed after the pull, so we need to
+					// vanish the lib we might have downloaded before
+					os.RemoveAll(moscommon.GetBinaryLibsDir(localDir))
+
+					// But in case the lib dir is a part of the repo itself, we have to
+					// do "git checkout ." on the repo. We shouldn't be afraid of
+					// losing user's local changes, because the fact that hash has
+					// changed means that the repo was clean anyway.
+					gitinst.ResetHard(localDir)
+				} else {
+					freportf(logWriter, "%s: Hash unchanged at %s (dir %q)", name, curHash, libDirAbs)
 				}
 			}
 
@@ -544,7 +534,12 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 			return "", errors.Trace(err)
 		}
 
-		targetDir, err = m.PrepareLocalDir(paths.GetModulesDir(appDir), logWriter, true, modulesDefVersion, *libsUpdateInterval, 0)
+		updateIntvl := *libsUpdateInterval
+		if *noLibsUpdate {
+			updateIntvl = 0
+		}
+
+		targetDir, err = m.PrepareLocalDir(paths.GetModulesDir(appDir), logWriter, true, modulesDefVersion, updateIntvl, 0)
 		if err != nil {
 			return "", errors.Annotatef(err, "preparing local copy of the module %q", name)
 		}
@@ -588,18 +583,8 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 			Version:  mongooseOsVersion,
 		}
 
-		localDir, err := m.GetLocalDir(md, mongooseOsVersion)
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-
-		if _, err := os.Stat(localDir); err == nil {
-			// lib's local dir already exists
-
-			if *noLibsUpdate {
-				ourutil.Freportf(logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
-				mosDirEffective = localDir
-			}
+		if *noLibsUpdate {
+			updateInterval = 0
 		}
 
 		if mosDirEffective == "" {

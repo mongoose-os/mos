@@ -2,6 +2,7 @@ package build
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 
 	"cesanta.com/common/go/ourgit"
 	"cesanta.com/common/go/ourutil"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/mosgit"
 
 	"github.com/cesanta/errors"
@@ -58,9 +60,9 @@ var (
 	boardsLibNewName = "zz_boards"
 )
 
-func parseGitLocation(loc string) (string, string, string, string, error) {
+func parseGitLocation(loc string) (string, string, string, string, string, error) {
 	isShort := false
-	var repoName, libName, repoURL, pathWithinRepo string
+	var repoPath, repoName, libName, repoURL, pathWithinRepo string
 	u, err := url.Parse(loc)
 	if err != nil {
 		if sm := gitSSHShortRegex.FindAllStringSubmatch(loc, 1); sm != nil {
@@ -71,7 +73,7 @@ func parseGitLocation(loc string) (string, string, string, string, error) {
 			}
 			isShort = true
 		} else {
-			return "", "", "", "", errors.Errorf("%q is not a Git location spec 1", loc)
+			return "", "", "", "", "", errors.Errorf("%q is not a Git location spec 1", loc)
 		}
 	} else if u.Host == "" && u.Opaque != "" {
 		/* Git short-hand repo path w/o user@, i.e. server:name */
@@ -81,12 +83,12 @@ func parseGitLocation(loc string) (string, string, string, string, error) {
 		}
 		isShort = true
 	} else if u.Scheme == "" {
-		return "", "", "", "", errors.Errorf("%q is not a Git location spec 2", loc)
+		return "", "", "", "", "", errors.Errorf("%q is not a Git location spec 2", loc)
 	}
 
 	parts := strings.Split(u.Path, "/")
 	if len(parts) == 0 {
-		return "", "", "", "", errors.Errorf("path is empty in %q", loc)
+		return "", "", "", "", "", errors.Errorf("path is empty in %q", loc)
 	}
 	libName = parts[len(parts)-1]
 	if strings.HasSuffix(libName, ".git") {
@@ -95,10 +97,12 @@ func parseGitLocation(loc string) (string, string, string, string, error) {
 	// Now find where repo name ends and path within repo begins.
 	// For GitHub HTTP URLs we expect tree/*/, for all other we find first component that ends in ".git".
 	if u.Scheme == "https" && u.Host == "github.com" && len(parts) > 4 {
+		repoPath = strings.Join(parts[1:3], "/")
 		repoName = parts[2]
 		u.Path = strings.Join(parts[:3], "/")
 		pathWithinRepo = filepath.Join(parts[5:]...)
 	} else {
+		pathParts := []string{}
 		for i, part := range parts {
 			if strings.HasSuffix(part, ".git") {
 				repoName = part[:len(part)-4]
@@ -106,11 +110,16 @@ func parseGitLocation(loc string) (string, string, string, string, error) {
 					u.Path = strings.Join(parts[:i+1], "/")
 					pathWithinRepo = filepath.Join(parts[i+1:]...)
 				}
+				pathParts = append(pathParts, repoName)
 				break
 			} else {
-				repoName = part
+				if part != "" {
+					repoName = part
+					pathParts = append(pathParts, repoName)
+				}
 			}
 		}
+		repoPath = strings.Join(pathParts, "/")
 	}
 
 	if isShort {
@@ -123,7 +132,7 @@ func parseGitLocation(loc string) (string, string, string, string, error) {
 		repoURL = u.String()
 	}
 
-	return repoName, libName, repoURL, pathWithinRepo, nil
+	return repoPath, repoName, libName, repoURL, pathWithinRepo, nil
 }
 
 func (m *SWModule) Normalize() error {
@@ -205,7 +214,7 @@ func (m *SWModule) PrepareLocalDir(
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		_, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
+		_, _, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
 		if err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
 			return "", errors.Trace(err)
@@ -237,15 +246,68 @@ func (m *SWModule) PrepareLocalDir(
 	return localPath, nil
 }
 
-func getGithubLibAssetUrl(repoUrl, platform, version string) (string, error) {
-	u, err := url.Parse(repoUrl)
-	if err != nil {
-		return "", errors.Trace(err)
+func fetchGitHubAsset(owner, repo, tag, assetName string) ([]byte, error) {
+	relMetaURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", relMetaURL, nil)
+	if *flags.GHToken != "" {
+		req.Header.Add("Authorization", fmt.Sprintf("token %s", *flags.GHToken))
 	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to fetch %s", relMetaURL)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
+	}
+	relMetaData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	glog.V(4).Infof("%s/%s/%s/%s: Release metadata: %s", owner, repo, tag, assetName, string(relMetaData))
+	var relMeta struct {
+		ID     int `json:"id"`
+		Assets []*struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		}
+	}
+	if err = json.Unmarshal(relMetaData, &relMeta); err != nil {
+		return nil, errors.Annotatef(err, "failed to parse GitHub release info")
+	}
+	assetURL := ""
+	for _, a := range relMeta.Assets {
+		if a.Name == assetName {
+			assetURL = a.URL
+			break
+		}
+	}
+	if assetURL == "" {
+		return nil, errors.Errorf("%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
+	}
+	glog.Infof("%s/%s/%s/%s: Asset URL: %s", owner, repo, tag, assetName, assetURL)
+	ourutil.Reportf("Fetching %s from %s...", assetName, assetURL)
 
-	_, name := path.Split(u.Path)
-
-	return fmt.Sprintf("%s/releases/download/%s/lib%s-%s.a", repoUrl, version, name, platform), nil
+	req2, err := http.NewRequest("GET", assetURL, nil)
+	req2.Header.Add("Accept", "application/octet-stream")
+	if *flags.GHToken != "" {
+		req2.Header.Add("Authorization", fmt.Sprintf("token %s", *flags.GHToken))
+	}
+	resp2, err := client.Do(req2)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to fetch %s", assetURL)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got %d status code when fetching %s", resp.StatusCode, assetURL)
+	}
+	// Fetched the asset successfully
+	data, err := ioutil.ReadAll(resp2.Body)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return data, nil
 }
 
 func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) error {
@@ -255,26 +317,15 @@ func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) err
 		if !strings.Contains(m.Location, "github.com") {
 			break
 		}
-		assetUrl, err := getGithubLibAssetUrl(m.Location, platform, version)
+		repoPath, _, libName, _, _, err := parseGitLocation(m.Location)
 		if err != nil {
 			return errors.Trace(err)
 		}
-
-		resp, err := http.Get(assetUrl)
+		pp := strings.Split(repoPath, "/")
+		assetName := fmt.Sprintf("lib%s-%s.a", libName, platform)
+		data, err := fetchGitHubAsset(pp[0], pp[1], version, assetName)
 		if err != nil {
-			return errors.Trace(err)
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("got %d status code when accessed %s", resp.StatusCode, assetUrl)
-		}
-
-		// Fetched the asset successfully
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "failed to download %s", assetName)
 		}
 
 		if err := os.MkdirAll(filepath.Dir(tgt), 0755); err != nil {
@@ -311,7 +362,7 @@ func (m *SWModule) getLocalGitRepoDir(libsDir, defaultVersion string) (string, e
 	if m.GetType() != SWModuleTypeGit {
 		return "", errors.Errorf("%q is not a Git lib", m.Location)
 	}
-	repoName, _, _, _, err := parseGitLocation(m.Location)
+	_, repoName, _, _, _, err := parseGitLocation(m.Location)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -325,7 +376,7 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		_, _, _, pathWithinRepo, _ := parseGitLocation(m.Location)
+		_, _, _, _, pathWithinRepo, _ := parseGitLocation(m.Location)
 		return filepath.Join(localRepoPath, pathWithinRepo), nil
 
 	case SWModuleTypeLocal:
@@ -371,7 +422,7 @@ func (m *SWModule) getName() (string, error) {
 
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		_, libName, _, _, err := parseGitLocation(m.Location)
+		_, _, libName, _, _, err := parseGitLocation(m.Location)
 		return libName, err
 	case SWModuleTypeLocal:
 		_, name := filepath.Split(m.Location)
@@ -639,7 +690,7 @@ func prepareLocalCopyGitLocked(
 			return errors.Trace(err)
 		}
 
-		if fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
+		if pullInterval != 0 && fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
 			freportf(logWriter, "%s: Pulling...", name)
 			err = gitinst.Pull(targetDir)
 			if err != nil {
@@ -651,7 +702,7 @@ func prepareLocalCopyGitLocked(
 				return errors.Trace(err)
 			}
 		} else {
-			glog.V(2).Infof("Repository %q is recent enough, not updating", targetDir)
+			glog.Infof("Repository %q is recent enough, not updating", targetDir)
 		}
 	} else {
 		glog.V(2).Infof("requested version %q is not a branch, skip pulling.", version)

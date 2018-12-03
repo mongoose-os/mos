@@ -19,6 +19,7 @@ var (
 	platform    = flag.String("platform", "", "Hardware platform")
 	SrcDir      = flag.String("src-dir", "", "")
 	Compress    = flag.Bool("compress", false, "")
+	GHToken     = flag.String("gh-token", "", "")
 )
 
 func Platform() string {
