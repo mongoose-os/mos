@@ -3,6 +3,7 @@ package create_fw_bundle
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -69,8 +70,13 @@ func CreateFWBundle(ctx context.Context, devConn *dev.DevConn) error {
 				if err != nil {
 					return errors.Annotatef(err, "%s", ps)
 				}
-				for _, hp := range hpp {
+				for ihp, hp := range hpp {
 					p1 := *p
+					if len(hpp) == 1 {
+						p1.Src = strings.Replace(p.Src, ".hex", ".bin", 1)
+					} else {
+						p1.Src = fmt.Sprintf("%s.%d.bin", strings.Replace(p.Src, ".hex", "", 1), ihp)
+					}
 					p1.Addr = hp.Addr
 					p1.Name = hp.Name
 					p1.Size = hp.Size
