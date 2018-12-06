@@ -232,7 +232,10 @@ func (c *serialCodec) Read(buf []byte) (read int, err error) {
 func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written int, err error) {
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
-	c.setHandsShaken(false)
+	if c.opts.SendChunkDelay != 0 {
+		// If user wants faster transfers, save time on handshake after initial one.
+		c.setHandsShaken(false)
+	}
 	hs := []byte(streamFrameDelimiter1 + string(eofChar) + streamFrameDelimiter1 + streamFrameDelimiter2 + streamFrameDelimiter2)
 	for !c.areHandsShaken() {
 		// Disable SW FC while handshake is taking place.
