@@ -162,6 +162,7 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 	data := make([]byte, *ChunkSizeFlag)
 	appendFlag := false
 
+	offset := 0
 	attempts := fsOpAttempts
 	for {
 		// Read the next chunk from the file.
@@ -171,12 +172,18 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 				ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 				defer cancel()
 				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
-				err := devConn.CFilesystem.Put(ctx2, &fwfs.PutArgs{
-					Filename: &devFilename,
-					Data:     lptr.String(base64.StdEncoding.EncodeToString(data[:n])),
-					Append:   lptr.Bool(appendFlag),
-				})
-				if err != nil {
+				putArgs := &struct {
+					Filename string `json:"filename"`
+					Offset   int    `json:"offset"`
+					Append   bool   `json:"append"`
+					Data     string `json:"data"`
+				}{
+					Filename: devFilename,
+					Offset:   offset,
+					Append:   appendFlag,
+					Data:     base64.StdEncoding.EncodeToString(data[:n]),
+				}
+				if _, err := dev.CallDeviceService(ctx2, devConn, "FS.Put", putArgs); err != nil {
 					attempts -= 1
 					if attempts > 0 {
 						glog.Warningf("Error: %s", err)
@@ -200,6 +207,7 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 
 		// All subsequent writes to this file will append the chunk.
 		appendFlag = true
+		offset += n
 	}
 
 	return nil
