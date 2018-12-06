@@ -14,15 +14,14 @@ import (
 	"cesanta.com/common/go/ourutil"
 	fwfs "cesanta.com/fw/defs/fs"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
 var (
-	fsOpAttempts  = 3
-	longFormat    = flag.BoolP("long", "l", false, "Long output format.")
-	ChunkSizeFlag = flag.Int("chunk-size", 512, "Chunk size for operations")
+	longFormat = flag.BoolP("long", "l", false, "Long output format.")
 )
 
 func listFiles(ctx context.Context, devConn *dev.DevConn, path string) (res []fwfs.ListExtResult, err error) {
@@ -74,16 +73,16 @@ func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 	contents := []byte{}
 	var offset int64
 
-	attempts := fsOpAttempts
+	attempts := *flags.FsOpAttempts
 	for {
 		// Get the next chunk of data
 		ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 		defer cancel()
-		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, ChunkSizeFlag, offset, attempts)
+		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, flags.ChunkSize, offset, attempts)
 		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfs.GetArgs{
 			Filename: &name,
 			Offset:   lptr.Int64(offset),
-			Len:      lptr.Int64(int64(*ChunkSizeFlag)),
+			Len:      lptr.Int64(int64(*flags.ChunkSize)),
 		})
 		if err != nil {
 			attempts -= 1
@@ -95,7 +94,7 @@ func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 			// smaller chunk size
 			return "", errors.Trace(err)
 		}
-		attempts = fsOpAttempts
+		attempts = *flags.FsOpAttempts
 
 		decoded, err := base64.StdEncoding.DecodeString(*chunk.Data)
 		if err != nil {
@@ -159,11 +158,11 @@ func PutFile(ctx context.Context, devConn *dev.DevConn, hostFilename, devFilenam
 }
 
 func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename string) error {
-	data := make([]byte, *ChunkSizeFlag)
+	data := make([]byte, *flags.ChunkSize)
 	appendFlag := false
 
 	offset := 0
-	attempts := fsOpAttempts
+	attempts := *flags.FsOpAttempts
 	for {
 		// Read the next chunk from the file.
 		n, readErr := r.Read(data)
@@ -171,7 +170,7 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 			for attempts > 0 {
 				ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 				defer cancel()
-				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
+				glog.V(1).Infof("Sending %s %d @ %d (attempts %d)", devFilename, n, offset, attempts)
 				putArgs := &struct {
 					Filename string `json:"filename"`
 					Offset   int    `json:"offset"`
@@ -195,7 +194,7 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 				}
 			}
 		}
-		attempts = fsOpAttempts
+		attempts = *flags.FsOpAttempts
 		if readErr != nil {
 			if errors.Cause(readErr) == io.EOF {
 				// Reached EOF, quit the loop normally.

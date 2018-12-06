@@ -9,7 +9,7 @@ import (
 
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/dev"
-	"cesanta.com/mos/fs" // For ChunkSizeFlag
+	"cesanta.com/mos/flags"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -79,7 +79,7 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 
 	ourutil.Reportf("Writing data...")
 	fwFile := bytes.NewBuffer(fwFileData)
-	data := make([]byte, *fs.ChunkSizeFlag)
+	data := make([]byte, *flags.ChunkSize)
 	total := int64(0)
 	lastReport := time.Now()
 	for {
