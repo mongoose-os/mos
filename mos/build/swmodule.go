@@ -246,7 +246,7 @@ func (m *SWModule) PrepareLocalDir(
 	return localPath, nil
 }
 
-func fetchGitHubAsset(owner, repo, tag, assetName string) ([]byte, error) {
+func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
 	relMetaURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", relMetaURL, nil)
@@ -258,33 +258,43 @@ func fetchGitHubAsset(owner, repo, tag, assetName string) ([]byte, error) {
 		return nil, errors.Annotatef(err, "failed to fetch %s", relMetaURL)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
-	}
-	relMetaData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	glog.V(4).Infof("%s/%s/%s/%s: Release metadata: %s", owner, repo, tag, assetName, string(relMetaData))
-	var relMeta struct {
-		ID     int `json:"id"`
-		Assets []*struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		}
-	}
-	if err = json.Unmarshal(relMetaData, &relMeta); err != nil {
-		return nil, errors.Annotatef(err, "failed to parse GitHub release info")
-	}
 	assetURL := ""
-	for _, a := range relMeta.Assets {
-		if a.Name == assetName {
-			assetURL = a.URL
-			break
+	if resp.StatusCode == http.StatusOK {
+		relMetaData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, errors.Trace(err)
 		}
-	}
-	if assetURL == "" {
-		return nil, errors.Errorf("%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
+		glog.V(4).Infof("%s/%s/%s/%s: Release metadata: %s", owner, repo, tag, assetName, string(relMetaData))
+		var relMeta struct {
+			ID     int `json:"id"`
+			Assets []*struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			}
+		}
+		if err = json.Unmarshal(relMetaData, &relMeta); err != nil {
+			return nil, errors.Annotatef(err, "failed to parse GitHub release info")
+		}
+		for _, a := range relMeta.Assets {
+			if a.Name == assetName {
+				assetURL = a.URL
+				break
+			}
+		}
+		if assetURL == "" {
+			return nil, errors.Errorf("%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
+		}
+	} else {
+		// It's been observed that GH API access is not always available.
+		// In particular, accessing it from TravisCI seems to be banned (getting 403).
+		// At the same time, fetching assets works fine, so here, if the URL seems like a public one,
+		// we fall back to fetching the asset via its public URL.
+		if strings.HasPrefix(loc, "https://") {
+			glog.Errorf("got %d status code when fetching %s, trying public URL", resp.StatusCode, relMetaURL)
+			assetURL = fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", owner, repo, tag, assetName)
+		} else {
+			return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
+		}
 	}
 	glog.Infof("%s/%s/%s/%s: Asset URL: %s", owner, repo, tag, assetName, assetURL)
 	ourutil.Reportf("Fetching %s from %s...", assetName, assetURL)
@@ -323,7 +333,7 @@ func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) err
 		}
 		pp := strings.Split(repoPath, "/")
 		assetName := fmt.Sprintf("lib%s-%s.a", libName, platform)
-		data, err := fetchGitHubAsset(pp[0], pp[1], version, assetName)
+		data, err := fetchGitHubAsset(m.Location, pp[0], pp[1], version, assetName)
 		if err != nil {
 			return errors.Annotatef(err, "failed to download %s", assetName)
 		}
