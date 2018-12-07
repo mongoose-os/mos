@@ -214,7 +214,7 @@ func CallDeviceService(ctx context.Context, devConn *DevConn, method string, arg
 		}
 		argsJSON = string(b)
 	} else {
-		if !isJSON(argsJSON) {
+		if argsJSON != "" && !isJSON(argsJSON) {
 			return "", errors.Errorf("Args [%s] is not a valid JSON string", args)
 		}
 	}
