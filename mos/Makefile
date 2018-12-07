@@ -23,7 +23,7 @@ version/version.go version/version.json:
 	@[ -f ../debian/changelog ] && { \
 	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > pkg.version; \
 	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > pkg.build_id; \
-	}
+	} || true
 	../common/tools/fw_meta.py gen_build_info \
 		--version=`[ -f pkg.version ] && cat pkg.version` \
 		--id=`[ -f pkg.build_id ] && cat pkg.build_id` \
