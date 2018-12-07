@@ -21,12 +21,12 @@ version/version.go version/version.json:
 	@# mos-latest (201708051141+e90a9bf~xenial0) xenial; urgency=low
 	@# The part before "+" becomes version, entire string is used as build id.
 	@[ -f ../debian/changelog ] && { \
-	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > debian.version; \
-	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > debian.build_id; \
-	} || rm -f debian.version debian.build_id
+	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > pkg.version; \
+	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > pkg.build_id; \
+	}
 	../common/tools/fw_meta.py gen_build_info \
-		--version=`[ -f debian.version ] && cat debian.version` \
-		--id=`[ -f debian.build_id ] && cat debian.build_id` \
+		--version=`[ -f pkg.version ] && cat pkg.version` \
+		--id=`[ -f pkg.build_id ] && cat pkg.build_id` \
 		--tag_as_version=true \
 		--go_output=version/version.go \
 		--json_output=version/version.json
