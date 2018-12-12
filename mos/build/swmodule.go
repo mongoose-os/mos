@@ -310,7 +310,7 @@ func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
 	}
 	defer resp2.Body.Close()
 	if resp2.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got %d status code when fetching %s", resp.StatusCode, assetURL)
+		return nil, errors.Errorf("got %d status code when fetching %s", resp2.StatusCode, assetURL)
 	}
 	// Fetched the asset successfully
 	data, err := ioutil.ReadAll(resp2.Body)
