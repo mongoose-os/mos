@@ -24,6 +24,7 @@ var (
 	modulesDirFlag = ""
 
 	StateFilepath = ""
+	AuthFilepath  = ""
 )
 
 func init() {
@@ -33,6 +34,7 @@ func init() {
 	flag.StringVar(&modulesDirFlag, "modules-dir", "", "Directory to store modules into")
 
 	flag.StringVar(&StateFilepath, "state-file", "~/.mos/state.json", "Where to store internal mos state")
+	flag.StringVar(&AuthFilepath, "auth-file", "~/.mos/auth.json", "Where to store license server auth key")
 }
 
 // Init() should be called after all flags are parsed
@@ -59,6 +61,11 @@ func Init() error {
 	}
 
 	StateFilepath, err = NormalizePath(StateFilepath, version.GetMosVersion())
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	AuthFilepath, err = NormalizePath(AuthFilepath, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}

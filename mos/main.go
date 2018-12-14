@@ -28,6 +28,7 @@ import (
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/fs"
 	"cesanta.com/mos/gcp"
+	license "cesanta.com/mos/license_cmd"
 	"cesanta.com/mos/ota"
 	"cesanta.com/mos/update"
 	"cesanta.com/mos/version"
@@ -117,6 +118,7 @@ func init() {
 		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true, false},
 		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, true, false},
 		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false, false},
+		{"license", license.License, `License device`, nil, []string{"port"}, true, false},
 		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true, false},
 		{"help", showHelp, `Show help. Add --full to show advanced commands`, nil, nil, false, false},
 		{"version", showVersion, `Show version`, nil, nil, false, false},
