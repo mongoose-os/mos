@@ -34,8 +34,7 @@ import (
 )
 
 const (
-	rsaCACert = "data/ca-verisign-g5.crt.pem"
-	ecCACert  = "data/ca-verisign-ecc-g2.crt.pem"
+	rsaCACert = "data/starfield.crt.pem"
 
 	awsIoTPolicyNone        = "-"
 	AWSIoTPolicyMOS         = "mos-default"
@@ -66,7 +65,6 @@ func init() {
 
 	// Make sure we have our certs compiled in.
 	MustAsset(rsaCACert)
-	MustAsset(ecCACert)
 }
 
 func getSvc() (*iot.IoT, error) {
@@ -422,7 +420,10 @@ func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 
 	if awsMQTTServer == "" {
 		// Get the value of mqtt.server from aws
-		de, err := iotSvc.DescribeEndpoint(&iot.DescribeEndpointInput{})
+		atsEPT := "iot:Data-ATS"
+		de, err := iotSvc.DescribeEndpoint(&iot.DescribeEndpointInput{
+			EndpointType: &atsEPT,
+		})
 		if err != nil {
 			return errors.Annotatef(err, "aws iot describe-endpoint failed!")
 		}
