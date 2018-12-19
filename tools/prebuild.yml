@@ -118,14 +118,6 @@
   variants:
     - name: esp8266
       platform: esp8266
-    - name: esp8266-1M
-      platform: esp8266
-      build_vars:
-        BOARD: esp8266-1M
-    - name: esp8266-2M
-      platform: esp8266
-      build_vars:
-        BOARD: esp8266-2M
     - name: esp32
       platform: esp32
     - name: cc3220
