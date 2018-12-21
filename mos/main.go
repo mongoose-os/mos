@@ -26,6 +26,7 @@ import (
 	"cesanta.com/mos/create_fw_bundle"
 	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/devutil"
 	"cesanta.com/mos/fs"
 	"cesanta.com/mos/gcp"
 	license "cesanta.com/mos/license_cmd"
@@ -55,17 +56,12 @@ var (
 	devicePass = flag.String("device-pass", "", "Device pass/key")
 	dryRun     = flag.Bool("dry-run", true, "Do not apply changes, print what would be done")
 	firmware   = flag.String("firmware", moscommon.GetFirmwareZipFilePath(moscommon.GetBuildDir("")), "Firmware .zip file location (file of HTTP URL)")
-	portFlag   = flag.String("port", "auto", "Serial port where the device is connected. "+
-		"If set to 'auto', ports on the system will be enumerated and the first will be used.")
-	timeout   = flag.Duration("timeout", 20*time.Second, "Timeout for the device connection and call operation")
-	reconnect = flag.Bool("reconnect", false, "Enable reconnection")
-	force     = flag.Bool("force", false, "Use the force")
-	verbose   = flag.Bool("verbose", false, "Verbose output")
-	chdir     = flag.StringP("chdir", "C", "", "Change into this directory first")
-	xFlag     = flag.BoolP("enable-extended", "X", false, "Deprecated. Enable extended commands")
+	force      = flag.Bool("force", false, "Use the force")
+	verbose    = flag.Bool("verbose", false, "Verbose output")
+	chdir      = flag.StringP("chdir", "C", "", "Change into this directory first")
+	xFlag      = flag.BoolP("enable-extended", "X", false, "Deprecated. Enable extended commands")
 
-	invertedControlLines = flag.Bool("inverted-control-lines", false, "DTR and RTS control lines use inverted polarity")
-	helpFull             = flag.Bool("full", false, "Show full help, including advanced flags")
+	helpFull = flag.Bool("full", false, "Show full help, including advanced flags")
 
 	isUI = false
 )
@@ -118,7 +114,7 @@ func init() {
 		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true, false},
 		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, true, false},
 		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false, false},
-		{"license", license.License, `License device`, nil, []string{"port"}, true, false},
+		{"license", license.License, `License device`, nil, []string{"port"}, false, false},
 		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true, false},
 		{"help", showHelp, `Show help. Add --full to show advanced commands`, nil, nil, false, false},
 		{"version", showVersion, `Show version`, nil, nil, false, false},
@@ -155,7 +151,7 @@ func showVersion(ctx context.Context, devConn *dev.DevConn) error {
 }
 
 func showPorts(ctx context.Context, devConn *dev.DevConn) error {
-	fmt.Printf("%s\n", strings.Join(enumerateSerialPorts(), "\n"))
+	fmt.Printf("%s\n", strings.Join(devutil.EnumerateSerialPorts(), "\n"))
 	return nil
 }
 
@@ -257,7 +253,7 @@ func main() {
 	}
 	if cmd != nil && cmd.needDevConn {
 		var err error
-		devConn, err = createDevConn(ctx)
+		devConn, err = devutil.CreateDevConnFromFlags(ctx)
 		if err != nil {
 			fmt.Println(errors.Trace(err))
 			os.Exit(1)

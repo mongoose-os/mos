@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
 
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
@@ -46,9 +47,9 @@ func call(ctx context.Context, devConn *dev.DevConn) error {
 		params = args[1]
 	}
 
-	if *timeout > 0 {
+	if *flags.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, *timeout)
+		ctx, cancel = context.WithTimeout(ctx, *flags.Timeout)
 		defer cancel()
 	}
 

@@ -1,9 +1,9 @@
 // +build !windows
 
-package main
+package devutil
 
 func getDefaultPort() string {
-	ports := enumerateSerialPorts()
+	ports := EnumerateSerialPorts()
 	if len(ports) == 0 {
 		return ""
 	}

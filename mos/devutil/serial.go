@@ -1,21 +1,24 @@
-package main
+package devutil
 
 import (
 	"github.com/cesanta/errors"
+
+	"cesanta.com/common/go/ourutil"
+	"cesanta.com/mos/flags"
 )
 
 var defaultPort string
 
-func getPort() (string, error) {
-	if *portFlag != "auto" {
-		return *portFlag, nil
+func GetPort() (string, error) {
+	if *flags.Port != "auto" {
+		return *flags.Port, nil
 	}
 	if defaultPort == "" {
 		defaultPort = getDefaultPort()
 		if defaultPort == "" {
 			return "", errors.Errorf("--port not specified and none were found")
 		}
-		reportf("Using port %s", defaultPort)
+		ourutil.Reportf("Using port %s", defaultPort)
 	}
 	return defaultPort, nil
 }

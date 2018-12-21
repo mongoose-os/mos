@@ -20,6 +20,8 @@ import (
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/mos/debug_core_dump"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/devutil"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/timestamp"
 
 	"github.com/cesanta/errors"
@@ -42,11 +44,8 @@ var (
 )
 
 func init() {
-	flag.UintVar(&baudRateFlag, "baud-rate", 115200, "Serial port speed")
 	flag.BoolVar(&noInput, "no-input", false,
 		"Do not read from stdin, only print device's output to stdout")
-	flag.BoolVar(&hwFCFlag, "hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
-	flag.BoolVar(&setControlLines, "set-control-lines", true, "Set RTS and DTR explicitly when in console/RPC mode")
 	flag.BoolVar(&catchCoreDumps, "catch-core-dumps", true, "Catch and save core dumps")
 
 	flag.StringVar(&tsfSpec, "timestamp", "StampMilli",
@@ -149,15 +148,15 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 	var r io.Reader
 	var w io.Writer
 
-	purl, err := url.Parse(*portFlag)
+	purl, err := url.Parse(*flags.Port)
 	switch {
 	case err == nil && (purl.Scheme == "mqtt" || purl.Scheme == "mqtts"):
 		chr := &chanReader{rch: make(chan []byte)}
-		opts, topic, err := codec.MQTTClientOptsFromURL(*portFlag, "", "", "")
+		opts, topic, err := codec.MQTTClientOptsFromURL(*flags.Port, "", "", "")
 		if err != nil {
 			return errors.Errorf("invalid MQTT port URL format")
 		}
-		tlsConfig, err := tlsConfigFromFlags()
+		tlsConfig, err := flags.TLSConfigFromFlags()
 		if err != nil {
 			return errors.Annotatef(err, "inavlid TLS config")
 		}
@@ -212,7 +211,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 	case err == nil && (purl.Scheme == "ws" || purl.Scheme == "wss"):
 		// Connect to mDash and activate event forwarding.
 		chr := &chanReader{rch: make(chan []byte)}
-		devConn, err = createDevConn(ctx)
+		devConn, err = devutil.CreateDevConnFromFlags(ctx)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -247,15 +246,15 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 
 	default:
 		// Everything else is treated as a serial port.
-		port, err := getPort()
+		port, err := devutil.GetPort()
 		if err != nil {
 			return errors.Trace(err)
 		}
 
 		sp, err := serial.Open(serial.OpenOptions{
 			PortName:            port,
-			BaudRate:            baudRateFlag,
-			HardwareFlowControl: hwFCFlag,
+			BaudRate:            uint(*flags.BaudRate),
+			HardwareFlowControl: *flags.HWFC,
 			DataBits:            8,
 			ParityMode:          serial.PARITY_NONE,
 			StopBits:            1,
@@ -264,8 +263,8 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		if err != nil {
 			return errors.Annotatef(err, "failed to open %s", port)
 		}
-		if setControlLines || *invertedControlLines {
-			bFalse := *invertedControlLines
+		if *flags.SetControlLines || *flags.InvertedControlLines {
+			bFalse := *flags.InvertedControlLines
 			sp.SetDTR(bFalse)
 			sp.SetRTS(bFalse)
 		}

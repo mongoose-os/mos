@@ -19,6 +19,8 @@ import (
 
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/devutil"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
@@ -170,12 +172,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 				numActiveMosCommands--
 			}
 			if numActiveMosCommands == 0 {
-				if *portFlag == "" {
+				if *flags.Port == "" {
 					cancel = nil
 				} else {
 					var ctx2 context.Context
 					ctx2, cancel = context.WithCancel(ctx)
-					cmd := exec.CommandContext(ctx2, fullMosPath, "console", "--port", *portFlag)
+					cmd := exec.CommandContext(ctx2, fullMosPath, "console", "--port", *flags.Port)
 					w := wsWriter{}
 					cmd.Stdout = &w
 					cmd.Stderr = &w
@@ -186,7 +188,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}()
 
-	if *portFlag != "" {
+	if *flags.Port != "" {
 		lockChan <- 0 // Start mos console if port is set
 	}
 
@@ -217,7 +219,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			PortFlag string
 			Ports    []string
 		}
-		reply := GetPortsResult{*portFlag, enumerateSerialPorts()}
+		reply := GetPortsResult{*flags.Port, devutil.EnumerateSerialPorts()}
 		httpReply(w, reply, nil)
 	})
 
@@ -230,8 +232,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/serial", func(w http.ResponseWriter, r *http.Request) {
 		port := r.FormValue("port")
-		if port != *portFlag {
-			*portFlag = port
+		if port != *flags.Port {
+			*flags.Port = port
 			lockChan <- 0 // let console goroutine know the port has changed
 		}
 		httpReply(w, true, nil)
@@ -262,12 +264,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 			// Release port if mos command wants to grab it
 			if cmd.name == "flash" || cmd.needDevConn {
-				if *portFlag == "" {
+				if *flags.Port == "" {
 					httpReply(w, true, fmt.Errorf("Port not chosen"))
 					return
 				}
 				args = append(args, "--port")
-				args = append(args, *portFlag)
+				args = append(args, *flags.Port)
 				lockChan <- 1
 				defer func() {
 					lockChan <- -1
@@ -300,7 +302,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		initialised := false
 		prevList := ""
 		for {
-			ports := enumerateSerialPorts()
+			ports := devutil.EnumerateSerialPorts()
 			sort.Strings(ports)
 			list := strings.Join(ports, ",")
 			if initialised && list != prevList {

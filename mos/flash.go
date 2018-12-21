@@ -14,6 +14,8 @@ import (
 	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/devutil"
+	"cesanta.com/mos/flags"
 	"cesanta.com/mos/flash/cc3200"
 	"cesanta.com/mos/flash/cc3220"
 	"cesanta.com/mos/flash/esp"
@@ -137,13 +139,13 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 
 	port := ""
 	if fw.Platform != "stm32" {
-		port, err = getPort()
+		port, err = devutil.GetPort()
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
 
-	espFlashOpts.InvertedControlLines = *invertedControlLines
+	espFlashOpts.InvertedControlLines = *flags.InvertedControlLines
 
 	switch strings.ToLower(fw.Platform) {
 	case "cc3200":
@@ -161,11 +163,11 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	case "stm32":
 		// Ideally we'd like to find mounted directory corresponding to the selected port.
 		// But for now, we'll just find mountpoints that sort of look like STLink...
-		port = *portFlag
+		port = *flags.Port
 		if port == "auto" || (strings.HasPrefix(port, "/dev/") || strings.HasPrefix(port, "COM")) {
 			port, err = stm32.GetSTLinkMountForPort(port)
 			if err != nil {
-				glog.Infof("Did not find port corresponding to %s: %s", *portFlag, err)
+				glog.Infof("Did not find port corresponding to %s: %s", *flags.Port, err)
 				mm, err := stm32.GetSTLinkMounts()
 				if err != nil {
 					return errors.Trace(err)
@@ -175,7 +177,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 				}
 				port = mm[0]
 			} else {
-				glog.Infof("%s -> %s", *portFlag, port)
+				glog.Infof("%s -> %s", *flags.Port, port)
 			}
 		}
 		stm32FlashOpts.ShareName = port

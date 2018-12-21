@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/devutil"
 	"cesanta.com/mos/flags"
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
@@ -46,7 +47,7 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("invalid arguments")
 	}
 
-	port, err := getPort()
+	port, err := devutil.GetPort()
 	if err != nil {
 		return errors.Trace(err)
 	}

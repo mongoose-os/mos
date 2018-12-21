@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/devutil"
 	"cesanta.com/mos/flash/esp"
 	"cesanta.com/mos/flash/esp/rom_client"
 	"cesanta.com/mos/flash/esp32"
@@ -29,7 +30,7 @@ func getRRW() (esp.RegReaderWriter, error) {
 		return esp32.NewFakeFuseController(), nil
 	}
 
-	port, err := getPort()
+	port, err := devutil.GetPort()
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
