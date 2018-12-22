@@ -16,11 +16,6 @@ import "C"
 
 import (
 	"os"
-	"sort"
-	"strconv"
-	"strings"
-
-	"golang.org/x/sys/windows/registry"
 
 	zwebview "github.com/zserge/webview"
 )

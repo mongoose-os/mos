@@ -2,6 +2,7 @@ package devutil
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/sys/windows/registry"
@@ -52,7 +53,7 @@ func (a byCOMNumber) Less(i, j int) bool {
 }
 
 func getDefaultPort() string {
-	ports := enumerateSerialPorts()
+	ports := EnumerateSerialPorts()
 	var filteredPorts []string
 	for _, p := range ports {
 		// COM1 and COM2 are commonly mapped to on-board serial ports which are usually not a good guess.
