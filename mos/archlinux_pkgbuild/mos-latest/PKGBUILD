@@ -9,9 +9,7 @@ depends=('libftdi-compat' 'libusb')
 makedepends=(
     'go'
     'git'
-    'python2'
-    'python2-gitpython'
-    'python2-six'
+    'python'
     'jshon'
 )
 conflicts=('mos')
@@ -22,9 +20,6 @@ md5sums=('SKIP')
 
 prepare() {
     cd "$srcdir/mos-tool"
-    sed -i 's,/usr/bin/env python$,/usr/bin/env python2,g' \
-            "common/tools/fw_meta.py"
-
     mkdir -p "$srcdir/go/src"
     test -d "$srcdir/go/src/cesanta.com" && rm -rf "$srcdir/go/src/cesanta.com"
     mv "$srcdir/mos-tool" "$srcdir/go/src/cesanta.com"
