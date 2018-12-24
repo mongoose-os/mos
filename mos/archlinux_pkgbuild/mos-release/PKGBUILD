@@ -1,4 +1,4 @@
-MOS_TAG=2.8.0
+MOS_TAG=2.10.0
 
 pkgname=mos
 pkgver=${MOS_TAG}
@@ -12,9 +12,7 @@ makedepends=(
     'go'
     'git'
     'python2'
-    'python2-gitpython'
     'python2-six'
-    'govendor'
     'jshon'
 )
 conflicts=('mos-latest')
@@ -36,18 +34,10 @@ prepare() {
 build() {
     export GOPATH="$srcdir/go"
     export PATH="$srcdir/go/bin:$PATH"
-
-    cd "$srcdir/go/src/cesanta.com"
-    govendor sync
-
-    cd mos
-    make generate
-    local build_id=$(jshon -F version/version.json -e build_id -u)
-    local hash=$(echo ${build_id} | cut -d '@' -f 2)
-    echo "${MOS_TAG}+${hash}~makepkg" > version/build_id
-    echo ${MOS_TAG} > version/version
-    go generate ./...
-    go build -v -i
+    cd "$srcdir/go/src/cesanta.com/mos"
+    go get -u github.com/kardianos/govendor
+    govendor sync -v
+    make build
 }
 
 package() {
