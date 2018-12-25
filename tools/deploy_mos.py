@@ -22,6 +22,8 @@ import os
 import pty
 import re
 import time
+import select
+import shutil
 import subprocess
 import sys
 
@@ -44,39 +46,47 @@ def RunSubprocess(cmd, communicator=None, quiet=False):
 
     print("Running subprocess: %s" % " ".join(cmd))
 
-  #-- run mdb as a child process, and pipe its stdin / stdout / stderr.
+    #-- run cmd as a child process, and pipe its stdin / stdout / stderr.
     proc = subprocess.Popen(
             cmd,
             stdin=slave_fd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
 
-    line = b""
-
+    out, out_line = b"", b""
+    err_line = b""
     while not quiet:
-        #-- get next byte from mdb's stdout
-        byte = proc.stdout.read(1)
+        #-- get next byte from stdout
+        ready, _, _ = select.select([proc.stdout, proc.stderr], [], [proc.stdout, proc.stderr])
 
-        if byte != b"":
-
-            line += byte
-
-            if byte == b"\n":
-                sys.stdout.write("[out] " + line.decode("utf-8"))
-                line = b""
-
-            if communicator != None:
-                communicator(line, master_fd)
-
-        else:
-            sys.stdout.write("Child process exited\n")
-            break
+        if proc.stdout in ready:
+            byte = os.read(proc.stdout.fileno(), 1)
+            if byte != b"":
+                out += byte
+                out_line += byte
+                if byte == b"\n":
+                    sys.stdout.write("[out] " + out_line.decode("utf-8"))
+                    out_line = b""
+                if communicator != None:
+                    communicator(out_line, master_fd)
+            else:
+                sys.stdout.write("Child process exited\n")
+                break
+        if proc.stderr in ready:
+            byte = os.read(proc.stderr.fileno(), 1)
+            if byte != b"":
+                err_line += byte
+                if byte == b"\n":
+                    sys.stdout.write("[err] " + err_line.decode("utf-8"))
+                    err_line = b""
 
     proc.wait()
     if proc.returncode != 0:
         print("returncode: %d" % proc.returncode)
         print("stderr: %s" % proc.stderr.read())
         raise Exception("non-zero return code")
+
+    return out
 
 
 def UploaderComm(line, tty):
@@ -119,9 +129,13 @@ if __name__ == "__main__":
     RunSubprocess(["docker", "run", "--rm", "hello-world"], quiet=True)
     print("Ok, Docker works")
 
+    # Check ssh access to site. If agent is used, this will unlock the key.
+    print("Checking SSH access to the site...")
+    RunSubprocess(["ssh", "core@mongoose-os.com", "echo", "Ok"])
+
     # Request the user for the passphrase
     passphrase = getpass.getpass("Passphrase for the key in %s: " % GPG_KEY_PATH)
-    print("Checking passphrase...")
+    print("Checking GPG signing key passphrase...")
     RunSubprocess([
         "docker", "run", "-it", "--rm",
         "-v", "%s:/root/.gnupg" % GPG_KEY_PATH,
@@ -147,23 +161,39 @@ if __name__ == "__main__":
 
         RunSubprocess(["git", "checkout", tag_effective])
 
+    print("Pulling the necessary images...")
     RunSubprocess(["make", "-C", "tools/docker/golang", "pull-all"])
 
     if platform == "mac":
-        print("Deploying Mac binary...")
+        print("Deploying binaries...")
         RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
         print("Updating Homebrew...")
         repo = git.Repo(".")
         head_commit = repo.head.commit
+        formula = ("mos" if myargs.release_tag != "" else "mos-latest")
         v = json.load(open(os.path.expanduser("~/tmp/mos_gopath/src/cesanta.com/mos/version/version.json"), "r"))
-        RunSubprocess([
+        hb_cmd = [
             "tools/update_hb.py",
             "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
-            "--formula=%s" % ("mos" if myargs.release_tag != "" else "mos-latest"),
+            "--formula=%s" % formula,
             "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
             "--version=%s" % v["build_version"],
-            "--push",
+            "--commit", "--push",
+        ]
+        RunSubprocess(hb_cmd)
+        print("Building a bottle...")
+        # We've just updated the formula.
+        RunSubprocess(["brew", "update"])
+        RunSubprocess(["brew", "uninstall", "-f", "mos", "mos-latest"])
+        RunSubprocess(["brew", "install", "--build-from-source", "--build-bottle", formula])
+        out = RunSubprocess(["brew", "bottle", formula]).decode("utf-8")
+        ll = [l for l in out.splitlines() if not l.startswith("==")]
+        bottle_fname = ll[0]
+        hb_cmd.extend([
+            "--bottle=%s" % bottle_fname,
+            "--bottle-upload-dest=core@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
         ])
+        RunSubprocess(hb_cmd)
 
     RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
 
