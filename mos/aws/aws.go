@@ -435,7 +435,7 @@ func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	if useATCA {
 		// ATECC508A makes ECDSA much faster than RSA, use it as first preference.
 		settings["mqtt.ssl_cipher_suites"] =
-			"TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256,TLS-RSA-WITH-AES-128-GCM-SHA256"
+			"TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:TLS-RSA-WITH-AES-128-GCM-SHA256"
 	}
 
 	// MQTT requires device.id to be set.
