@@ -19,19 +19,31 @@ import (
 	"github.com/cesanta/errors"
 )
 
+type LicenseServerAccess struct {
+	Server string `json:"server,omitempty"`
+	Token  string `json:"token,omitempty"`
+}
+
 type AuthFile struct {
-	LicenseServerAccessToken string `json:"license_server_access_token"`
+	LicenseServerAccess []*LicenseServerAccess `json:"license_server_access,omitempty"`
 }
 
-func readToken() string {
-	auth := AuthFile{}
-	data, _ := ioutil.ReadFile(paths.AuthFilepath)
-	json.Unmarshal(data, &auth)
-	return auth.LicenseServerAccessToken
+func readToken(server string) string {
+	var auth AuthFile
+	data, err := ioutil.ReadFile(paths.AuthFilepath)
+	if err == nil {
+		json.Unmarshal(data, &auth)
+	}
+	for _, s := range auth.LicenseServerAccess {
+		if s.Server == server {
+			return s.Token
+		}
+	}
+	return ""
 }
 
-func prompt() string {
-	fmt.Printf("  1. Please login to %s\n", *flags.LicenseServer)
+func promptToken(server string) string {
+	fmt.Printf("  1. Please login to %s\n", server)
 	fmt.Println("  2. Click on 'Key' in the top menu")
 	fmt.Println("  3. Copy the access key to the clipboard")
 	fmt.Println("  4. Paste the access key below and press enter")
@@ -41,10 +53,26 @@ func prompt() string {
 	return scanner.Text()
 }
 
-func saveToken() {
-	token := prompt()
-	auth := AuthFile{LicenseServerAccessToken: token}
-	data, _ := json.MarshalIndent(auth, "", "  ")
+func saveToken(server, token string) {
+	var auth AuthFile
+	data, err := ioutil.ReadFile(paths.AuthFilepath)
+	if err == nil {
+		json.Unmarshal(data, &auth)
+	}
+	updated := false
+	for _, s := range auth.LicenseServerAccess {
+		if s.Server == server {
+			s.Token = token
+			updated = true
+		}
+	}
+	if !updated {
+		auth.LicenseServerAccess = append(auth.LicenseServerAccess, &LicenseServerAccess{
+			Server: server,
+			Token:  token,
+		})
+	}
+	data, _ = json.MarshalIndent(auth, "", "  ")
 	ioutil.WriteFile(paths.AuthFilepath, data, 0600)
 }
 
@@ -61,13 +89,15 @@ type licenseResponse struct {
 
 func License(ctx context.Context, devConn *dev.DevConn) error {
 	var err error
-	token := readToken()
+	server := *flags.LicenseServer
+	token := readToken(server)
+	shouldSaveToken := false
 	if token == "" {
-		saveToken()
-		token = readToken()
+		token = promptToken(server)
 		if token == "" {
-			return errors.New("Cannot save access token")
+			return errors.New("Failed to obtain access token")
 		}
+		shouldSaveToken = true
 	}
 	lreq := licenseRequest{
 		Type:     *flags.PID,
@@ -99,10 +129,10 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 		lreq.App = res.App
 	}
 
-	ourutil.Reportf("Requesting license from %s...", *flags.LicenseServer)
+	ourutil.Reportf("Requesting license from %s...", server)
 
 	postData, _ := json.Marshal(&lreq)
-	url := fmt.Sprintf("%s/api/v1/license", *flags.LicenseServer)
+	url := fmt.Sprintf("%s/api/v1/license", server)
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(postData))
 	req.Header.Add("Content-Type", "application/json")
@@ -119,6 +149,9 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("Error obtaining license: %s", lresp.Message)
 	}
 	ourutil.Reportf("License: %s", lresp.Text)
+	if shouldSaveToken {
+		saveToken(server, token)
+	}
 	if devConn == nil {
 		return nil
 	}
