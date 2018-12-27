@@ -77,9 +77,17 @@ type command struct {
 	short       string
 	required    []string
 	optional    []string
-	needDevConn bool
+	needDevConn YesNoMaybe
 	extended    bool
 }
+
+type YesNoMaybe float32
+
+const (
+	Yes   YesNoMaybe = 1.0
+	Maybe            = 0.5
+	No               = 0.0
+)
 
 type handler func(ctx context.Context, devConn *dev.DevConn) error
 
@@ -93,47 +101,47 @@ func unimplemented() error {
 
 func init() {
 	commands = []command{
-		{"ui", startUI, `Start GUI`, nil, nil, false, false},
-		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "platform", "local", "repo", "clean", "server"}, false, false},
-		{"clone", clone.Clone, `Clone a repo`, nil, []string{}, false, false},
-		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false, false},
-		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, false, false},
-		{"console", console, `Simple serial port console`, nil, []string{"port"}, false, false}, //TODO: needDevConn
-		{"ls", fs.Ls, `List files at the local device's filesystem`, nil, []string{"port"}, true, false},
-		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true, false},
-		{"put", fs.Put, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true, false},
-		{"rm", fs.Rm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true, false},
-		{"ota", ota.OTA, `Perform an OTA update on a device`, nil, []string{"port"}, true, false},
-		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, true, false},
-		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, true, false},
-		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true, false},
-		{"create-fw-bundle", create_fw_bundle.CreateFWBundle, `Create or modify a firmware ZIP bundle from disparate parts.`, nil, nil, false, false},
-		{"debug-core-dump", debug_core_dump.DebugCoreDump, `Debug a core dump`, nil, nil, false, false},
-		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true, false},
-		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, true, false},
-		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, true, false},
-		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, true, false},
-		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false, false},
-		{"license", license.License, `License device`, nil, nil, false, false},
-		{"license-save-key", license.SaveKey, `Save license server key`, nil, nil, false, false},
-		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true, false},
-		{"help", showHelp, `Show help. Add --full to show advanced commands`, nil, nil, false, false},
-		{"version", showVersion, `Show version`, nil, nil, false, false},
+		{"ui", startUI, `Start GUI`, nil, nil, No, false},
+		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "platform", "local", "repo", "clean", "server"}, No, false},
+		{"clone", clone.Clone, `Clone a repo`, nil, []string{}, No, false},
+		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, Maybe, false},
+		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, No, false},
+		{"console", console, `Simple serial port console`, nil, []string{"port"}, No, false}, //TODO: needDevConn
+		{"ls", fs.Ls, `List files at the local device's filesystem`, nil, []string{"port"}, Yes, false},
+		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, Yes, false},
+		{"put", fs.Put, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, Yes, false},
+		{"rm", fs.Rm, `Delete a file from the device's filesystem`, nil, []string{"port"}, Yes, false},
+		{"ota", ota.OTA, `Perform an OTA update on a device`, nil, []string{"port"}, Yes, false},
+		{"config-get", config.Get, `Get config value from the locally attached device`, nil, []string{"port"}, Yes, false},
+		{"config-set", config.Set, `Set config value at the locally attached device`, nil, []string{"port"}, Yes, false},
+		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, Yes, false},
+		{"create-fw-bundle", create_fw_bundle.CreateFWBundle, `Create or modify a firmware ZIP bundle from disparate parts.`, nil, nil, No, false},
+		{"debug-core-dump", debug_core_dump.DebugCoreDump, `Debug a core dump`, nil, nil, No, false},
+		{"aws-iot-setup", aws.AWSIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, Yes, false},
+		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, Yes, false},
+		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, Yes, false},
+		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, Yes, false},
+		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, No, false},
+		{"license", license.License, `License device`, nil, nil, Maybe, false},
+		{"license-save-key", license.SaveKey, `Save license server key`, nil, nil, No, false},
+		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, Yes, false},
+		{"help", showHelp, `Show help. Add --full to show advanced commands`, nil, nil, No, false},
+		{"version", showVersion, `Show version`, nil, nil, No, false},
 
 		// extended commands
-		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, nil, []string{"format", "port"}, true, true},
-		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, nil, []string{"format", "dry-run", "port"}, true, true},
-		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, nil, []string{"dry-run", "port"}, true, true},
-		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, true, true},
-		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, true, true},
-		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, true, true},
-		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, false, true},
-		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, false, true},
-		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false, true},
-		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, false, true},
-		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, false, true},
-		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, false, true},
-		{"ports", showPorts, `Show serial ports`, nil, nil, false, false},
+		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, nil, []string{"format", "port"}, Yes, true},
+		{"atca-set-config", atcaSetConfig, `Set ATCA chip config`, nil, []string{"format", "dry-run", "port"}, Yes, true},
+		{"atca-lock-zone", atcaLockZone, `Lock config or data zone`, nil, []string{"dry-run", "port"}, Yes, true},
+		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, Yes, true},
+		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, Yes, true},
+		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, Yes, true},
+		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, No, true},
+		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, No, true},
+		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, No, true},
+		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, No, true},
+		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, No, true},
+		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, No, true},
+		{"ports", showPorts, `Show serial ports`, nil, nil, No, true},
 	}
 }
 
@@ -252,7 +260,7 @@ func main() {
 	if !isUI {
 		cmd = getCommand(flag.Arg(0))
 	}
-	if cmd != nil && cmd.needDevConn {
+	if cmd != nil && cmd.needDevConn == Yes {
 		var err error
 		devConn, err = devutil.CreateDevConnFromFlags(ctx)
 		if err != nil {

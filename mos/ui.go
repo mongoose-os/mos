@@ -263,7 +263,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			}
 
 			// Release port if mos command wants to grab it
-			if cmd.name == "flash" || cmd.needDevConn {
+			if cmd.needDevConn != No {
 				if *flags.Port == "" {
 					httpReply(w, true, fmt.Errorf("Port not chosen"))
 					return
