@@ -24,6 +24,7 @@ type licenseRequest struct {
 
 type licenseResponse struct {
 	Text    string `json:"text"`
+	Left    int    `json:"left"`
 	Message string `json:"message"`
 }
 
@@ -87,7 +88,7 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 	if lresp.Text == "" {
 		return errors.Errorf("Error obtaining license: %s", lresp.Message)
 	}
-	ourutil.Reportf("License: %s", lresp.Text)
+	ourutil.Reportf("License: %s (%d left)", lresp.Text, lresp.Left)
 	if devConn == nil {
 		return nil
 	}
