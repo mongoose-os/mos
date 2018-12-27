@@ -14,6 +14,7 @@ import (
 	"cesanta.com/mos/devutil"
 	"cesanta.com/mos/flags"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 )
 
 type licenseRequest struct {
@@ -83,6 +84,7 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	defer resp.Body.Close()
 	rs, _ := ioutil.ReadAll(resp.Body)
+	glog.V(1).Infof("Server response: %s", string(rs))
 	var lresp licenseResponse
 	json.Unmarshal(rs, &lresp)
 	if lresp.Text == "" {
