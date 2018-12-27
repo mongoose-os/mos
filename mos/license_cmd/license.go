@@ -1,80 +1,20 @@
 package license
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/config"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/devutil"
 	"cesanta.com/mos/flags"
 	"github.com/cesanta/errors"
 )
-
-type LicenseServerAccess struct {
-	Server string `json:"server,omitempty"`
-	Token  string `json:"token,omitempty"`
-}
-
-type AuthFile struct {
-	LicenseServerAccess []*LicenseServerAccess `json:"license_server_access,omitempty"`
-}
-
-func readToken(server string) string {
-	var auth AuthFile
-	data, err := ioutil.ReadFile(paths.AuthFilepath)
-	if err == nil {
-		json.Unmarshal(data, &auth)
-	}
-	for _, s := range auth.LicenseServerAccess {
-		if s.Server == server {
-			return s.Token
-		}
-	}
-	return ""
-}
-
-func promptToken(server string) string {
-	fmt.Printf("  1. Please login to %s\n", server)
-	fmt.Println("  2. Click on 'Key' in the top menu")
-	fmt.Println("  3. Copy the access key to the clipboard")
-	fmt.Println("  4. Paste the access key below and press enter")
-	fmt.Print("Access key: ")
-	scanner := bufio.NewScanner(bufio.NewReader(os.Stdin))
-	scanner.Scan()
-	return scanner.Text()
-}
-
-func saveToken(server, token string) {
-	var auth AuthFile
-	data, err := ioutil.ReadFile(paths.AuthFilepath)
-	if err == nil {
-		json.Unmarshal(data, &auth)
-	}
-	updated := false
-	for _, s := range auth.LicenseServerAccess {
-		if s.Server == server {
-			s.Token = token
-			updated = true
-		}
-	}
-	if !updated {
-		auth.LicenseServerAccess = append(auth.LicenseServerAccess, &LicenseServerAccess{
-			Server: server,
-			Token:  token,
-		})
-	}
-	data, _ = json.MarshalIndent(auth, "", "  ")
-	ioutil.WriteFile(paths.AuthFilepath, data, 0600)
-}
 
 type licenseRequest struct {
 	Type     string `json:"type"`
@@ -90,14 +30,13 @@ type licenseResponse struct {
 func License(ctx context.Context, devConn *dev.DevConn) error {
 	var err error
 	server := *flags.LicenseServer
-	token := readToken(server)
-	shouldSaveToken := false
-	if token == "" {
-		token = promptToken(server)
-		if token == "" {
-			return errors.New("Failed to obtain access token")
-		}
-		shouldSaveToken = true
+	key := *flags.LicenseServerKey
+	if key == "" {
+		key = readKey(server)
+	}
+	if key == "" {
+		promptKey(server)
+		return errors.New("Failed to obtain access key")
 	}
 	lreq := licenseRequest{
 		Type:     *flags.PID,
@@ -136,7 +75,7 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(postData))
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", key))
 	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Annotatef(err, "HTTP request failed %s", url)
@@ -149,9 +88,6 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("Error obtaining license: %s", lresp.Message)
 	}
 	ourutil.Reportf("License: %s", lresp.Text)
-	if shouldSaveToken {
-		saveToken(server, token)
-	}
 	if devConn == nil {
 		return nil
 	}

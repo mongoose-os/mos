@@ -40,7 +40,9 @@ var (
 	Timeout        = flag.Duration("timeout", 20*time.Second, "Timeout for the device connection and call operation")
 	Reconnect      = flag.Bool("reconnect", false, "Enable reconnection")
 	HWFC           = flag.Bool("hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
-	LicenseServer  = flag.String("license-server", "https://license.mongoose-os.com", "License server address")
+
+	LicenseServer    = flag.String("license-server", "https://license.mongoose-os.com", "License server address")
+	LicenseServerKey = flag.String("license-server-key", "", "License server key")
 
 	InvertedControlLines = flag.Bool("inverted-control-lines", false, "DTR and RTS control lines use inverted polarity")
 	SetControlLines      = flag.Bool("set-control-lines", true, "Set RTS and DTR explicitly when in console/RPC mode")
