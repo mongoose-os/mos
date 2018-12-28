@@ -75,8 +75,6 @@ var (
 
 const (
 	projectDir = "."
-
-	localLibsDir = "local_libs"
 )
 
 type buildParams struct {
@@ -158,7 +156,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 
 	// Request server version in parallel
 	serverVersionCh := make(chan *version.VersionJson, 1)
-	if !*local {
+	if true || !*local {
 		go func() {
 			v, err := update.GetServerMosVersion(update.GetUpdateChannel())
 			if err != nil {

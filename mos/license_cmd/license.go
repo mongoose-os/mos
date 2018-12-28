@@ -13,6 +13,7 @@ import (
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/devutil"
 	"cesanta.com/mos/flags"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -78,6 +79,7 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(postData))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", key))
+	req.Header.Add("User-Agent", version.GetUserAgent())
 	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Annotatef(err, "HTTP request failed %s", url)

@@ -4,7 +4,9 @@ package version
 // to avoid update during "blanket" go generate runs
 
 import (
+	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -80,4 +82,8 @@ func GetUbuntuUpdateChannel(buildId string) string {
 		}
 	}
 	return ""
+}
+
+func GetUserAgent() string {
+	return fmt.Sprintf("mos/%s %s (%s; %s)", Version, BuildId, runtime.GOOS, runtime.GOARCH)
 }

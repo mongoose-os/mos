@@ -3,19 +3,18 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"cesanta.com/common/go/ourfilepath"
 	"cesanta.com/common/go/ourio"
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
 	moscommon "cesanta.com/mos/common"
@@ -28,6 +27,11 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	depsDir      = "deps"
+	localLibsDir = "local_libs"
+)
+
 func buildRemote(bParams *buildParams) error {
 	appDir, err := getCodeDirAbs()
 	if err != nil {
@@ -38,27 +42,52 @@ func buildRemote(bParams *buildParams) error {
 
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
-	tmpCodeDir, err := ioutil.TempDir(paths.TmpDir, "tmp_mos_src_")
+	appStagingDir, err := ioutil.TempDir(paths.TmpDir, "tmp_mos_src_")
 	if err != nil {
 		return errors.Trace(err)
 	}
 	if !*keepTempFiles {
-		defer os.RemoveAll(tmpCodeDir)
+		defer os.RemoveAll(appStagingDir)
+	}
+	if *verbose {
+		ourutil.Reportf("Using %s as staging dir", appStagingDir)
 	}
 
 	// Since we're going to copy sources to the temp dir, make sure that nobody
 	// else can read them
-	if err := os.Chmod(tmpCodeDir, 0700); err != nil {
+	if err := os.Chmod(appStagingDir, 0700); err != nil {
 		return errors.Trace(err)
 	}
 
-	if err := ourio.CopyDir(appDir, tmpCodeDir, nil); err != nil {
+	if err := ourio.CopyDir(appDir, appStagingDir, []string{"build", ".git"}); err != nil {
 		return errors.Trace(err)
 	}
+
+	// Copy CustomLibLocations and CustomModuleLocations to deps
+	for n, libDir := range bParams.CustomLibLocations {
+		libDirStaging := filepath.Join(appStagingDir, depsDir, n)
+		if *verbose {
+			ourutil.Reportf("Copying %s", libDir)
+		}
+		if err := ourio.CopyDir(libDir, libDirStaging, []string{".git"}); err != nil {
+			return errors.Annotatef(err, "failed to copy lib %s", n)
+		}
+	}
+	bParams.CustomLibLocations = nil
+	for n, moduleDir := range bParams.CustomModuleLocations {
+		moduleDirStaging := filepath.Join(appStagingDir, depsDir, "modules", n)
+		if *verbose {
+			ourutil.Reportf("Copying %s", moduleDir)
+		}
+		if err := ourio.CopyDir(moduleDir, moduleDirStaging, []string{".git"}); err != nil {
+			return errors.Annotatef(err, "failed to copy module %s", n)
+		}
+	}
+	bParams.CustomModuleLocations = nil
 
 	interp := interpreter.NewInterpreter(newMosVars())
 
-	manifest, _, err := manifest_parser.ReadManifest(tmpCodeDir, &bParams.ManifestAdjustments, interp)
+	manifest, _, err := manifest_parser.ReadManifest(appStagingDir, &bParams.ManifestAdjustments, interp)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -87,20 +116,20 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Errorf("invalid project type: %q", manifest.Type)
 	}
 
-	// Copy all external code (which is outside of the appDir) under tmpCodeDir {{{
-	if err := copyExternalCodeAll(&manifest.Sources, appDir, tmpCodeDir); err != nil {
+	// Copy all external code (which is outside of the appDir) under appStagingDir {{{
+	if err := copyExternalCodeAll(&manifest.Sources, appDir, appStagingDir); err != nil {
 		return errors.Trace(err)
 	}
 
-	if err := copyExternalCodeAll(&manifest.Includes, appDir, tmpCodeDir); err != nil {
+	if err := copyExternalCodeAll(&manifest.Includes, appDir, appStagingDir); err != nil {
 		return errors.Trace(err)
 	}
 
-	if err := copyExternalCodeAll(&manifest.Filesystem, appDir, tmpCodeDir); err != nil {
+	if err := copyExternalCodeAll(&manifest.Filesystem, appDir, appStagingDir); err != nil {
 		return errors.Trace(err)
 	}
 
-	if err := copyExternalCodeAll(&manifest.BinaryLibs, appDir, tmpCodeDir); err != nil {
+	if err := copyExternalCodeAll(&manifest.BinaryLibs, appDir, appStagingDir); err != nil {
 		return errors.Trace(err)
 	}
 	// }}}
@@ -127,7 +156,7 @@ func buildRemote(bParams *buildParams) error {
 	}
 
 	err = ioutil.WriteFile(
-		moscommon.GetManifestFilePath(tmpCodeDir),
+		moscommon.GetManifestFilePath(appStagingDir),
 		manifestData,
 		0644,
 	)
@@ -139,6 +168,7 @@ func buildRemote(bParams *buildParams) error {
 	whitelist := map[string]bool{
 		moscommon.GetManifestFilePath(""): true,
 		localLibsDir:                      true,
+		depsDir:                           true,
 		".":                               true,
 	}
 	for _, v := range manifest.Sources {
@@ -160,13 +190,10 @@ func buildRemote(bParams *buildParams) error {
 	transformers := make(map[string]fileTransformer)
 
 	// create a zip out of the code dir
-	os.Chdir(tmpCodeDir)
+	os.Chdir(appStagingDir)
 	src, err := zipUp(".", whitelist, transformers)
 	if err != nil {
 		return errors.Trace(err)
-	}
-	if glog.V(2) {
-		glog.V(2).Infof("zip:", hex.Dump(src))
 	}
 	os.Chdir(appDir)
 
@@ -244,6 +271,7 @@ func buildRemote(bParams *buildParams) error {
 	freportf(logWriterStderr, "Uploading sources (%d bytes)", len(body.Bytes()))
 	req, err := http.NewRequest("POST", uri, body)
 	req.Header.Set("Content-Type", mpw.FormDataContentType())
+	req.Header.Add("User-Agent", version.GetUserAgent())
 	req.SetBasicAuth(buildUser, buildPass)
 
 	client := &http.Client{}
@@ -289,11 +317,11 @@ func buildRemote(bParams *buildParams) error {
 }
 
 // copyExternalCode checks whether given path p is outside of appDir, and if
-// so, copies its contents as a new directory under tmpCodeDir, and returns
+// so, copies its contents as a new directory under appStagingDir, and returns
 // its name. If nothing was copied, returns an empty string.
-func copyExternalCode(p, appDir, tmpCodeDir string) (string, error) {
+func copyExternalCode(p, appDir, appStagingDir string) (string, error) {
 	// Ensure we have relative path curPathRel which should start with ".." if
-	// it's outside of the tmpCodeDir
+	// it's outside of the appStagingDir
 	curPathAbs := p
 	if !filepath.IsAbs(curPathAbs) {
 		curPathAbs = filepath.Join(appDir, curPathAbs)
@@ -307,8 +335,8 @@ func copyExternalCode(p, appDir, tmpCodeDir string) (string, error) {
 	}
 
 	if len(curPathRel) > 0 && curPathRel[0] == '.' {
-		// The path is outside of tmpCodeDir, so we should copy its contents
-		// under tmpCodeDir
+		// The path is outside of appStagingDir, so we should copy its contents
+		// under appStagingDir
 
 		// The path could end with a glob, so we need to get existing and
 		// non-existing parts of the path
@@ -326,7 +354,7 @@ func copyExternalCode(p, appDir, tmpCodeDir string) (string, error) {
 		// full path with all separators replaced with "_".
 		curTmpPathRel := strings.Replace(actualPart, string(filepath.Separator), "_", -1)
 
-		curTmpPathAbs := filepath.Join(tmpCodeDir, curTmpPathRel)
+		curTmpPathAbs := filepath.Join(appStagingDir, curTmpPathRel)
 		if err := os.MkdirAll(curTmpPathAbs, 0755); err != nil {
 			return "", errors.Trace(err)
 		}
@@ -347,9 +375,9 @@ func copyExternalCode(p, appDir, tmpCodeDir string) (string, error) {
 
 // copyExternalCodeAll calls copyExternalCode for each element of the paths
 // slice, and for each affected path updates the item in the slice.
-func copyExternalCodeAll(paths *[]string, appDir, tmpCodeDir string) error {
+func copyExternalCodeAll(paths *[]string, appDir, appStagingDir string) error {
 	for i, curPath := range *paths {
-		newPath, err := copyExternalCode(curPath, appDir, tmpCodeDir)
+		newPath, err := copyExternalCode(curPath, appDir, appStagingDir)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -395,9 +423,11 @@ func zipUp(
 			return nil
 		}
 
-		glog.Infof("zipping %s", file)
+		if *verbose {
+			ourutil.Reportf("Zipping %s", file)
+		}
 
-		w, err := z.Create(path.Join("src", fileForwardSlash))
+		w, err := z.Create(fileForwardSlash)
 		if err != nil {
 			return errors.Trace(err)
 		}

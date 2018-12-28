@@ -31,11 +31,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"cesanta.com/common/go/docker"
-	"cesanta.com/common/go/ourgit"
 	"cesanta.com/common/go/ourglob"
 	"cesanta.com/common/go/ourio"
 	fwbuildcommon "cesanta.com/fwbuild/common"
@@ -65,12 +63,8 @@ var (
 )
 
 const (
-	payloadLimit   = 2 * 1024 * 1024
-	mongooseOsName = "mongoose-os"
-	mongooseOsSrc  = "https://github.com/cesanta/mongoose-os"
+	payloadLimit = 2 * 1024 * 1024
 
-	libsName     = "libs"
-	modulesName  = "modules"
 	appsRootName = "apps"
 
 	updateSharedReposInterval = time.Minute * 30
@@ -236,40 +230,18 @@ func saveBuildCtxInfo(src string) error {
 // The dir hierarchy looks as follows:
 //
 //    *volumesDir
-//    ├── mongoose-os    <-- shared repository, pulled once in a while
-//    │   └── ... mongoose-os-repo-files
 //    └── apps
 //        └── app_name
 //            └── arch_name
 //                └── build_contexts
 //                    ├── build_ctx_xxxxxxxx
-//                    │   ├── src
-//                    │   ├── modules
-//                    │   │   ├── mongoose-os <-- private clone, references the shared one
-//                    │   │   │   ... all the rest of the modules are
-//                    │   │   │       managed only by mos
-//                    │   │   ├── module_foo
-//                    │   │   └── module_bar
-//                    │   ├── libs
-//                    │   │   │   ... all libs are managed only by mos
-//                    │   │   ├── lib_foo
-//                    │   │   └── lib_bar
+//                    │   ├── deps
+//                    │   │   └── ... managed by mos
 //                    │   ├── mos.yml
+//                    │   ├── src
 //                    │   └── ...other source files...
-//                    └── build_ctx_yyyyyyyy
-//                        ├── src
-//                        ├── modules
-//                        │   ├── mongoose-os <-- private clone, references the shared one
-//                        │   │   ... all the rest of the modules are
-//                        │   │       managed only by mos
-//                        │   ├── module_foo
-//                        │   └── module_bar
-//                        ├── libs
-//                        │   │   ... all libs are managed only by mos
-//                        │   ├── lib_foo
-//                        │   └── lib_bar
-//                        ├── mos.yml
-//                        └── ...other source files...
+//                    ├── build_ctx_yyyyyyyy
+//                    └── ...contexts...
 //
 // The build_ctx_xxxxx dir is created for each "build context". Build context
 // just contains uploaded source files, context metadata (see BuildCtxInfo),
@@ -352,7 +324,7 @@ func buildFirmware() error {
 
 	// unzip sources
 	bytesReader := bytes.NewReader(sources)
-	if err := archive.UnzipInto(bytesReader, bytesReader.Size(), tmpCodeDir, 1); err != nil {
+	if err := archive.UnzipInto(bytesReader, bytesReader.Size(), tmpCodeDir, 0); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -461,82 +433,11 @@ func buildFirmware() error {
 		return errors.Trace(err)
 	}
 
-	codeModulesDir := filepath.Join(codeDir, modulesName)
-	if err := os.MkdirAll(codeModulesDir, 0755); err != nil {
-		return errors.Trace(err)
-	}
-
-	codeLibsDir := filepath.Join(codeDir, libsName)
-	if err := os.MkdirAll(codeLibsDir, 0755); err != nil {
-		return errors.Trace(err)
-	}
-
 	// Temp directory for mos
 	codeTmpDir := filepath.Join(codeDir, "tmp")
 	if err := os.MkdirAll(codeTmpDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
-
-	sharedMongooseOsPath := filepath.Join(*volumesDir, mongooseOsName)
-	fInfo, err := os.Stat(sharedMongooseOsPath)
-	if err != nil && !os.IsNotExist(err) {
-		return errors.Trace(err)
-	}
-
-	if err != nil || fInfo.ModTime().Add(updateSharedReposInterval).Before(time.Now()) {
-		// Prepare shared mongoose-os repo
-		if err := prepareSharedRepo(
-			mongooseOsSrc, sharedMongooseOsPath,
-		); err != nil {
-			return errors.Trace(err)
-		}
-	} else {
-		glog.Infof("Repository %q is updated recently enough, don't touch it", sharedMongooseOsPath)
-	}
-
-	allReposData := &allReposData{
-		ppaths: map[string]struct{}{},
-	}
-
-	// Clone mongoose-os repo for that build, referencing our shared clone
-	buildMgosRepoRoot := filepath.Join(codeModulesDir, mongooseOsName)
-
-	if err := allReposData.AddRepo(mongooseOsSrc, sharedMongooseOsPath, buildMgosRepoRoot); err != nil {
-		return errors.Trace(err)
-	}
-
-	// Prepare all private repos, in parallel {{{
-	{
-		errsCh := make(chan error)
-		var wg sync.WaitGroup
-
-		for _, repo := range allReposData.repos {
-			wg.Add(1)
-			go func(repo repoData) {
-				defer wg.Done()
-
-				if _, err := os.Stat(repo.privatePath); err != nil {
-					if err := preparePrivateRepo(repo.origin, repo.privatePath, repo.sharedPath); err != nil {
-						errsCh <- errors.Trace(err)
-					}
-				}
-
-			}(repo)
-		}
-
-		// closer
-		go func() {
-			wg.Wait()
-			close(errsCh)
-		}()
-
-		// Wait until all goroutines are done, and fail if there is at least one
-		// error
-		for err := range errsCh {
-			return errors.Trace(err)
-		}
-	}
-	// }}}
 
 	// Write out build params
 	buildParams := reqPar.FormValue(moscommon.FormBuildParamsName)
@@ -572,15 +473,11 @@ func buildFirmware() error {
 		docker.Bind(appRoot, appRoot, "rw"),
 		// We also need to bind the shared mongoose-os repo, because the one
 		// in the build directory references it. We mount it in read-only mode.
-		docker.Bind(sharedMongooseOsPath, sharedMongooseOsPath, "ro"),
-		docker.WorkDir(codeDir),
 		docker.Cmd([]string{
-			"build", "--local", "--verbose",
+			"build", "-C", codeDir, "--local", "--verbose",
 			"--migrate=false",
 			"--save-build-stat=false",
 			fmt.Sprintf("--build-params=%s", bpFile),
-			"--modules-dir", codeModulesDir,
-			"--libs-dir", codeLibsDir,
 			"--temp-dir", codeTmpDir,
 			fmt.Sprintf("--prefer-prebuilt-libs=%v", preferPrebuildLibs),
 		}),
@@ -658,28 +555,6 @@ func sendData(w http.ResponseWriter, status int, data []byte) error {
 	return nil
 }
 
-type repoData struct {
-	origin      string
-	sharedPath  string
-	privatePath string
-}
-
-type allReposData struct {
-	repos  []repoData
-	ppaths map[string]struct{}
-}
-
-func (d *allReposData) AddRepo(origin, sharedPath, privatePath string) error {
-	d.repos = append(d.repos, repoData{
-		origin:      origin,
-		sharedPath:  sharedPath,
-		privatePath: privatePath,
-	})
-	d.ppaths[privatePath] = struct{}{}
-
-	return nil
-}
-
 func usage() {
 	fmt.Printf("Fwbuilder. Usage: %s [flags] <action>\n", os.Args[0])
 	fmt.Printf("Action can be: %q\n", "build")
@@ -720,90 +595,6 @@ func main() {
 func isBuildVarAllowed(name string) bool {
 	return strings.HasPrefix(name, "MG_ENABLE_") ||
 		strings.HasPrefix(name, "APP_")
-}
-
-// prepareSharedRepo ensures the repo in targetDir exists, and is pulled
-// not more than updateSharedReposInterval ago. If some change is needed
-// (clone or pull), then it acquires the lock for the corresponding path
-// (see locks.getFlockByPath()).
-func prepareSharedRepo(srcURL, targetDir string) error {
-	gitinst := ourgit.NewOurGitShell()
-
-	fl := locks.getFlockByPath(targetDir)
-	fl.Lock()
-	defer fl.Unlock()
-
-	fInfo, err := os.Stat(targetDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Local clone does not yet exist
-
-			tmpTargetDir := targetDir + "_"
-
-			// If temp target dir already exists, remove it
-			// (sometimes it happens that it exists. TODO(dfrank) figure out why)
-			os.RemoveAll(tmpTargetDir)
-
-			// We clone in a temporary dir, and then rename it: it is needed to
-			// ensure that some subsequent build won't see recently updated dir and
-			// assume that the repo is ready to use
-			glog.Infof("Cloning %q to a shared location %q", srcURL, targetDir)
-			if err := gitinst.Clone(srcURL, tmpTargetDir, ourgit.CloneOptions{}); err != nil {
-				return errors.Trace(err)
-			}
-
-			if err := os.Rename(tmpTargetDir, targetDir); err != nil {
-				return errors.Trace(err)
-			}
-
-		} else {
-			return errors.Trace(err)
-		}
-	} else {
-		// Clone already exists, so, let's see if we should pull it
-
-		if fInfo.ModTime().Add(updateSharedReposInterval).Before(time.Now()) {
-			glog.Infof("Pulling %q", targetDir)
-			if err := gitinst.Pull(targetDir); err != nil {
-				glog.Warningf("Pulling %q has FAILED, deleting and cloning a fresh copy", targetDir)
-				// Pulling git repo failed; sometimes the repository gets corrupted
-				// for yet unknown reason, so as a workaround, we delete the repo
-				// and then call this function again, so it'll make a fresh clone
-				if err := os.RemoveAll(targetDir); err != nil {
-					return errors.Trace(err)
-				}
-				prepareSharedRepo(srcURL, targetDir)
-			}
-
-			// Update modification time
-			if err := os.Chtimes(targetDir, time.Now(), time.Now()); err != nil {
-				return errors.Trace(err)
-			}
-		} else {
-			glog.Infof("Repository %q is updated recently enough, don't touch it", targetDir)
-		}
-	}
-	return nil
-}
-
-func preparePrivateRepo(srcURL, targetDir, sharedDir string) error {
-	gitinst := ourgit.NewOurGitShell()
-
-	glog.Infof("Cloning %q to a private location %q (referencing shared %q)",
-		srcURL, targetDir, sharedDir,
-	)
-	if err := gitinst.Clone(srcURL, targetDir, ourgit.CloneOptions{
-		ReferenceDir: sharedDir,
-	}); err != nil {
-		return errors.Trace(err)
-	}
-
-	// Update modification time to now, so that mos won't pull it
-	if err := os.Chtimes(targetDir, time.Now(), time.Now()); err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
 }
 
 // locksStruct is needed to maintain mutexes on a per-path basis; see

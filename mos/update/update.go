@@ -57,8 +57,11 @@ func getMosURL(p, mosVersion string) string {
 // mosVersion can be either exact mos version like "1.6", or update channel
 // like "latest" or "release".
 func GetServerMosVersion(mosVersion string) (*version.VersionJson, error) {
+	client := &http.Client{}
 	versionUrl := getMosURL("version.json", mosVersion)
-	resp, err := http.Get(versionUrl)
+	req, err := http.NewRequest("GET", versionUrl, nil)
+	req.Header.Add("User-Agent", version.GetUserAgent())
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

@@ -154,7 +154,7 @@ func showHelp(ctx context.Context, devConn *dev.DevConn) error {
 func showVersion(ctx context.Context, devConn *dev.DevConn) error {
 	fmt.Printf(
 		"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
-		"The Mongoose OS command line tool", version.GetMosVersion(), version.BuildId, update.GetUpdateChannel(),
+		"The Mongoose OS command line tool", version.Version, version.BuildId, update.GetUpdateChannel(),
 	)
 	return nil
 }

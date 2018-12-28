@@ -170,12 +170,14 @@ entriesLoop:
 				err = errors.Trace(err)
 				return
 			}
-		} else {
+		} else if entry.Mode().IsRegular() {
 			err = CopyFile(srcPath, dstPath)
 			if err != nil {
 				err = errors.Trace(err)
 				return
 			}
+		} else {
+			glog.Errorf("%s: unsupported entry type, skipped", filepath.Join(src, entry.Name()))
 		}
 	}
 

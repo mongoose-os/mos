@@ -36,8 +36,10 @@ func unzipFileInto(file *zip.File, dir string, skipLevels int) error {
 
 	// zip files have always forward slashes
 	cs := strings.Split(file.Name, "/")
-	if len(cs) < skipLevels+1 {
-		return errors.Errorf("path contains more elements than what we skip levels")
+	if len(cs) <= skipLevels {
+		return errors.Errorf(
+			"path %q contains fewer elements than what skip levels (%d)",
+			file.Name, skipLevels)
 	}
 
 	filePath := filepath.Join(dir, filepath.Join(cs[skipLevels:]...))
