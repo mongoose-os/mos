@@ -43,25 +43,13 @@ args = parser.parse_args()
 
 TOKEN = "file:%s" % args.token_filepath
 
-def call_users_api(
-        org, users_url, params = {}, method = "GET", json_data = None, subdomain = "api",
-        data = None, headers = {}, decode_json = True
-        ):
-    return github_api.call_users_api(token=TOKEN, **locals())
-
-def call_releases_api(
-        repo_name, releases_url, params = {}, method = "GET", json_data = None, subdomain = "api",
-        data = None, headers = {}, decode_json = True
-        ):
-    return github_api.call_releases_api(token=TOKEN, **locals())
-
 
 def get_repos(org):
     repos = []
     page = 1
     while True:
         # Get repos on the current "page"
-        r, ok = call_users_api(org, "/repos", params={"page": page})
+        r, ok = github_api.CallUsersAPI(org, "/repos", params={"page": page})
 
         if len(r) == 0:
             # No more repos, we're done
@@ -120,10 +108,10 @@ def del_repo_tag(repo_name, tag):
 
 
 def del_release(repo_name, tag):
-    r, ok = call_releases_api(repo_name, releases_url = "/tags/%s" % tag)
+    r, ok = github_api.CallReleasesAPI(repo_name, releases_url = "/tags/%s" % tag)
     if ok:
         print("%s: Deleting existing %s release %d" % (repo_name, tag, r["id"]))
-        r, ok = call_releases_api(
+        r, ok = github_api.CallReleasesAPI(
             repo_name,
             releases_url = "/%d" % r["id"],
             method = "DELETE",
@@ -133,14 +121,14 @@ def del_release(repo_name, tag):
 # handle_repo {{{
 def handle_repo(repo_name, from_tag, to_tag):
     if not args.no_cleanup_drafts:
-        rr, ok = call_releases_api(repo_name, method="GET", releases_url="")
+        rr, ok = github_api.CallReleasesAPI(repo_name, method="GET", releases_url="")
         if not ok:
             raise Exception("Failed to list releases: %s" % r)
         for r in rr:
             if not r["draft"]:
                 continue
             print("%s: Cleaning up draft release %d (%s)" % (repo_name, r["id"], r["name"]))
-            call_releases_api(
+            github_api.CallReleasesAPI(
                 repo_name,
                 releases_url = "/%d" % r["id"],
                 method = "DELETE",
@@ -152,7 +140,7 @@ def handle_repo(repo_name, from_tag, to_tag):
     # Tag the repo (deletes existing tag, if any).
     make_repo_tag(repo_name, to_tag)
 
-    res, ok = call_releases_api(repo_name, "/tags/%s" % from_tag)
+    res, ok = github_api.CallReleasesAPI(repo_name, "/tags/%s" % from_tag)
     if not ok:
         print("%s: No %s release, not creating tagged" % (repo_name, from_tag))
         # No release - no problem.
@@ -160,7 +148,7 @@ def handle_repo(repo_name, from_tag, to_tag):
 
     # Create a release draft {{{
     print("%s: Creating a new draft of %s" % (repo_name, to_tag))
-    r, ok = call_releases_api(repo_name, method = "POST", releases_url = "", json_data = {
+    r, ok = github_api.CallReleasesAPI(repo_name, method = "POST", releases_url = "", json_data = {
         "tag_name": to_tag,
         "name": to_tag,
         "draft": True,
@@ -179,7 +167,7 @@ def handle_repo(repo_name, from_tag, to_tag):
         r = requests.get(asset_url, auth=(token, ""), headers={"Accept": "application/octet-stream"})
         if r.status_code == 200:
             print("%s: Uploading a new asset %s" % (repo_name, asset["name"]))
-            r, ok = call_releases_api(
+            r, ok = github_api.CallReleasesAPI(
                 repo_name,
                 method = "POST", subdomain = "uploads", data = r.content,
                 releases_url = "/%d/assets" % new_rel_id,
@@ -198,7 +186,7 @@ def handle_repo(repo_name, from_tag, to_tag):
 
     # Undraft the release {{{
     print("%s: Undraft the %s release" % (repo_name, to_tag))
-    r, ok = call_releases_api(repo_name, method = "PATCH", releases_url = "/%d" % new_rel_id, json_data = {
+    r, ok = github_api.CallReleasesAPI(repo_name, method = "PATCH", releases_url = "/%d" % new_rel_id, json_data = {
         "draft": False,
     })
     if not ok:

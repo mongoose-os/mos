@@ -58,15 +58,22 @@ def call_api(
 # }}}
 
 
-# call_releases_api: a wrapper for call_api which constructs the
+def CallRefsAPI(
+        repo_name, token, uri,
+        subdomain="api",
+        params={}, method="GET", json_data=None,
+        data=None, headers={}, decode_json=True):
+    url = 'https://%s.github.com/repos/%s/git/refs%s' % (subdomain, repo_name, uri)
+    return call_api(token, url, params=params, method=method, json_data=json_data, data=data, headers=headers, decode_json=decode_json)
+
+# CallReleasesAPI: a wrapper for call_api which constructs the
 # releases-related url.
 #
 # releases_url is an url part after "/repos/<repo_name>/releases".
 # Where repo_name consists of two parts: "org/repo".
-
 # releases_url should be either be empty or start with a slash.
 # The rest of the arguments are the same as call_api has.
-def call_releases_api(
+def CallReleasesAPI(
         repo_name, token, releases_url,
         subdomain = "api",
         params = {}, method = "GET", json_data = None,
@@ -75,7 +82,8 @@ def call_releases_api(
     url = 'https://%s.github.com/repos/%s/releases%s' % (subdomain, repo_name, releases_url)
     return call_api(token, url, params=params, method=method, json_data=json_data, data=data, headers=headers, decode_json=decode_json)
 
-def call_users_api(
+
+def CallUsersAPI(
         org, token, users_url, params = {}, method = "GET", json_data = None, subdomain = "api",
         data = None, headers = {}, decode_json = True
         ):

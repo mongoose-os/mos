@@ -49,99 +49,75 @@ import git
 # NB: only support building from master right now.
 
 
-g_cur_rel_id = None
-
-
 def RunCmd(cmd):
     logging.info("  %s", " ".join(cmd))
     subprocess.check_call(cmd)
 
 
-def CallReleasesAPI(
-        repo_name, token, releases_url, params={}, method="GET", json_data=None, subdomain="api",
-        data=None, headers={}, decode_json=True):
-    return github_api.call_releases_api(**locals())
-
-
-def DeleteRelease(repo, token, release_id):
-    logging.info("    Deleting release %d", release_id)
-    CallReleasesAPI(
-        repo, token,
-        method="DELETE",
-        releases_url=("/%d" % release_id),
-        decode_json=False)
-
-
 def CreateGitHubRelease(spec, tag, token, tmp_dir):
     logging.debug("GH release spec: %s", spec)
     repo = spec["repo"]
-    draft_rel_name = "%s_draft" % tag
 
-    logging.info("Creating a release draft for %s", repo)
-    r, ok = CallReleasesAPI(repo, token, "", method="POST", json_data={
-        "name": tag,
-        "draft": True,
-        "tag_name": draft_rel_name,
-        "target_commitish": "master",
-    })
-    if not ok:
-        logging.error("Failed to create a release draft: %s", r)
-        raise RuntimeError
-    new_rel_id = r["id"]
-    global g_cur_rel_id
-    g_cur_rel_id = new_rel_id
-    logging.debug("New release id: %d", new_rel_id)
+    logging.info("  Publishing release %s / %s", repo, tag)
+
+    # If tag already exists, make sure it points to master.
+    tag_ref, ok1 = github_api.CallRefsAPI(repo, token, ("/tags/%s" % tag))
+    master_ref, ok2 = github_api.CallRefsAPI(repo, token, "/heads/master")
+    if ok1 and ok2 and tag_ref["object"]["sha"] != master_ref["object"]["sha"]:
+        logging.info("    Updating tag %s (%s -> %s)",
+                tag, tag_ref["object"]["sha"], master_ref["object"]["sha"])
+        r, ok = github_api.CallRefsAPI(
+            repo, token, method="PATCH",
+            uri=("/tags/%s" % tag),
+            json_data={
+                "sha": master_ref["object"]["sha"],
+                "force": False,
+            })
+    # If target release already exists, avoid re-creating it - simply delete previous assets.
+    rel, ok = github_api.CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
+    if ok:
+        logging.info("    Release already exists (id %d), deleting assets", rel["id"])
+        for a in rel.get("assets", []):
+            logging.info("      Deleting asset %s (%d)", a["name"], a["id"])
+            github_api.CallReleasesAPI(
+                repo, token,
+                method="DELETE",
+                releases_url=("/assets/%d" % a["id"]),
+                decode_json=False)
+    else:
+        logging.info("    Creating release")
+        rel, ok = github_api.CallReleasesAPI(repo, token, "", method="POST", json_data={
+            "name": tag,
+            "draft": False,
+            "tag_name": tag,
+            "target_commitish": "master",
+        })
+        if not ok:
+            logging.error("Failed to create a release draft: %s", r)
+            raise RuntimeError
+    rel_id = rel["id"]
+    logging.debug("Release id: %d", rel_id)
+    logging.info("    Uploading assets")
     for asset_name, asset_file in spec["assets"]:
         ct = "application/zip" if asset_name.endswith(".zip") else "application/octet-stream"
-        logging.info("  Uploading %s to %s", asset_file, asset_name)
+        logging.info("      Uploading %s to %s", asset_file, asset_name)
         with open(asset_file, "rb") as f:
-            r, ok = CallReleasesAPI(
+            r, ok = github_api.CallReleasesAPI(
                 repo, token, method="POST", subdomain="uploads", data=f,
-                releases_url=("/%d/assets" % new_rel_id),
+                releases_url=("/%d/assets" % rel_id),
                 headers = {"Content-Type": ct},
                 params = {"name": asset_name})
         if not ok:
             logging.error("Failed to upload %s: %s", asset_name, r)
             raise RuntimeError
-
-    # If target release already exists, delete it {{{
-    r, ok = CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
-    if ok:
-        logging.info("  Deleting old %s release", tag)
-        DeleteRelease(repo, token, r["id"])
-        # Also remove the tag itself, so that when we save release below
-        # with that tag, it'll be created on master branch.
-        # Since we are not necessarily publishing from the same repo,
-        # we make a separate clone.
-        repo_url = "git@github.com:%s" % repo
-        tmp_dst = os.path.join(tmp_dir, repo.replace("/", "_"))
-        logging.info("  Deleting tag %s (tmp %s)", tag, tmp_dst)
-        if not os.path.exists(tmp_dst):
-            RunCmd(["git", "clone", "--depth=1", repo_url, tmp_dst])
-        dst_repo = git.Repo(tmp_dst)
-        remote = dst_repo.remote(name="origin")
-        remote.push(refspec=(":%s" % tag))
-
-    r, ok = CallReleasesAPI(
-        repo, token, method="PATCH",
-        releases_url=("/%d" % new_rel_id),
-        json_data={
-            "tag_name": tag,
-            "draft": False,
-            "target_commitish": "master",
-        })
-    if not ok:
-        logging.error("Failed to create a release: %s", r)
-        raise RuntimeError
-    logging.info("Created release %s / %s (%d)", repo, tag, r["id"])
-    g_cur_rel_id = None
+    logging.info("  Published release %s / %s (%d)", repo, tag, rel["id"])
 
 
 def UpdateGitHubRelease(spec, tag, token, tmp_dir):
     logging.debug("GH release spec: %s", spec)
     repo = spec["repo"]
 
-    rel, ok = CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
+    rel, ok = github_api.CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
     if not ok:
         logging.error("Failed to get release info for %s/%s: %s; (re)creating", repo, tag, rel)
         # Assume release doesn't exist and create it.
@@ -153,14 +129,14 @@ def UpdateGitHubRelease(spec, tag, token, tmp_dir):
         for a in rel.get("assets", []):
             if a["name"] == asset_name:
                 logging.info("    Deleting asset %s (%d)", asset_name, a["id"])
-                CallReleasesAPI(
+                github_api.CallReleasesAPI(
                     repo, token,
                     method="DELETE",
                     releases_url=("/assets/%d" % a["id"]),
                     decode_json=False)
         logging.info("    Uploading %s to %s", asset_file, asset_name)
         with open(asset_file, "rb") as f:
-            r, ok = CallReleasesAPI(
+            r, ok = github_api.CallReleasesAPI(
                 repo, token, method="POST", subdomain="uploads", data=f,
                 releases_url=("/%d/assets" % rel["id"]),
                 headers = {"Content-Type": ct},
@@ -276,7 +252,6 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, libs_dir, tmp_dir, no_libs_update, gh_
             with open(gh_token_file, "r") as f:
                 token = f.read().strip()
             i = 1
-            global g_cur_rel_id
             while True:
                 try:
                     if not gh_out.get("update", False):
@@ -286,9 +261,6 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, libs_dir, tmp_dir, no_libs_update, gh_
                     break
                 except (Exception, KeyboardInterrupt) as e:
                     logging.exception("Exception (attempt %d): %s", i, e)
-                    if g_cur_rel_id:
-                        DeleteRelease(gh_out["repo"], token, g_cur_rel_id)
-                        g_cur_rel_id = None
                     if not isinstance(e, KeyboardInterrupt) and i < 3:
                         time.sleep(1)
                         i += 1
