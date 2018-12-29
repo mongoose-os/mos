@@ -18,11 +18,29 @@ test -d $DESTDIR || mkdir -p $DESTDIR
 FULLPATH=$DESTDIR/$PROGNAME
 
 if test "$OS" = Linux ; then
-  MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/linux/mos
+  [ -f /etc/lsb-release ] && source /etc/lsb-release
+  if [ "${DISTRIB_ID}" == "Ubuntu" ]; then
+    echo Installing from Ubuntu PPA...
+    sudo apt-get install -y software-properties-common
+    sudo add-apt-repository -u ppa:mongoose-os/mos
+    sudo apt-get install -y mos
+    mos version
+    exit 0
+  else
+    MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/linux/mos
+  fi
 elif test "$OS" = Darwin ; then
-  MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/mac/mos
-  checklib /usr/local/opt/libftdi/lib/libftdi1.2.dylib
-  checklib /usr/local/opt/libusb/lib/libusb-1.0.0.dylib
+  if which brew > /dev/null; then
+    echo Installing from Homebrew...
+    brew tap cesanta/mos
+    brew install mos
+    mos version
+    exit 0
+  else
+    MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/mac/mos
+    checklib /usr/local/opt/libftdi/lib/libftdi1.2.dylib
+    checklib /usr/local/opt/libusb/lib/libusb-1.0.0.dylib
+  fi
 else
   echo "Unsupported OS [$OS]. Only Linux or MacOS are supported."
   echo "FAILURE, exiting."
@@ -48,6 +66,7 @@ if test "$?" == "127" ; then
   echo "PATH=\"\$PATH:$DESTDIR\"" >> $RC_FILE
 fi
 
+$FULLPATH version
 echo "SUCCESS: $FULLPATH is installed."
 echo "Run '$FULLPATH --help' to see all available commands."
 echo "Run '$FULLPATH' without arguments to start a simplified Web UI installer."
