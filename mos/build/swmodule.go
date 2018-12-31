@@ -247,6 +247,15 @@ func (m *SWModule) PrepareLocalDir(
 }
 
 func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
+	// Try public URL first. Most of our repos (and therefore assets) are public.
+	// API access limits do not apply to public asset access.
+	if strings.HasPrefix(loc, "https://") {
+		assetURL := fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", owner, repo, tag, assetName)
+		data, err := fetchGitHubAssetFromURL(assetName, tag, assetURL)
+		if err == nil {
+			return data, nil
+		}
+	}
 	relMetaURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", relMetaURL, nil)
@@ -285,35 +294,31 @@ func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
 			return nil, errors.Errorf("%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
 		}
 	} else {
-		// It's been observed that GH API access is not always available.
-		// In particular, accessing it from TravisCI seems to be banned (getting 403).
-		// At the same time, fetching assets works fine, so here, if the URL seems like a public one,
-		// we fall back to fetching the asset via its public URL.
-		if strings.HasPrefix(loc, "https://") {
-			glog.Errorf("got %d status code when fetching %s, trying public URL", resp.StatusCode, relMetaURL)
-			assetURL = fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", owner, repo, tag, assetName)
-		} else {
-			return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
-		}
+		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
 	}
 	glog.Infof("%s/%s/%s/%s: Asset URL: %s", owner, repo, tag, assetName, assetURL)
-	ourutil.Reportf("Fetching %s from %s...", assetName, assetURL)
+	return fetchGitHubAssetFromURL(assetName, tag, assetURL)
+}
 
-	req2, err := http.NewRequest("GET", assetURL, nil)
-	req2.Header.Add("Accept", "application/octet-stream")
+func fetchGitHubAssetFromURL(assetName, tag, assetURL string) ([]byte, error) {
+	ourutil.Reportf("Fetching %s (%s) from %s...", assetName, tag, assetURL)
+
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", assetURL, nil)
+	req.Header.Add("Accept", "application/octet-stream")
 	if *flags.GHToken != "" {
-		req2.Header.Add("Authorization", fmt.Sprintf("token %s", *flags.GHToken))
+		req.Header.Add("Authorization", fmt.Sprintf("token %s", *flags.GHToken))
 	}
-	resp2, err := client.Do(req2)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to fetch %s", assetURL)
 	}
-	defer resp2.Body.Close()
-	if resp2.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got %d status code when fetching %s", resp2.StatusCode, assetURL)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got %d status code when fetching %s", resp.StatusCode, assetURL)
 	}
 	// Fetched the asset successfully
-	data, err := ioutil.ReadAll(resp2.Body)
+	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -333,7 +338,17 @@ func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) err
 		}
 		pp := strings.Split(repoPath, "/")
 		assetName := fmt.Sprintf("lib%s-%s.a", libName, platform)
-		data, err := fetchGitHubAsset(m.Location, pp[0], pp[1], version, assetName)
+		var data []byte
+		for i := 1; i <= 3; i++ {
+			data, err = fetchGitHubAsset(m.Location, pp[0], pp[1], version, assetName)
+			if err == nil {
+				break
+			}
+			// Sometimes asset downloads fail. GitHub doesn't like us, or rate limiting or whatever.
+			// Try a couple times.
+			glog.Errorf("GitHub asset %s download failed (attempt %d): %s", assetName, i, err)
+			time.Sleep(1 * time.Second)
+		}
 		if err != nil {
 			return errors.Annotatef(err, "failed to download %s", assetName)
 		}

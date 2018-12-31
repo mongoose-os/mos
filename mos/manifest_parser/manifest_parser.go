@@ -269,12 +269,13 @@ func ReadManifestFinal(
 			var fetchErrs []error
 			if (len(manifest.LibsHandled[k].Sources) == 0 && len(origSources) != 0) || preferPrebuiltLibs {
 				var variants []string
+				libVersion := lcur.Lib.GetVersion(manifest.LibsVersion)
 				if v, ok := interp.MVars.GetVar("build_vars.BOARD"); ok && v.(string) != "" {
 					variants = append(variants, fmt.Sprintf("%s-%s", manifest.Platform, v.(string)))
 				}
 				variants = append(variants, manifest.Platform)
 				for _, variant := range variants {
-					bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Lib.Name, variant)
+					bl := moscommon.GetBinaryLibFilePath(buildDirAbs, lcur.Lib.Name, variant, libVersion)
 					if _, err := os.Stat(bl); err == nil {
 						bl, err := filepath.Abs(bl)
 						if err != nil {
@@ -282,15 +283,15 @@ func ReadManifestFinal(
 						}
 						ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
 						binaryLib = bl
+						break
+					}
+					// Try fetching
+					fetchErr := lcur.Lib.FetchPrebuiltBinary(variant, libVersion, bl)
+					if fetchErr == nil {
+						ourutil.Freportf(logWriter, "Successfully fetched prebuilt binary for %q to %q", lcur.Lib.Name, bl)
+						binaryLib = bl
 					} else {
-						// Try fetching
-						fetchErr := lcur.Lib.FetchPrebuiltBinary(variant, manifest.LibsVersion, bl)
-						if fetchErr == nil {
-							ourutil.Freportf(logWriter, "Successfully fetched prebuilt binary for %q to %q", lcur.Lib.Name, bl)
-							binaryLib = bl
-						} else {
-							fetchErrs = append(fetchErrs, fetchErr)
-						}
+						fetchErrs = append(fetchErrs, fetchErr)
 					}
 					if binaryLib != "" {
 						break

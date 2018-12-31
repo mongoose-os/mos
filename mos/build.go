@@ -490,14 +490,11 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
 					freportf(logWriter, "%s: Hash is updated: %s -> %s", name, curHash, newHash)
 					// The current repo hash has changed after the pull, so we need to
-					// vanish the lib we might have downloaded before
-					os.RemoveAll(moscommon.GetBinaryLibsDir(localDir))
-
-					// But in case the lib dir is a part of the repo itself, we have to
-					// do "git checkout ." on the repo. We shouldn't be afraid of
-					// losing user's local changes, because the fact that hash has
-					// changed means that the repo was clean anyway.
-					gitinst.ResetHard(localDir)
+					// vanish binary lib(s) we might have downloaded before
+					bLibs, _ := filepath.Glob(moscommon.GetBinaryLibFilePath(moscommon.GetBuildDir(appDir), name, "*", "*"))
+					for _, bl := range bLibs {
+						os.Remove(bl)
+					}
 				} else {
 					freportf(logWriter, "%s: Hash unchanged at %s (dir %q)", name, curHash, libDirAbs)
 				}
