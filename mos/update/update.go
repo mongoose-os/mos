@@ -38,6 +38,10 @@ import (
 var (
 	migrateFlag = flag.Bool("migrate", true, "Migrate data from the previous version if needed")
 
+	brewPackageNames = map[string]string{
+		"release": "mos",
+		"latest":  "mos-latest",
+	}
 	ubuntuPackageNames = map[string]string{
 		"release": "mos",
 		"latest":  "mos-latest",
@@ -109,6 +113,17 @@ func doUbuntuUpdate(oldUpdChannel, newUpdChannel string) error {
 	return ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt-get", "install", "-y", newPkg)
 }
 
+func doBrewUpdate(oldUpdChannel, newUpdChannel string) error {
+	oldPkg := ubuntuPackageNames[oldUpdChannel]
+	newPkg := ubuntuPackageNames[newUpdChannel]
+	ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "update")
+	ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "tap", "cesanta/mos")
+  if oldPkg != newPkg {
+	  ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "uninstall", "-f", oldPkg)
+  }
+  return ourutil.RunCmd(ourutil.CmdOutAlways, "brew", "install", newPkg)
+}
+
 func Update(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
 
@@ -136,8 +151,7 @@ func Update(ctx context.Context, devConn *dev.DevConn) error {
 	if version.LooksLikeUbuntuBuildId(version.BuildId) {
 		return doUbuntuUpdate(updChannel, newUpdChannel)
 	} else if version.LooksLikeBrewBuildId(version.BuildId) {
-		ourutil.Reportf("Please use brew to update mos.")
-		return nil
+		return doBrewUpdate(updChannel, newUpdChannel)
 	} else if version.LooksLikeDistrBuildId(version.BuildId) {
 		ourutil.Reportf("Mos was installed via some package manager, please use it to update.")
 		return nil
