@@ -118,10 +118,10 @@ func doBrewUpdate(oldUpdChannel, newUpdChannel string) error {
 	newPkg := ubuntuPackageNames[newUpdChannel]
 	ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "update")
 	ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "tap", "cesanta/mos")
-  if oldPkg != newPkg {
-	  ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "uninstall", "-f", oldPkg)
-  }
-  return ourutil.RunCmd(ourutil.CmdOutAlways, "brew", "install", newPkg)
+	if oldPkg != newPkg {
+		ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "uninstall", "-f", oldPkg)
+	}
+	return ourutil.RunCmd(ourutil.CmdOutAlways, "brew", "install", newPkg)
 }
 
 func Update(ctx context.Context, devConn *dev.DevConn) error {

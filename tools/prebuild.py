@@ -54,7 +54,7 @@ def RunCmd(cmd):
     subprocess.check_call(cmd)
 
 
-def CreateGitHubRelease(spec, tag, token, tmp_dir):
+def CreateGitHubRelease(spec, tag, token, tmp_dir, re_create=False):
     logging.debug("GH release spec: %s", spec)
     repo = spec["repo"]
 
@@ -76,15 +76,28 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir):
     # If target release already exists, avoid re-creating it - simply delete previous assets.
     rel, ok = github_api.CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
     if ok:
-        logging.info("    Release already exists (id %d), deleting assets", rel["id"])
-        for a in rel.get("assets", []):
-            logging.info("      Deleting asset %s (%d)", a["name"], a["id"])
+        if re_create:
+            logging.info("    Release already exists (id %d), deleting", rel["id"])
             github_api.CallReleasesAPI(
                 repo, token,
                 method="DELETE",
-                releases_url=("/assets/%d" % a["id"]),
+                releases_url=("/%d" % rel["id"]),
                 decode_json=False)
+            rel = None
+
+        else:
+            logging.info("    Release already exists (id %d), deleting assets", rel["id"])
+            for a in rel.get("assets", []):
+                logging.info("      Deleting asset %s (%d)", a["name"], a["id"])
+                github_api.CallReleasesAPI(
+                    repo, token,
+                    method="DELETE",
+                    releases_url=("/assets/%d" % a["id"]),
+                    decode_json=False)
     else:
+        rel = None
+
+    if rel is None:
         logging.info("    Creating release")
         rel, ok = github_api.CallReleasesAPI(repo, token, "", method="POST", json_data={
             "name": tag,
@@ -255,7 +268,12 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, libs_dir, tmp_dir, no_libs_update, gh_
             while True:
                 try:
                     if not gh_out.get("update", False):
-                        CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+                        # Looks like after some number of asset deletions / uploads GH release
+                        # gets into a bad state where new asset uploads are just failing.
+                        # So we try once, try twice and on the third time we re-create the release
+                        # even if it exists.
+                        re_create = (i > 2)
+                        CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir, re_create=re_create)
                     else:
                         UpdateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
                     break
