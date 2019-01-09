@@ -8,12 +8,9 @@ import (
 )
 
 var (
-	genDirFlag = ""
+	genDirFlag        = flag.String("gen-dir", "", "Directory to put build output under. Default is build_dir/gen")
+	binaryLibsDirFlag = flag.String("binary-libs-dir", "", "Directory to put binary libs under. Default is build_dir/objs")
 )
-
-func init() {
-	flag.StringVar(&genDirFlag, "gen-dir", "", "Directory to put build output under. Default is build_dir/gen")
-}
 
 func GetBuildDir(projectDir string) string {
 	return filepath.Join(projectDir, "build")
@@ -28,8 +25,8 @@ func GetManifestArchFilePath(projectDir, arch string) string {
 }
 
 func GetGeneratedFilesDir(buildDir string) string {
-	if genDirFlag != "" {
-		if gdfa, err := filepath.Abs(genDirFlag); err == nil {
+	if *genDirFlag != "" {
+		if gdfa, err := filepath.Abs(*genDirFlag); err == nil {
 			return gdfa
 		}
 	}
@@ -105,7 +102,11 @@ func GetConfSchemaFilePath(buildDir string) string {
 }
 
 func GetBinaryLibFilePath(buildDir, name, variant, version string) string {
-	return filepath.Join(GetObjectDir(buildDir), fmt.Sprintf("lib%s-%s-%s.a", name, variant, version))
+	bld := *binaryLibsDirFlag
+	if bld == "" {
+		bld = GetObjectDir(buildDir)
+	}
+	return filepath.Join(bld, fmt.Sprintf("lib%s-%s-%s.a", name, variant, version))
 }
 
 func GetSdkVersionFile(mosDir, platform string) string {
