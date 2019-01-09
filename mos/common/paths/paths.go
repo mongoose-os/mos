@@ -19,7 +19,8 @@ var (
 	AppsDirTpl = fmt.Sprintf("~/.mos/apps-%s", dirTplMosVersion)
 
 	TmpDir         = ""
-	libsDirFlag    = ""
+	depsDirFlag    = ""
+	LibsDirFlag    = ""
 	AppsDir        = ""
 	modulesDirFlag = ""
 
@@ -29,7 +30,8 @@ var (
 
 func init() {
 	flag.StringVar(&TmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
-	flag.StringVar(&libsDirFlag, "libs-dir", "", "Directory to store libraries into")
+	flag.StringVar(&depsDirFlag, "deps-dir", "", "Directory to fetch libs, modules into")
+	flag.StringVar(&LibsDirFlag, "libs-dir", "", "Directory to find libs in")
 	flag.StringVar(&AppsDir, "apps-dir", AppsDirTpl, "Directory to store apps into")
 	flag.StringVar(&modulesDirFlag, "modules-dir", "", "Directory to store modules into")
 
@@ -45,7 +47,12 @@ func Init() error {
 		return errors.Trace(err)
 	}
 
-	libsDirFlag, err = NormalizePath(libsDirFlag, version.GetMosVersion())
+	depsDirFlag, err = NormalizePath(depsDirFlag, version.GetMosVersion())
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	LibsDirFlag, err = NormalizePath(LibsDirFlag, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -108,8 +115,8 @@ func NormalizePath(p, version string) (string, error) {
 }
 
 func GetDepsDir(projectDir string) string {
-	if libsDirFlag != "" {
-		return libsDirFlag
+	if depsDirFlag != "" {
+		return depsDirFlag
 	} else {
 		return filepath.Join(projectDir, "deps")
 	}

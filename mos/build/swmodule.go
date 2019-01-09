@@ -437,6 +437,14 @@ func (m *SWModule) GetName() (string, error) {
 	return n, err
 }
 
+func (m *SWModule) GetName2() (string, error) {
+	n, err := m.GetName()
+	if err == nil && n == boardsLibNewName {
+		n = boardsLibName
+	}
+	return n, err
+}
+
 func (m *SWModule) getName() (string, error) {
 	if m.Name != "" {
 		if !validNameRegex.MatchString(m.Name) {
