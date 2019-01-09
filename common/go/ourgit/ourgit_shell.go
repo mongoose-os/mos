@@ -124,6 +124,13 @@ scan:
 		return false, nil
 	}
 
+	// Working directory is clean. Are we on a particular tag?
+	resp, err = shellGit(localDir, "describe", "--tags", "--exact-match", "HEAD")
+	if err == nil {
+		// We are. That's cool, we can manage the repo then.
+		return true, nil
+	}
+
 	// Working directory is clean, now we need to check if there are some
 	// non-pushed commits. Unfortunately there is no way (that I know of) which
 	// would work with both branches and tags. So, we do this:
@@ -149,6 +156,7 @@ scan:
 
 	if resp != "" {
 		// Some commits need to be pushed to upstream
+		glog.Errorf("%s: dirty 3", localDir)
 		return false, nil
 	}
 
