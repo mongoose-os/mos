@@ -348,6 +348,35 @@ func ReadManifestFinal(
 
 var libsAddedError = errors.Errorf("new libs added")
 
+type prepareLibsEntry struct {
+	parentNodeName string
+	manifest       *build.FWAppManifest
+}
+
+type manifestParseContext struct {
+	// Directory of the "root" app. Might be a temporary directory.
+	rootAppDir string
+
+	adjustments ManifestAdjustments
+	logWriter   io.Writer
+
+	deps        *Deps
+	initDeps    *Deps
+	libsHandled map[string]build.FWAppManifestLibHandled
+
+	appManifest *build.FWAppManifest
+	interp      *interpreter.MosInterpreter
+
+	cbs *ReadManifestCallbacks
+
+	requireArch bool
+
+	prepareLibs []*prepareLibsEntry
+
+	mtx     *sync.Mutex
+	flagSet *stringFlagSet
+}
+
 // readManifestWithLibs reads manifest from the provided dir, "expands" all
 // libs (so that the returned manifest does not really contain any libs),
 // and also returns the most recent modification time of all encountered
@@ -391,6 +420,21 @@ func readManifestWithLibs(
 	manifest, mtime, err := readManifestWithLibs2(depsApp, dir, pc)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	for i := 1; len(pc.prepareLibs) != 0; i++ {
+		glog.Infof("Prepare libs pass %d (%d)", i, len(pc.prepareLibs))
+		pll := pc.prepareLibs
+		pc.prepareLibs = nil
+		for _, ple := range pll {
+			libsMtime, err := prepareLibs(ple.parentNodeName, ple.manifest, pc)
+			if err != nil {
+			} else {
+				if libsMtime.After(mtime) {
+					mtime = libsMtime
+				}
+			}
+		}
 	}
 
 	// Set the mos.platform variable
@@ -503,33 +547,14 @@ func readManifestWithLibs(
 	return manifest, mtime, nil
 }
 
-type manifestParseContext struct {
-	// Directory of the "root" app. Might be a temporary directory.
-	rootAppDir string
-
-	adjustments ManifestAdjustments
-	logWriter   io.Writer
-
-	deps        *Deps
-	initDeps    *Deps
-	libsHandled map[string]build.FWAppManifestLibHandled
-
-	appManifest *build.FWAppManifest
-	interp      *interpreter.MosInterpreter
-
-	cbs *ReadManifestCallbacks
-
-	requireArch bool
-
-	mtx     *sync.Mutex
-	flagSet *stringFlagSet
-}
-
 func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext) (*build.FWAppManifest, time.Time, error) {
 	manifest, mtime, err := ReadManifest(dir, &pc.adjustments, pc.interp)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
+
+	pc.mtx.Lock()
+	defer pc.mtx.Unlock()
 
 	if pc.requireArch && manifest.Platform == "" {
 		return nil, time.Time{}, errors.Errorf("--platform must be specified or mos.yml should contain a platform key")
@@ -574,10 +599,10 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		interpreter.SetManifestVars(pc.interp.MVars, manifest)
 	}
 
-	libsMtime, err := prepareLibs(parentNodeName, manifest, pc)
-	if err == nil && libsMtime.After(mtime) {
-		mtime = libsMtime
-	}
+	pc.prepareLibs = append(pc.prepareLibs, &prepareLibsEntry{
+		parentNodeName: parentNodeName,
+		manifest:       manifest,
+	})
 
 	return manifest, mtime, err
 }
