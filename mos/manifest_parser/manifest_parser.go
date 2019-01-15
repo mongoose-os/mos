@@ -422,25 +422,27 @@ func readManifestWithLibs(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	for i := 1; len(pc.prepareLibs) != 0; i++ {
-		glog.Infof("Prepare libs pass %d (%d)", i, len(pc.prepareLibs))
-		pll := pc.prepareLibs
-		pc.prepareLibs = nil
-		for _, ple := range pll {
-			libsMtime, err := prepareLibs(ple.parentNodeName, ple.manifest, pc)
-			if err != nil {
-			} else {
-				if libsMtime.After(mtime) {
-					mtime = libsMtime
-				}
-			}
-		}
-	}
-
 	// Set the mos.platform variable
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
+	pass := 0
 	for {
+		for len(pc.prepareLibs) != 0 {
+			pass++
+			glog.Infof("Prepare libs pass %d (%d)", pass, len(pc.prepareLibs))
+			pll := pc.prepareLibs
+			pc.prepareLibs = nil
+			for _, ple := range pll {
+				libsMtime, err := prepareLibs(ple.parentNodeName, ple.manifest, pc)
+				if err != nil {
+				} else {
+					if libsMtime.After(mtime) {
+						mtime = libsMtime
+					}
+				}
+			}
+		}
+
 		// Get all deps in topological order
 		depsTopo, cycle := deps.Topological(true)
 		if cycle != nil {
