@@ -53,6 +53,8 @@ var (
 	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
+	noPlatformCheckFlag = flag.Bool("no-platform-check", false, "override platform support check")
+
 	preferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
 
 	buildVarsSlice []string
@@ -82,6 +84,7 @@ type buildParams struct {
 	BuildTarget           string
 	CustomLibLocations    map[string]string
 	CustomModuleLocations map[string]string
+	NoPlatformCheck       bool
 }
 
 func init() {
@@ -138,6 +141,7 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 			BuildTarget:           *buildTarget,
 			CustomLibLocations:    cll,
 			CustomModuleLocations: cml,
+			NoPlatformCheck:       *noPlatformCheckFlag,
 		}
 	}
 

@@ -172,7 +172,12 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 	}
 
 	if !found {
-		return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Platform, manifest.Platforms)
+		if !bParams.NoPlatformCheck {
+			return errors.Errorf(
+				"can't build for the platform %s; supported platforms are: %v "+
+					"(use --no-platform-check to override)",
+				manifest.Platform, manifest.Platforms)
+		}
 	}
 
 	appSources, err := absPathSlice(manifest.Sources)
