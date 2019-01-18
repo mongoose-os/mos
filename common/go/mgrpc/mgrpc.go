@@ -149,6 +149,10 @@ func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
 	}
 
 	conn, err := websocket.NewClient(config, nc)
+	if err == websocket.ErrBadStatus {
+		// We dont' know what status was returned but in all likelihood it's 404.
+		return conn, errors.Annotatef(err, "Invalid HTTP response code returned. Missing rpc-ws library?")
+	}
 	return conn, errors.Trace(err)
 }
 
@@ -178,7 +182,7 @@ func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, er
 	}
 	conn, err := wsDialConfig(config)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, errors.Annotatef(err, "WebSocket connection failed")
 	}
 	return codec.WebSocket(conn), nil
 }

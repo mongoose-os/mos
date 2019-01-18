@@ -10,6 +10,7 @@ import (
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"golang.org/x/net/websocket"
 )
 
 type ConnectFunc func(addr string) (Codec, error)
@@ -20,7 +21,7 @@ type reconnectWrapperCodec struct {
 
 	lock        sync.Mutex
 	conn        Codec
-	connEstd    chan struct{}
+	connEstd    chan error
 	nextAttempt time.Time
 
 	closeNotifier chan struct{}
@@ -32,7 +33,7 @@ func NewReconnectWrapperCodec(addr string, connect ConnectFunc) Codec {
 		addr:          addr,
 		connect:       connect,
 		nextAttempt:   time.Now(),
-		connEstd:      make(chan struct{}), // Closed when a new connection is established.
+		connEstd:      make(chan error), // closed when a new connection is established, or an error if permanently fails
 		closeNotifier: make(chan struct{}),
 	}
 	go rwc.maintainConnection()
@@ -72,7 +73,7 @@ func (rwc *reconnectWrapperCodec) maintainConnection() {
 				glog.Errorf("%s Connection closed", rwc)
 				rwc.lock.Lock()
 				rwc.conn = nil
-				rwc.connEstd = make(chan struct{})
+				rwc.connEstd = make(chan error)
 				rwc.lock.Unlock()
 			}
 		}
@@ -90,7 +91,12 @@ func (rwc *reconnectWrapperCodec) maintainConnection() {
 		// TODO(rojer): implement backoff.
 		rwc.nextAttempt = time.Now().Add(2 * time.Second)
 		if err != nil {
-			glog.Errorf("%s connection error: %+v", rwc.stringLocked(), err)
+			if errors.Cause(err) == websocket.ErrBadStatus {
+				glog.Errorf("%s fatal connection error: %+v", rwc.stringLocked(), err)
+				rwc.connEstd <- errors.Trace(err)
+			} else {
+				glog.Errorf("%s connection error: %+v", rwc.stringLocked(), err)
+			}
 			rwc.lock.Unlock()
 			continue
 		}
@@ -112,7 +118,10 @@ func (rwc *reconnectWrapperCodec) getConn(ctx context.Context) (Codec, error) {
 		select {
 		case <-ctx.Done():
 			return nil, errors.Trace(ctx.Err())
-		case <-connEstd:
+		case err, ok := <-connEstd:
+			if ok {
+				return nil, errors.Annotatef(err, "fatal connection error, not reconnecting")
+			}
 		}
 	}
 }
