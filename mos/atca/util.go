@@ -46,8 +46,14 @@ func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte,
 		return nil, nil, nil, errors.Annotatef(err, "ParseBinaryConfig")
 	}
 
-	ourutil.Reportf("\nATECC508A rev 0x%x S/N 0x%s, config is %s, data is %s",
-		cfg.Revision, hex.EncodeToString(cfg.SerialNum), strings.ToLower(string(cfg.LockConfig)),
+	var model string
+	if cfg.Revision >= 0x6000 {
+		model = "ATECC608A"
+	} else {
+		model = "ATECC508A"
+	}
+	ourutil.Reportf("\n%s rev 0x%x S/N 0x%s, config is %s, data is %s",
+		model, cfg.Revision, hex.EncodeToString(cfg.SerialNum), strings.ToLower(string(cfg.LockConfig)),
 		strings.ToLower(string(cfg.LockValue)))
 
 	if cfg.LockConfig != LockModeLocked || cfg.LockValue != LockModeLocked {

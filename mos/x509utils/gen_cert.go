@@ -55,7 +55,7 @@ func init() {
 	flag.StringVar(&certType, "cert-type", "", "Type of the key for new cert, RSA or ECDSA. Default is "+defaultCertType+".")
 	flag.StringVar(&CertCN, "cert-cn", "", "Common name for the certificate. By default uses device ID.")
 	flag.DurationVar(&CertValidity, "cert-validity", defaultCertValidity, "Generated certificate validity")
-	flag.BoolVar(&useATCA, "use-atca", false, "Use ATCA (AECC508A) to store private key.")
+	flag.BoolVar(&useATCA, "use-atca", false, "Use ATCA (ATECCx08A) to store private key.")
 	flag.IntVar(&ATCASlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
 }
 
