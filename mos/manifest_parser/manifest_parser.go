@@ -435,6 +435,7 @@ func readManifestWithLibs(
 			for _, ple := range pll {
 				libsMtime, err := prepareLibs(ple.parentNodeName, ple.manifest, pc)
 				if err != nil {
+					return nil, time.Time{}, errors.Trace(err)
 				} else {
 					if libsMtime.After(mtime) {
 						mtime = libsMtime
