@@ -20,6 +20,9 @@ import (
 	"cesanta.com/mos/fs"
 	"cesanta.com/mos/x509utils"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudiot/v1"
 )
 
 var (
@@ -48,6 +51,15 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("Please set --gcp-project, --gcp-region and --gcp-registry")
 	}
 
+	httpClient, err := google.DefaultClient(ctx, cloudiot.CloudPlatformScope)
+	if err != nil {
+		return errors.Annotatef(err, "failed to create GCP HTTP client")
+	}
+	iotAPIClient, err := cloudiot.New(httpClient)
+	if err != nil {
+		return errors.Annotatef(err, "failed to create GCP client")
+	}
+
 	ourutil.Reportf("Connecting to the device...")
 	devInfo, err := devConn.GetInfo(ctx)
 	if err != nil {
@@ -73,12 +85,12 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	jwsType := ""
+	pubKeyFormat := ""
 	switch certType {
 	case x509utils.CertTypeRSA:
-		jwsType = "rs256"
+		pubKeyFormat = "RSA_X509_PEM"
 	case x509utils.CertTypeECDSA:
-		jwsType = "es256"
+		pubKeyFormat = "ES256_PEM"
 	default:
 		return errors.Errorf("unsupported certy type %s", certType)
 	}
@@ -93,10 +105,10 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	_, certPEMBytes, keySigner, _, keyPEMBytes, err := x509utils.LoadOrGenerateCertAndKey(
 		ctx, certType, gcpCertFile, gcpKeyFile, certTmpl, useATCA, devConn, devConf, devInfo)
 
-	pubKeyFileName := ""
+	var pubKeyPEMBytes []byte
 	switch certType {
 	case x509utils.CertTypeRSA:
-		pubKeyFileName = fmt.Sprintf("gcp-%s.crt.pem", ourutil.FirstN(certCN, 16))
+		pubKeyFileName := fmt.Sprintf("gcp-%s.crt.pem", ourutil.FirstN(certCN, 16))
 		_, err = x509utils.WriteAndUploadFile(ctx, "certificate", certPEMBytes,
 			gcpCertFile, pubKeyFileName, nil)
 		if err != nil {
@@ -106,8 +118,9 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		pubKeyDERBytes, _ := x509.MarshalPKIXPublicKey(keySigner.Public())
 		pubKeyPEMBuf := bytes.NewBuffer(nil)
 		pem.Encode(pubKeyPEMBuf, &pem.Block{Type: "PUBLIC KEY", Bytes: pubKeyDERBytes})
-		pubKeyFileName = fmt.Sprintf("gcp-%s.pub.pem", ourutil.FirstN(certCN, 16))
-		_, err = x509utils.WriteAndUploadFile(ctx, "public key", pubKeyPEMBuf.Bytes(),
+		pubKeyFileName := fmt.Sprintf("gcp-%s.pub.pem", ourutil.FirstN(certCN, 16))
+		pubKeyPEMBytes = pubKeyPEMBuf.Bytes()
+		_, err = x509utils.WriteAndUploadFile(ctx, "public key", pubKeyPEMBytes,
 			gcpCertFile, pubKeyFileName, nil)
 		if err != nil {
 			return errors.Trace(err)
@@ -129,20 +142,32 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("BUG: no private key data!")
 	}
 
-	createArgs := []string{
-		"gcloud", "iot", "devices", "create", devID,
-		"--project", gcpProject, "--region", gcpRegion, "--registry", gcpRegistry,
-		"--public-key", fmt.Sprintf("path=%s,type=%s", pubKeyFileName, jwsType),
-	}
 	ourutil.Reportf("Creating the device...")
-	if err := ourutil.RunCmd(ourutil.CmdOutOnError, createArgs...); err != nil {
+	parent := fmt.Sprintf("projects/%s/locations/%s/registries/%s",
+		gcpProject, gcpRegion, gcpRegistry)
+	device := cloudiot.Device{
+		Id: devID,
+		Credentials: []*cloudiot.DeviceCredential{
+			{
+				PublicKey: &cloudiot.PublicKeyCredential{
+					Format: pubKeyFormat,
+					Key:    string(pubKeyPEMBytes),
+				},
+			},
+		},
+	}
+	resp, err := iotAPIClient.Projects.Locations.Registries.Devices.Create(parent, &device).Do()
+	if err != nil {
+		glog.Infof("Error creating device: %s %s", err, resp)
 		ourutil.Reportf("Trying to delete the device...")
-		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "gcloud", "iot", "devices", "delete", devID,
-			"--project", gcpProject, "--region", gcpRegion, "--registry", gcpRegistry, "--quiet"); err != nil {
+		dev := fmt.Sprintf("%s/devices/%s", parent, devID)
+		_, err = iotAPIClient.Projects.Locations.Registries.Devices.Delete(dev).Do()
+		if err != nil {
 			return errors.Annotatef(err, "failed to re-create device")
 		}
 		ourutil.Reportf("Retrying device creation...")
-		if err := ourutil.RunCmd(ourutil.CmdOutOnError, createArgs...); err != nil {
+		resp, err = iotAPIClient.Projects.Locations.Registries.Devices.Create(parent, &device).Do()
+		if err != nil {
 			return errors.Annotatef(err, "failed to create device")
 		}
 	}
