@@ -122,6 +122,18 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir, re_create=False):
                 params = {"name": asset_name})
         if not ok:
             logging.error("Failed to upload %s: %s", asset_name, r)
+            if r and r.get("code", "") == "already_exists":
+                # This is a bug in GitHub where sometimes "phantom asset" will block an upload.
+                # The asset is not listed (or it would've been deleted), but an uplaod will fail.
+                # There is no way around it exept re-creating a release.
+                # Here we'll just delete it and next run will re-create properly. Ugh.
+                logging.error("*BUG* Phantom asset, nuking release")
+                github_api.CallReleasesAPI(
+                    repo, token,
+                    method="DELETE",
+                    releases_url=("/%d" % rel_id),
+                    decode_json=False)
+
             raise RuntimeError
     logging.info("  Published release %s / %s (%d)", repo, tag, rel["id"])
 
@@ -295,7 +307,7 @@ def ProcessEntry(e, mos, repo_dir, libs_dir, tmp_dir, no_libs_update, gh_release
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prebuild script for apps and libs")
     parser.add_argument("--v", type=int, default=logging.INFO)
-    parser.add_argument("--config", type=str)
+    parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--tmp-dir", type=str, default=os.path.join(os.getenv("TMPDIR", "/tmp"), "mos_prebuild"))
     parser.add_argument("--libs-dir", type=str)
     parser.add_argument("--repo-dir", type=str)
