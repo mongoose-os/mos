@@ -48,13 +48,6 @@ var (
 	SetControlLines      = flag.Bool("set-control-lines", true, "Set RTS and DTR explicitly when in console/RPC mode")
 
 	AzureConnectionString = flag.String("azure-connection-string", "", "Azure connection string")
-
-	GCPProject        = flag.String("gcp-project", "", "Google IoT project ID")
-	GCPRegion         = flag.String("gcp-region", "", "Google IoT region")
-	GCPRegistry       = flag.String("gcp-registry", "", "Google IoT device registry")
-	GCPCertFile       = flag.String("gcp-cert-file", "", "Certificate/public key file")
-	GCPKeyFile        = flag.String("gcp-key-file", "", "Private key file")
-	GCPRPCCreateTopic = flag.Bool("gcp-rpc-create-topic", false, "Create RPC topic plumbing if needed")
 )
 
 func Platform() string {

@@ -84,6 +84,7 @@ func (c *azureDMCodec) getSASToken(ttl time.Duration) (string, error) {
 				return "", errors.Annotatef(err, "invalid key encoding")
 			}
 			keyName = c.url.User.Username()
+			glog.Infof("BZZT %s", keyName)
 		}
 	}
 	if keyName == "" && c.opts.ConnectionString != "" {
@@ -186,6 +187,7 @@ func (c *azureDMCodec) Send(ctx context.Context, f *frame.Frame) error {
 		return errors.Trace(err)
 	}
 	req.Header.Add("Authorization", sig)
+	//req.Header.Add("Request-Id", "0e6c44f1-0cb6-41e1-94d4-dcbea521ae38")
 	req.Header.Add("Content-Type", "application/json; charset=utf-8")
 	resp, err := c.client.Do(req)
 	if resp != nil {

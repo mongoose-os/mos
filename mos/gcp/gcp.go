@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,7 +17,6 @@ import (
 	"cesanta.com/mos/atca"
 	"cesanta.com/mos/config"
 	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flags"
 	"cesanta.com/mos/fs"
 	"cesanta.com/mos/x509utils"
 	"github.com/cesanta/errors"
@@ -25,13 +25,29 @@ import (
 	"google.golang.org/api/cloudiot/v1"
 )
 
+var (
+	gcpProject  = ""
+	gcpRegion   = ""
+	gcpRegistry = ""
+	gcpCertFile = ""
+	gcpKeyFile  = ""
+)
+
+func init() {
+	flag.StringVar(&gcpProject, "gcp-project", "", "Google IoT project ID")
+	flag.StringVar(&gcpRegion, "gcp-region", "", "Google IoT region")
+	flag.StringVar(&gcpRegistry, "gcp-registry", "", "Google IoT device registry")
+	flag.StringVar(&gcpCertFile, "gcp-cert-file", "", "Certificate/public key file")
+	flag.StringVar(&gcpKeyFile, "gcp-key-file", "", "Private key file")
+}
+
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
 func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
-	if *flags.GCPProject == "" || *flags.GCPRegion == "" || *flags.GCPRegistry == "" {
+	if gcpProject == "" || gcpRegion == "" || gcpRegistry == "" {
 		return errors.Errorf("Please set --gcp-project, --gcp-region and --gcp-registry")
 	}
 
@@ -87,14 +103,14 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	certTmpl = &x509.Certificate{}
 	certTmpl.Subject.CommonName = certCN
 	_, certPEMBytes, keySigner, _, keyPEMBytes, err := x509utils.LoadOrGenerateCertAndKey(
-		ctx, certType, *flags.GCPCertFile, *flags.GCPKeyFile, certTmpl, useATCA, devConn, devConf, devInfo)
+		ctx, certType, gcpCertFile, gcpKeyFile, certTmpl, useATCA, devConn, devConf, devInfo)
 
 	var pubKeyPEMBytes []byte
 	switch certType {
 	case x509utils.CertTypeRSA:
 		pubKeyFileName := fmt.Sprintf("gcp-%s.crt.pem", ourutil.FirstN(certCN, 16))
 		_, err = x509utils.WriteAndUploadFile(ctx, "certificate", certPEMBytes,
-			*flags.GCPCertFile, pubKeyFileName, nil)
+			gcpCertFile, pubKeyFileName, nil)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -105,7 +121,7 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		pubKeyFileName := fmt.Sprintf("gcp-%s.pub.pem", ourutil.FirstN(certCN, 16))
 		pubKeyPEMBytes = pubKeyPEMBuf.Bytes()
 		_, err = x509utils.WriteAndUploadFile(ctx, "public key", pubKeyPEMBytes,
-			*flags.GCPCertFile, pubKeyFileName, nil)
+			gcpCertFile, pubKeyFileName, nil)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -116,7 +132,7 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	if keyPEMBytes != nil {
 		keyFileName := fmt.Sprintf("gcp-%s.key.pem", ourutil.FirstN(certCN, 16))
 		keyDevFileName, err = x509utils.WriteAndUploadFile(ctx, "key", keyPEMBytes,
-			*flags.GCPKeyFile, keyFileName, devConn)
+			gcpKeyFile, keyFileName, devConn)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -128,7 +144,7 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 
 	ourutil.Reportf("Creating the device...")
 	parent := fmt.Sprintf("projects/%s/locations/%s/registries/%s",
-		*flags.GCPProject, *flags.GCPRegion, *flags.GCPRegistry)
+		gcpProject, gcpRegion, gcpRegistry)
 	device := cloudiot.Device{
 		Id: devID,
 		Credentials: []*cloudiot.DeviceCredential{
@@ -185,9 +201,9 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		"mqtt.server":      "mqtt.googleapis.com:8883",
 		"mqtt.ssl_ca_cert": filepath.Base(caCertFile),
 		"gcp.enable":       "true",
-		"gcp.project":      *flags.GCPProject,
-		"gcp.region":       *flags.GCPRegion,
-		"gcp.registry":     *flags.GCPRegistry,
+		"gcp.project":      gcpProject,
+		"gcp.region":       gcpRegion,
+		"gcp.registry":     gcpRegistry,
 		"gcp.device":       devID,
 		"gcp.key":          keyDevFileName,
 	}
