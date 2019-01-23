@@ -54,6 +54,14 @@ def RunCmd(cmd):
     subprocess.check_call(cmd)
 
 
+def DeleteRelease(repo, token, rel_id):
+    github_api.CallReleasesAPI(
+        repo, token,
+        method="DELETE",
+        releases_url=("/%d" % rel_id),
+        decode_json=False)
+
+
 def CreateGitHubRelease(spec, tag, token, tmp_dir, re_create=False):
     logging.debug("GH release spec: %s", spec)
     repo = spec["repo"]
@@ -78,13 +86,8 @@ def CreateGitHubRelease(spec, tag, token, tmp_dir, re_create=False):
     if ok:
         if re_create:
             logging.info("    Release already exists (id %d), deleting", rel["id"])
-            github_api.CallReleasesAPI(
-                repo, token,
-                method="DELETE",
-                releases_url=("/%d" % rel["id"]),
-                decode_json=False)
+            DeleteRelease(repo, token, rel["id"])
             rel = None
-
         else:
             logging.info("    Release already exists (id %d), deleting assets", rel["id"])
             for a in rel.get("assets", []):
@@ -156,17 +159,13 @@ def UpdateGitHubRelease(spec, tag, token, tmp_dir):
                 params = {"name": asset_name})
         if not ok:
             logging.error("Failed to upload %s: %s", asset_name, r)
-            if r and r.get("code", "") == "already_exists":
+            if r and r.get("errors", [{}])[0].get("code", "") == "already_exists":
                 # This is a bug in GitHub where sometimes "phantom asset" will block an upload.
                 # The asset is not listed (or it would've been deleted), but an uplaod will fail.
                 # There is no way around it exept re-creating a release.
                 # Here we'll just delete it and next run will re-create properly. Ugh.
                 logging.error("*BUG* Phantom asset, nuking release")
-                github_api.CallReleasesAPI(
-                    repo, token,
-                    method="DELETE",
-                    releases_url=("/%d" % rel_id),
-                    decode_json=False)
+                DeleteRelease(repo, token, rel["id"])
             raise RuntimeError
 
     logging.info("  Updated release %s / %s (%d)", repo, tag, rel["id"])
