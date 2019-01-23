@@ -43,6 +43,9 @@ func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []b
 		AzureDM: codec.AzureDMCodecOptions{
 			ConnectionString: *flags.AzureConnectionString,
 		},
+		GCP: codec.GCPCodecOptions{
+			CreateTopic: *flags.GCPRPCCreateTopic,
+		},
 		MQTT: codec.MQTTCodecOptions{},
 		Serial: codec.SerialCodecOptions{
 			BaudRate:             uint(*flags.BaudRate),

@@ -274,7 +274,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := run(cmd, ctx, devConn); err != nil {
+	err := run(cmd, ctx, devConn)
+	if devConn != nil {
+		devConn.Disconnect(context.Background())
+	}
+	if err != nil {
 		glog.Infof("Error: %+v", errors.ErrorStack(err))
 		fmt.Fprintf(os.Stderr, "Error: %s\n", errors.ErrorStack(err))
 		glog.Flush()

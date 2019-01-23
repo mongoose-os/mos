@@ -265,7 +265,11 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 			r.opts.connectAddress, &r.opts.codecOptions.AzureDM); err != nil {
 			return errors.Trace(err)
 		}
-
+	case tGCP:
+		if r.codec, err = codec.NewGCPCodec(
+			r.opts.connectAddress, &r.opts.codecOptions.GCP); err != nil {
+			return errors.Trace(err)
+		}
 	case tWatson:
 		r.codec = codec.NewReconnectWrapperCodec(
 			r.opts.connectAddress,
@@ -301,7 +305,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 		f, err := c.Recv(ctx)
 		glog.V(2).Infof("done, %v", err)
 		if r.closing {
-			glog.Infof("devConn is disconnected, breaking out of the recvLoop", err)
+			glog.Infof("devConn is disconnected, breaking out of the recvLoop (%s)", err)
 			r.reqsLock.Lock()
 			for k, v := range r.reqs {
 				// Use non-blocking send, otherwise we can block and lock this rpc
