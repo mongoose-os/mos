@@ -32,6 +32,7 @@ type Codec interface {
 
 type Options struct {
 	AzureDM AzureDMCodecOptions
+	GCP     GCPCodecOptions
 	MQTT    MQTTCodecOptions
 	Serial  SerialCodecOptions
 	Watson  WatsonCodecOptions
