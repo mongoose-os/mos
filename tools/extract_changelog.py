@@ -48,7 +48,7 @@ def get_repos(org):
     while True:
         # Get repos on the current "page"
         print("  %d..." % page, file=sys.stderr)
-        r, ok = github_api.call_users_api(org, TOKEN, "/repos", params={"page": page})
+        r, ok = github_api.CallUsersAPI(org, TOKEN, "/repos", params={"page": page})
 
         if len(r) == 0:
             # No more repos, we're done
