@@ -69,6 +69,8 @@
       build_vars:
         BOARD: NUCLEO-F746ZG
         MGOS_ENABLE_LWIP: 1
+    - name: ubuntu
+      platform: ubuntu
 
 # Bootloader
 - location: https://github.com/mongoose-os-apps/bootloader
