@@ -295,8 +295,12 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, libs_dir, tmp_dir, no_libs_u
                         time.sleep(1)
                         i += 1
                     else:
-                        if gh_out.get("update", False):
-                            logging.error("*BUG* Phantom asset, nuking release")
+                        if not isinstance(e, KeyboardInterrupt) and gh_out.get("update"):
+                            logging.error("*BUG* Phantom asset (probably), nuking release")
+                            rel, ok = github_api.CallReleasesAPI(gh_out["repo"], token,
+                                                                 releases_url=("/tags/%s" % gh_release_tag))
+                            if ok:
+                                DeleteRelease(repo, token, rel["id"])
                         raise
 
 
