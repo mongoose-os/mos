@@ -36,7 +36,7 @@ import github_api
 GPG_KEY_PATH = os.path.join(os.environ["HOME"], ".gnupg-cesantabot")
 BUILD_DEB_PATH = os.path.join("mos", "ubuntu", "build-deb.sh")
 UPLOAD_DEB_PATH = os.path.join("mos", "ubuntu", "upload-deb.sh")
-UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic"]
+UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic", "disco"]
 
 deb_package = "mos-latest"
 tag_effective = "latest"
