@@ -70,7 +70,12 @@ func (rwc *reconnectWrapperCodec) maintainConnection() {
 				glog.V(1).Infof("closed, stopping reconnect thread")
 				return
 			case <-conn.CloseNotify():
-				glog.Errorf("%s Connection closed", rwc)
+				select {
+				case <-rwc.closeNotifier:
+					// We are shutting down, don't raise fuss
+				default:
+					glog.Errorf("%s Connection closed", rwc)
+				}
 				rwc.lock.Lock()
 				rwc.conn = nil
 				rwc.connEstd = make(chan error)
@@ -175,10 +180,10 @@ func (rwc *reconnectWrapperCodec) Send(ctx context.Context, frame *frame.Frame) 
 
 func (rwc *reconnectWrapperCodec) Close() {
 	rwc.closeOnce.Do(func() {
+		close(rwc.closeNotifier)
 		if rwc.conn != nil {
 			rwc.conn.Close()
 		}
-		close(rwc.closeNotifier)
 	})
 }
 
