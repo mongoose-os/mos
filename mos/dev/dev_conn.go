@@ -200,12 +200,7 @@ func (dc *DevConn) GetTimeout() time.Duration {
 	return dc.c.Timeout
 }
 
-func isJSON(s string) bool {
-	var js json.RawMessage
-	return json.Unmarshal([]byte(s), &js) == nil
-}
-
-func CallDeviceService(ctx context.Context, devConn *DevConn, method string, args interface{}) (string, error) {
+func (dc *DevConn) Call(ctx context.Context, method string, args interface{}) (string, error) {
 	argsJSON, ok := args.(string)
 	if !ok {
 		b, err := json.Marshal(args)
@@ -224,7 +219,7 @@ func CallDeviceService(ctx context.Context, devConn *DevConn, method string, arg
 		cmd.Args = ourjson.RawJSON([]byte(argsJSON))
 	}
 
-	resp, err := devConn.RPC.Call(ctx, devConn.Dest, cmd, rpccreds.GetRPCCreds)
+	resp, err := dc.RPC.Call(ctx, dc.Dest, cmd, rpccreds.GetRPCCreds)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -236,4 +231,13 @@ func CallDeviceService(ctx context.Context, devConn *DevConn, method string, arg
 	// Ignoring errors here, cause response could be empty which is a success
 	str, _ := json.MarshalIndent(resp.Response, "", "  ")
 	return string(str), nil
+}
+
+func isJSON(s string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
+}
+
+func CallDeviceService(ctx context.Context, devConn *DevConn, method string, args interface{}) (string, error) {
+	return devConn.Call(ctx, method, args)
 }

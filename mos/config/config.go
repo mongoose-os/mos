@@ -7,30 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/common/go/lptr"
 	"cesanta.com/common/go/ourutil"
-	fwconfig "cesanta.com/fw/defs/config"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
 var (
-	noSave   bool
-	noReboot bool
-
 	saveTimeout  = 10 * time.Second
 	saveAttempts = 3
 )
-
-// register advanced flash specific commands
-func init() {
-	flag.BoolVar(&noReboot, "no-reboot", false,
-		"Save config but don't reboot the device.")
-	flag.BoolVar(&noSave, "no-save", false,
-		"Don't save config and don't reboot the device")
-}
 
 func Get(ctx context.Context, devConn *dev.DevConn) error {
 	path := ""
@@ -107,16 +95,17 @@ func SetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.DevConf)
 	}
 
 	attempts := saveAttempts
-	for !noSave {
-		if noReboot {
+	for !*flags.NoSave {
+		if *flags.NoReboot {
 			ourutil.Reportf("Saving...")
 		} else {
 			ourutil.Reportf("Saving and rebooting...")
 		}
 		ctx2, cancel := context.WithTimeout(ctx, saveTimeout)
 		defer cancel()
-		err = devConn.CConf.Save(ctx2, &fwconfig.SaveArgs{
-			Reboot: lptr.Bool(!noReboot),
+		_, err = devConn.Call(ctx2, "Config.Save", map[string]interface{}{
+			"reboot":   !*flags.NoReboot,
+			"try_once": *flags.TryOnce,
 		})
 		if err != nil {
 			attempts -= 1
@@ -126,8 +115,11 @@ func SetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.DevConf)
 			}
 			return errors.Trace(err)
 		}
+		if *flags.TryOnce {
+			ourutil.Reportf("Note: --try-once is set, config is valid for one reboot only")
+		}
 
-		if !noReboot {
+		if !*flags.NoReboot {
 			time.Sleep(200 * time.Millisecond)
 		}
 		break

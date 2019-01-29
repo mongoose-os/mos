@@ -55,6 +55,10 @@ var (
 	GCPCertFile       = flag.String("gcp-cert-file", "", "Certificate/public key file")
 	GCPKeyFile        = flag.String("gcp-key-file", "", "Private key file")
 	GCPRPCCreateTopic = flag.Bool("gcp-rpc-create-topic", false, "Create RPC topic plumbing if needed")
+
+	NoReboot = flag.Bool("no-reboot", false, "Save config but don't reboot the device.")
+	NoSave   = flag.Bool("no-save", false, "Don't save config and don't reboot the device")
+	TryOnce  = flag.Bool("try-once", false, "When saving the config, do it in such a way that it's only applied on the next boot")
 )
 
 func Platform() string {
