@@ -19,8 +19,6 @@ import (
 var (
 	hiddenFlags = []string{
 		"alsologtostderr",
-		"clubby.default_frame_version",
-		"clubby.xxx_ubjson_input",
 		"log_backtrace_at",
 		"log_dir",
 		"logbufsecs",
