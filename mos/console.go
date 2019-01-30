@@ -215,7 +215,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		if err != nil {
 			return errors.Trace(err)
 		}
-		if _, err = dev.CallDeviceService(ctx, devConn, "Dash.Console.Subscribe", ""); err != nil {
+		if err = devConn.Call(ctx, "Dash.Console.Subscribe", nil, nil); err != nil {
 			return errors.Trace(err)
 		}
 		devConn.RPC.AddHandler("Dash.Console.Event", func(c mgrpc.MgRPC, f *frame.Frame) *frame.Frame {

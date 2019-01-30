@@ -12,7 +12,6 @@ import (
 
 	"cesanta.com/common/go/lptr"
 	"cesanta.com/common/go/ourutil"
-	fwfs "cesanta.com/fw/defs/fs"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flags"
 	"github.com/cesanta/errors"
@@ -24,24 +23,40 @@ var (
 	longFormat = flag.BoolP("long", "l", false, "Long output format.")
 )
 
-func listFiles(ctx context.Context, devConn *dev.DevConn, path string) (res []fwfs.ListExtResult, err error) {
+type ListArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
+type ListExtArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
+type ListExtResult struct {
+	Name *string `json:"name,omitempty"`
+	Size *int64  `json:"size,omitempty"`
+}
+
+func listFiles(ctx context.Context, devConn *dev.DevConn, path string) ([]ListExtResult, error) {
+	var res []ListExtResult
 	if *longFormat {
-		res, err = devConn.CFilesystem.ListExt(ctx, &fwfs.ListExtArgs{Path: &path})
+		if err := devConn.Call(ctx, "FS.ListExt", &ListExtArgs{Path: &path}, &res); err != nil {
+			return nil, errors.Trace(err)
+		}
 	} else {
 		// Get file list from the attached device
-		names, err := devConn.CFilesystem.List(ctx, &fwfs.ListArgs{Path: &path})
-		if err != nil {
+		var names []string
+		if err := devConn.Call(ctx, "FS.List", &ListArgs{Path: &path}, &names); err != nil {
 			return nil, errors.Trace(err)
 		}
 		for _, name := range names {
 			n := name
-			res = append(res, fwfs.ListExtResult{Name: &n})
+			res = append(res, ListExtResult{Name: &n})
 		}
 	}
-	return res, err
+	return res, nil
 }
 
-type byName []fwfs.ListExtResult
+type byName []ListExtResult
 
 func (a byName) Len() int           { return len(a) }
 func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -68,6 +83,17 @@ func Ls(ctx context.Context, devConn *dev.DevConn) error {
 	return nil
 }
 
+type GetArgs struct {
+	Filename *string `json:"filename,omitempty"`
+	Len      *int64  `json:"len,omitempty"`
+	Offset   *int64  `json:"offset,omitempty"`
+}
+
+type GetResult struct {
+	Data *string `json:"data,omitempty"`
+	Left *int64  `json:"left,omitempty"`
+}
+
 func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, error) {
 	// Get file
 	contents := []byte{}
@@ -79,12 +105,12 @@ func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 		ctx2, cancel := context.WithTimeout(ctx, devConn.GetTimeout())
 		defer cancel()
 		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, flags.ChunkSize, offset, attempts)
-		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfs.GetArgs{
+		var chunk GetResult
+		if err := devConn.Call(ctx2, "FS.Get", &GetArgs{
 			Filename: &name,
 			Offset:   lptr.Int64(offset),
 			Len:      lptr.Int64(int64(*flags.ChunkSize)),
-		})
-		if err != nil {
+		}, &chunk); err != nil {
 			attempts -= 1
 			if attempts > 0 {
 				glog.Warningf("Error: %s", err)
@@ -182,7 +208,7 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 					Append:   appendFlag,
 					Data:     base64.StdEncoding.EncodeToString(data[:n]),
 				}
-				if _, err := dev.CallDeviceService(ctx2, devConn, "FS.Put", putArgs); err != nil {
+				if err := devConn.Call(ctx2, "FS.Put", putArgs, nil); err != nil {
 					attempts -= 1
 					if attempts > 0 {
 						glog.Warningf("Error: %s", err)
@@ -212,10 +238,14 @@ func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename
 	return nil
 }
 
+type RemoveArgs struct {
+	Filename *string `json:"filename,omitempty"`
+}
+
 func fsRemoveFile(ctx context.Context, devConn *dev.DevConn, devFilename string) error {
-	return errors.Trace(devConn.CFilesystem.Remove(ctx, &fwfs.RemoveArgs{
+	return errors.Trace(devConn.Call(ctx, "FS.Remove", &RemoveArgs{
 		Filename: &devFilename,
-	}))
+	}, nil))
 }
 
 func Rm(ctx context.Context, devConn *dev.DevConn) error {

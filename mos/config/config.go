@@ -103,11 +103,10 @@ func SetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.DevConf)
 		}
 		ctx2, cancel := context.WithTimeout(ctx, saveTimeout)
 		defer cancel()
-		_, err = devConn.Call(ctx2, "Config.Save", map[string]interface{}{
+		if err = devConn.Call(ctx2, "Config.Save", map[string]interface{}{
 			"reboot":   !*flags.NoReboot,
 			"try_once": *flags.TryOnce,
-		})
-		if err != nil {
+		}, nil); err != nil {
 			attempts -= 1
 			if attempts > 0 {
 				glog.Warningf("Error: %s", err)

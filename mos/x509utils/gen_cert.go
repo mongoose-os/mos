@@ -18,8 +18,6 @@ import (
 
 	"cesanta.com/common/go/lptr"
 	"cesanta.com/common/go/ourutil"
-	atcaService "cesanta.com/fw/defs/atca"
-	fwsys "cesanta.com/fw/defs/sys"
 	"cesanta.com/mos/atca"
 	"cesanta.com/mos/config"
 	"cesanta.com/mos/dev"
@@ -59,7 +57,7 @@ func init() {
 	flag.IntVar(&ATCASlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
 }
 
-func PickCertType(devInfo *fwsys.GetInfoResult) (CertType, bool, error) {
+func PickCertType(devInfo *dev.GetInfoResult) (CertType, bool, error) {
 	if useATCA {
 		if certType != "" && strings.ToUpper(certType) != "ECDSA" {
 			return "", true, errors.Errorf("ATCA only supports EC keys")
@@ -118,7 +116,7 @@ func checkATCAConfig(ctx context.Context, devConn *dev.DevConn, devConf *dev.Dev
 	return nil
 }
 
-func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *fwsys.GetInfoResult) (crypto.Signer, []byte, []byte, error) {
+func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult) (crypto.Signer, []byte, []byte, error) {
 	var err error
 	var keySigner crypto.Signer
 	var keyPEMBlockType string
@@ -136,7 +134,7 @@ func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, dev
 			ourutil.Reportf("invalid device configuration: %s", err)
 		}
 
-		cl, _, atcaCfg, err := atca.Connect(ctx, devConn)
+		_, atcaCfg, err := atca.Connect(ctx, devConn)
 		if err != nil {
 			return nil, nil, nil, errors.Annotatef(err, "failed to connect to the crypto device")
 		}
@@ -144,11 +142,12 @@ func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, dev
 			return nil, nil, nil, errors.Errorf("crypto chip is not fully configured; see step 2 here: https://mongoose-os.com/docs/overview/security.html#setup-guide")
 		}
 		ourutil.Reportf("Generating new private key in slot %d", ATCASlot)
-		_, err = cl.GenKey(ctx, &atcaService.GenKeyArgs{Slot: lptr.Int64(int64(ATCASlot))})
-		if err != nil {
+		if err = devConn.Call(ctx, "ATCA.GenKey", &atca.GenKeyArgs{
+			Slot: lptr.Int64(int64(ATCASlot)),
+		}, nil); err != nil {
 			return nil, nil, nil, errors.Annotatef(err, "failed to generate private key in slot %d", ATCASlot)
 		}
-		keySigner = atca.NewSigner(ctx, cl, ATCASlot)
+		keySigner = atca.NewSigner(ctx, devConn, ATCASlot)
 		keyPEMBlockType = "EC PRIVATE KEY"
 	} else {
 		switch keyType {
@@ -247,7 +246,7 @@ func LoadCertAndKey(certFile, keyFile string) ([]byte, []byte, crypto.Signer, []
 }
 
 func LoadOrGenerateCertAndKey(ctx context.Context, certType CertType, certFile, keyFile string, certTmpl *x509.Certificate, useATCA bool,
-	devConn *dev.DevConn, devConf *dev.DevConf, devInfo *fwsys.GetInfoResult) (
+	devConn *dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult) (
 	[]byte, []byte, crypto.Signer, []byte, []byte, error) {
 
 	certDERBytes, certPEMBytes, keySigner, keyDERBytes, keyPEMBytes, err := LoadCertAndKey(certFile, keyFile)

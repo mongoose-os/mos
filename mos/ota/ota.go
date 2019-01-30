@@ -44,15 +44,11 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 	fwFileSize := len(fwFileData)
 
 	ourutil.Reportf("Getting current OTA status...")
-	s, err := dev.CallDeviceService(ctx, devConn, "OTA.Status", "")
-	if err != nil {
-		return errors.Annotatef(err, "unable to get current OTA status")
-	}
 	st := struct {
 		State int `json:"state"`
 	}{State: -1}
-	if err := json.Unmarshal([]byte(s), &st); err != nil {
-		return errors.Annotatef(err, "invalid OTA.Status response")
+	if err := devConn.Call(ctx, "OTA.Status", nil, &st); err != nil {
+		return errors.Annotatef(err, "unable to get current OTA status")
 	}
 	if st.State != 0 && st.State != 2 /* MGOS_OTA_STATE_ERROR */ {
 		return errors.Errorf("update is already in progress (%d), call OTA.End", st.State)
@@ -72,8 +68,7 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 		beginArgs = string(baJSON)
 	}
 	ourutil.Reportf("Starting an update (args: %s)...", beginArgs)
-	s, err = dev.CallDeviceService(ctx, devConn, "OTA.Begin", beginArgs)
-	if err != nil {
+	if err = devConn.Call(ctx, "OTA.Begin", beginArgs, nil); err != nil {
 		return errors.Annotatef(err, "unable to start an update")
 	}
 
@@ -94,15 +89,13 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 			Offset int64  `json:"offset"`
 			Data   string `json:"data"`
 		}{Offset: total, Data: dataB64}
-		staJSON, _ := json.Marshal(&sta)
 		for i := 0; i < 3; i++ {
 			ctx2, _ := context.WithTimeout(ctx, devConn.GetTimeout())
-			_, err = dev.CallDeviceService(ctx2, devConn, "OTA.Write", string(staJSON))
-			if err == nil {
+			if err = devConn.Call(ctx2, "OTA.Write", &sta, nil); err == nil {
 				break
 			}
 			if i == 2 {
-				dev.CallDeviceService(ctx, devConn, "OTA.End", "null")
+				devConn.Call(ctx, "OTA.End", nil, nil)
 				return errors.Annotatef(err, "write failed at offset %d", total)
 			}
 		}
@@ -114,6 +107,5 @@ func OTA(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	ourutil.Reportf("Finalizing update...")
-	s, err = dev.CallDeviceService(ctx, devConn, "OTA.End", "null")
-	return err
+	return devConn.Call(ctx, "OTA.End", nil, nil)
 }

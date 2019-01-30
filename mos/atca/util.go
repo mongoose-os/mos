@@ -11,9 +11,7 @@ import (
 	"context"
 
 	"cesanta.com/common/go/ourutil"
-	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/dev"
-	"cesanta.com/mos/rpccreds"
 	"github.com/cesanta/errors"
 )
 
@@ -21,29 +19,28 @@ const (
 	KeyFilePrefix = "ATCA:"
 )
 
-func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte, *Config, error) {
-	cl := atcaService.NewClient(dc.RPC, "", rpccreds.GetRPCCreds)
+func Connect(ctx context.Context, dc *dev.DevConn) ([]byte, *Config, error) {
+	var r GetConfigResult
 
-	r, err := cl.GetConfig(ctx)
-	if err != nil {
-		return nil, nil, nil, errors.Annotatef(err, "GetConfig")
+	if err := dc.Call(ctx, "ATCA.GetConfig", nil, &r); err != nil {
+		return nil, nil, errors.Annotatef(err, "GetConfig")
 	}
 
 	if r.Config == nil {
-		return nil, nil, nil, errors.New("no config data in response")
+		return nil, nil, errors.New("no config data in response")
 	}
 
 	confData, err := base64.StdEncoding.DecodeString(*r.Config)
 	if err != nil {
-		return nil, nil, nil, errors.Annotatef(err, "failed to decode config data")
+		return nil, nil, errors.Annotatef(err, "failed to decode config data")
 	}
 	if len(confData) != ConfigSize {
-		return nil, nil, nil, errors.Errorf("expected %d bytes, got %d", ConfigSize, len(confData))
+		return nil, nil, errors.Errorf("expected %d bytes, got %d", ConfigSize, len(confData))
 	}
 
 	cfg, err := ParseBinaryConfig(confData)
 	if err != nil {
-		return nil, nil, nil, errors.Annotatef(err, "ParseBinaryConfig")
+		return nil, nil, errors.Annotatef(err, "ParseBinaryConfig")
 	}
 
 	var model string
@@ -61,7 +58,7 @@ func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte,
 	}
 	ourutil.Reportf("")
 
-	return cl, confData, cfg, nil
+	return confData, cfg, nil
 }
 
 func WriteHex(data []byte, numPerLine int) []byte {

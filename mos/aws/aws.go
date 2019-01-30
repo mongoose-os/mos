@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"cesanta.com/common/go/ourutil"
-	fwsys "cesanta.com/fw/defs/sys"
 	"cesanta.com/mos/atca"
 	"cesanta.com/mos/config"
 	"cesanta.com/mos/dev"
@@ -162,7 +161,7 @@ func GetAWSIoTPolicyNames() ([]string, error) {
 	return policies, nil
 }
 
-func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *fwsys.GetInfoResult, cn, thingName string) ([]byte, []byte, error) {
+func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult, cn, thingName string) ([]byte, []byte, error) {
 	var err error
 
 	if AWSIoTPolicy == "" {

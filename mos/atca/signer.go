@@ -7,25 +7,24 @@ import (
 	"crypto/elliptic"
 	"encoding/asn1"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"math/big"
-	"os"
 
 	"cesanta.com/common/go/lptr"
-	atcaService "cesanta.com/fw/defs/atca"
+	"cesanta.com/common/go/ourutil"
+	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 )
 
 // Implements crypto.Signer interface using ATCA.
 type Signer struct {
 	ctx  context.Context
-	cl   atcaService.Service
+	dc   *dev.DevConn
 	slot int
 }
 
-func NewSigner(ctx context.Context, cl atcaService.Service, slot int) crypto.Signer {
-	return &Signer{ctx: ctx, cl: cl, slot: slot}
+func NewSigner(ctx context.Context, dc *dev.DevConn, slot int) crypto.Signer {
+	return &Signer{ctx: ctx, dc: dc, slot: slot}
 }
 
 func (s *Signer) Public() crypto.PublicKey {
@@ -35,11 +34,10 @@ func (s *Signer) Public() crypto.PublicKey {
 		Y:     big.NewInt(0),
 	}
 
-	req := &atcaService.GetPubKeyArgs{Slot: lptr.Int64(int64(s.slot))}
-
-	r, err := s.cl.GetPubKey(s.ctx, req)
-	if err != nil {
-		//errors.Annotatef(err, "GetPubKey")
+	var r GetPubKeyResult
+	if err := s.dc.Call(s.ctx, "ATCA.GetPubKey", &GetPubKeyArgs{
+		Slot: lptr.Int64(int64(s.slot)),
+	}, &r); err != nil {
 		return nil
 	}
 
@@ -60,16 +58,14 @@ func (s *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 		return nil, errors.NotImplementedf("can only sign 32 byte digests, signing %d bytes", len(digest))
 	}
 
+	ourutil.Reportf("Signing with slot %d...\n", s.slot)
+
 	b64d := base64.StdEncoding.EncodeToString(digest)
-	req := &atcaService.SignArgs{
+	var r SignResult
+	if err := s.dc.Call(s.ctx, "ATCA.Sign", &SignArgs{
 		Slot:   lptr.Int64(int64(s.slot)),
 		Digest: &b64d,
-	}
-
-	fmt.Fprintf(os.Stderr, "Signing with slot %d...\n", s.slot)
-
-	r, err := s.cl.Sign(s.ctx, req)
-	if err != nil {
+	}, &r); err != nil {
 		return nil, errors.Annotatef(err, "ATCA.Sign")
 	}
 

@@ -53,16 +53,15 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 			return errors.Annotatef(err, "error connecting to device")
 		}
 		ourutil.Reportf("Querying device UID...")
-		rs, err := dev.CallDeviceService(ctx, devConn, "Sys.GetUID", "")
-		if err != nil {
-			return errors.Annotatef(err, "error querying device UID")
-		}
 		var res struct {
 			PID string `json:"pid"`
 			UID string `json:"uid"`
 			App string `json:"app"`
 		}
-		if err := json.Unmarshal([]byte(rs), &res); err != nil || res.UID == "" || res.PID == "" {
+		if err := devConn.Call(ctx, "Sys.GetUID", nil, &res); err != nil {
+			return errors.Annotatef(err, "error querying device UID")
+		}
+		if res.UID == "" || res.PID == "" {
 			return errors.Annotatef(err, "invalid device reply %s", res)
 		}
 		ourutil.Reportf("PID: %s UID: %s", res.PID, res.UID)

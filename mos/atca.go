@@ -16,7 +16,6 @@ import (
 
 	"context"
 
-	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/atca"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -58,7 +57,7 @@ func atcaGetConfig(ctx context.Context, dc *dev.DevConn) error {
 		fn = args[1]
 	}
 
-	_, confData, cfg, err := atca.Connect(ctx, dc)
+	confData, cfg, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
@@ -130,7 +129,7 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("%s: expected %d bytes, got %d", fn, atca.ConfigSize, len(confData))
 	}
 
-	cl, _, currentCfg, err := atca.Connect(ctx, dc)
+	_, currentCfg, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
@@ -140,7 +139,7 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 	}
 
 	b64c := base64.StdEncoding.EncodeToString(confData)
-	req := &atcaService.SetConfigArgs{
+	req := &atca.SetConfigArgs{
 		Config: &b64c,
 	}
 
@@ -153,7 +152,7 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 		return nil
 	}
 
-	if err = cl.SetConfig(ctx, req); err != nil {
+	if err = dc.Call(ctx, "ATCA.SetConfig", req, nil); err != nil {
 		return errors.Annotatef(err, "SetConfig")
 	}
 
@@ -178,13 +177,13 @@ func atcaLockZone(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("invalid zone '%s'", args[1])
 	}
 
-	cl, _, _, err := atca.Connect(ctx, dc)
+	_, _, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
 
 	zoneInt := int64(zone)
-	req := &atcaService.LockZoneArgs{Zone: &zoneInt}
+	req := &atca.LockZoneArgs{Zone: &zoneInt}
 
 	if *dryRun {
 		reportf("This is a dry run, would have sent the following request:\n\n"+
@@ -193,7 +192,7 @@ func atcaLockZone(ctx context.Context, dc *dev.DevConn) error {
 		return nil
 	}
 
-	if err = cl.LockZone(ctx, req); err != nil {
+	if err = dc.Call(ctx, "ATCA.LockZone", req, nil); err != nil {
 		return errors.Annotatef(err, "LockZone")
 	}
 
@@ -202,7 +201,7 @@ func atcaLockZone(ctx context.Context, dc *dev.DevConn) error {
 	return nil
 }
 
-func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atcaService.SetKeyArgs, error) {
+func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atca.SetKeyArgs, error) {
 	var keyData []byte
 
 	rest := data
@@ -237,7 +236,7 @@ func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atcaServi
 
 	b64k := base64.StdEncoding.EncodeToString(keyData)
 	isECC := true
-	req := &atcaService.SetKeyArgs{Key: &b64k, Ecc: &isECC}
+	req := &atca.SetKeyArgs{Key: &b64k, Ecc: &isECC}
 
 	if cfg.LockValue == atca.LockModeLocked {
 		if cfg.SlotInfo[slot].SlotConfig.WriteConfig&0x4 == 0 {
@@ -286,7 +285,7 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	cl, _, cfg, err := atca.Connect(ctx, dc)
+	_, cfg, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
@@ -295,7 +294,7 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("config zone must be locked got SetKey to work")
 	}
 
-	var req *atcaService.SetKeyArgs
+	var req *atca.SetKeyArgs
 
 	si := cfg.SlotInfo[slot]
 	if slot < 8 && si.KeyConfig.Private && si.KeyConfig.KeyType == atca.KeyTypeECC {
@@ -309,7 +308,7 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 		}
 		b64k := base64.StdEncoding.EncodeToString(keyData)
 		isECC := false
-		req = &atcaService.SetKeyArgs{Key: &b64k, Ecc: &isECC}
+		req = &atca.SetKeyArgs{Key: &b64k, Ecc: &isECC}
 	}
 
 	if err != nil {
@@ -327,7 +326,7 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 		return nil
 	}
 
-	if err = cl.SetKey(ctx, req); err != nil {
+	if err = dc.Call(ctx, "ATCA.SetKey", req, nil); err != nil {
 		return errors.Annotatef(err, "SetKey")
 	}
 
@@ -360,7 +359,7 @@ func writePEM(derBytes []byte, blockType string, outputFileName string) error {
 	return nil
 }
 
-func genCSR(csrTemplateFile string, slot int, cl atcaService.Service, outputFileName string) error {
+func genCSR(csrTemplateFile string, slot int, dc *dev.DevConn, outputFileName string) error {
 	reportf("Generating CSR using template from %s", csrTemplateFile)
 	data, err := ioutil.ReadFile(csrTemplateFile)
 	if err != nil {
@@ -390,7 +389,7 @@ func genCSR(csrTemplateFile string, slot int, cl atcaService.Service, outputFile
 			x509.ECDSA, x509.ECDSAWithSHA256, csrTemplate.PublicKeyAlgorithm,
 			csrTemplate.SignatureAlgorithm)
 	}
-	signer := atca.NewSigner(context.Background(), cl, slot)
+	signer := atca.NewSigner(context.Background(), dc, slot)
 	csr, err := x509.CreateCertificateRequest(nil, csrTemplate, signer)
 	if err != nil {
 		return errors.Annotatef(err, "failed to create new CSR")
@@ -430,12 +429,11 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 		outputFileName = args[2]
 	}
 
-	cl, _, _, err := atca.Connect(ctx, dc)
-	if err != nil {
+	if _, _, err = atca.Connect(ctx, dc); err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
 
-	req := &atcaService.GenKeyArgs{Slot: &slot}
+	req := &atca.GenKeyArgs{Slot: &slot}
 
 	if *dryRun {
 		reportf("This is a dry run, would have sent the following request:\n\n"+
@@ -445,8 +443,8 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 		return nil
 	}
 
-	r, err := cl.GenKey(ctx, req)
-	if err != nil {
+	var r atca.GenKeyResult
+	if err := dc.Call(ctx, "ATCA.GenKey", req, &r); err != nil {
 		return errors.Annotatef(err, "GenKey")
 	}
 
@@ -465,7 +463,7 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 	reportf("Generated new ECC key on slot %d", slot)
 
 	if csrTemplate != "" {
-		return genCSR(csrTemplate, int(slot), cl, outputFileName)
+		return genCSR(csrTemplate, int(slot), dc, outputFileName)
 	} else {
 		return writePubKey(keyData, outputFileName)
 	}
@@ -486,15 +484,14 @@ func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 		outputFileName = args[2]
 	}
 
-	cl, _, _, err := atca.Connect(ctx, dc)
-	if err != nil {
+	if _, _, err := atca.Connect(ctx, dc); err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
 
-	req := &atcaService.GetPubKeyArgs{Slot: &slot}
+	req := &atca.GetPubKeyArgs{Slot: &slot}
 
-	r, err := cl.GetPubKey(ctx, req)
-	if err != nil {
+	var r atca.GetPubKeyResult
+	if err := dc.Call(ctx, "ATCA.GetPubKey", req, nil); err != nil {
 		return errors.Annotatef(err, "GetPubKey")
 	}
 
@@ -511,7 +508,7 @@ func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 	}
 
 	if csrTemplate != "" {
-		return genCSR(csrTemplate, int(slot), cl, outputFileName)
+		return genCSR(csrTemplate, int(slot), dc, outputFileName)
 	} else {
 		return writePubKey(keyData, outputFileName)
 	}

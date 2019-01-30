@@ -10,9 +10,6 @@ import (
 	"cesanta.com/common/go/mgrpc/codec"
 	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
-	fwconfig "cesanta.com/fw/defs/config"
-	fwfilesystem "cesanta.com/fw/defs/fs"
-	fwsys "cesanta.com/fw/defs/sys"
 	"cesanta.com/mos/rpccreds"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -38,10 +35,6 @@ type DevConn struct {
 	Dest        string
 	Reconnect   bool
 	codecOpts   codec.Options
-
-	CConf       fwconfig.Service
-	CSys        fwsys.Service
-	CFilesystem fwfilesystem.Service
 }
 
 // CreateDevConn creates a direct connection to the device at a given address,
@@ -74,14 +67,12 @@ func (c *Client) CreateDevConnWithOpts(ctx context.Context, connectAddr string, 
 }
 
 func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
-	var devConfRaw ourjson.RawMessage
-	var err error
+	var devConf DevConf
 	attempts := confOpAttempts
 	for {
 		ctx2, cancel := context.WithTimeout(ctx, dc.GetTimeout())
 		defer cancel()
-		devConfRaw, err = dc.CConf.Get(ctx2, &fwconfig.GetArgs{})
-		if err != nil {
+		if err := dc.Call(ctx2, "Config.Get", nil, &devConf.data); err != nil {
 			attempts -= 1
 			if attempts > 0 {
 				glog.Warningf("Error: %s", err)
@@ -92,14 +83,11 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 		break
 	}
 
-	var devConf DevConf
-
-	err = devConfRaw.UnmarshalIntoUseNumber(&devConf.data)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
 	return &devConf, nil
+}
+
+type ConfigSetArg struct {
+	Config map[string]interface{} `json:"config,omitempty"`
 }
 
 func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
@@ -107,10 +95,9 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 	for {
 		ctx2, cancel := context.WithTimeout(ctx, dc.GetTimeout())
 		defer cancel()
-		err := dc.CConf.Set(ctx2, &fwconfig.SetArgs{
-			Config: ourjson.DelayMarshaling(devConf.diff),
-		})
-		if err != nil {
+		if err := dc.Call(ctx2, "Config.Set", &ConfigSetArg{
+			Config: devConf.diff,
+		}, nil); err != nil {
 			attempts -= 1
 			if attempts > 0 {
 				glog.Warningf("Error: %s", err)
@@ -124,21 +111,44 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 	return nil
 }
 
-func (dc *DevConn) GetInfo(ctx context.Context) (*fwsys.GetInfoResult, error) {
+type GetInfoResultWifi struct {
+	SSSID  *string `json:"ssid,omitempty"`
+	StaIP  *string `json:"sta_ip,omitempty"`
+	APIP   *string `json:"ap_ip,omitempty"`
+	Status *string `json:"status,omitempty"`
+}
+
+type GetInfoResult struct {
+	App        *string            `json:"app,omitempty"`
+	Arch       *string            `json:"arch,omitempty"`
+	Fs_free    *int64             `json:"fs_free,omitempty"`
+	Fs_size    *int64             `json:"fs_size,omitempty"`
+	Fw_id      *string            `json:"fw_id,omitempty"`
+	Fw_version *string            `json:"fw_version,omitempty"`
+	Mac        *string            `json:"mac,omitempty"`
+	RAMFree    *int64             `json:"ram_free,omitempty"`
+	RAMMinFree *int64             `json:"ram_min_free,omitempty"`
+	RAMSize    *int64             `json:"ram_size,omitempty"`
+	Uptime     *int64             `json:"uptime,omitempty"`
+	Wifi       *GetInfoResultWifi `json:"wifi,omitempty"`
+}
+
+func (dc *DevConn) GetInfo(ctx context.Context) (*GetInfoResult, error) {
+	var r GetInfoResult
 	attempts := confOpAttempts
 	for {
 		ctx2, cancel := context.WithTimeout(ctx, dc.GetTimeout())
 		defer cancel()
-		r, err := dc.CSys.GetInfo(ctx2)
-		if err != nil {
-			attempts -= 1
-			if attempts > 0 {
-				glog.Warningf("Error: %s", err)
-				continue
-			}
-			return nil, errors.Trace(err)
+		var err error
+		if err = dc.Call(ctx2, "Sys.GetInfo", nil, &r); err == nil {
+			return &r, nil
 		}
-		return r, err
+		attempts -= 1
+		if attempts > 0 {
+			glog.Warningf("Error: %s", err)
+			continue
+		}
+		return nil, errors.Trace(err)
 	}
 }
 
@@ -190,9 +200,6 @@ func (dc *DevConn) ConnectWithOpts(ctx context.Context, reconnect bool, tlsConfi
 		return errors.Trace(err)
 	}
 
-	dc.CConf = fwconfig.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
-	dc.CSys = fwsys.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
-	dc.CFilesystem = fwfilesystem.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
 	return nil
 }
 
@@ -200,44 +207,63 @@ func (dc *DevConn) GetTimeout() time.Duration {
 	return dc.c.Timeout
 }
 
-func (dc *DevConn) Call(ctx context.Context, method string, args interface{}) (string, error) {
-	argsJSON, ok := args.(string)
-	if !ok {
-		b, err := json.Marshal(args)
-		if err != nil {
-			return "", errors.Annotatef(err, "failed to serialize args")
-		}
-		argsJSON = string(b)
-	} else {
-		if argsJSON != "" && !isJSON(argsJSON) {
-			return "", errors.Errorf("Args [%s] is not a valid JSON string", args)
-		}
-	}
-
-	cmd := &frame.Command{Cmd: method}
-	if args != "" {
-		cmd.Args = ourjson.RawJSON([]byte(argsJSON))
-	}
-
-	resp, err := dc.RPC.Call(ctx, dc.Dest, cmd, rpccreds.GetRPCCreds)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	if resp.Status != 0 {
-		return "", errors.Errorf("remote error %d: %s", resp.Status, resp.StatusMsg)
-	}
-
-	// Ignoring errors here, cause response could be empty which is a success
-	str, _ := json.MarshalIndent(resp.Response, "", "  ")
-	return string(str), nil
-}
-
 func isJSON(s string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(s), &js) == nil
 }
 
-func CallDeviceService(ctx context.Context, devConn *DevConn, method string, args interface{}) (string, error) {
-	return devConn.Call(ctx, method, args)
+func (dc *DevConn) CallRaw(ctx context.Context, method string, args interface{}) (ourjson.RawMessage, error) {
+	argsJSON, ok := args.(string)
+	if !ok {
+		if args != nil {
+			b, err := json.Marshal(args)
+			if err != nil {
+				return nil, errors.Annotatef(err, "failed to serialize args")
+			}
+			argsJSON = string(b)
+		} else {
+			argsJSON = ""
+		}
+	} else {
+		if argsJSON != "" && !isJSON(argsJSON) {
+			return nil, errors.Errorf("Args [%s] is not a valid JSON string", args)
+		}
+	}
+
+	cmd := &frame.Command{Cmd: method}
+	if argsJSON != "" {
+		cmd.Args = ourjson.RawJSON([]byte(argsJSON))
+	}
+
+	resp, err := dc.RPC.Call(ctx, dc.Dest, cmd, rpccreds.GetRPCCreds)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if resp.Status != 0 {
+		return nil, errors.Errorf("remote error %d: %s", resp.Status, resp.StatusMsg)
+	}
+
+	return resp.Response, nil
+}
+
+func (dc *DevConn) CallB(ctx context.Context, method string, args interface{}) ([]byte, error) {
+	respRaw, err := dc.CallRaw(ctx, method, args)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	// Ignoring errors here, cause response could be empty which is a success
+	res, _ := json.MarshalIndent(respRaw, "", "  ")
+	return res, nil
+}
+
+func (dc *DevConn) Call(ctx context.Context, method string, args interface{}, resp interface{}) error {
+	respRaw, err := dc.CallRaw(ctx, method, args)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp != nil {
+		return respRaw.UnmarshalInto(resp)
+	}
+	return nil
 }
