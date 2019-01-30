@@ -185,7 +185,7 @@ if __name__ == "__main__":
         # We've just updated the formula.
         RunSubprocess(["brew", "update"])
         RunSubprocess(["brew", "uninstall", "-f", "mos", "mos-latest"])
-        RunSubprocess(["brew", "install", "--build-from-source", "--build-bottle", formula])
+        RunSubprocess(["brew", "install", "--build-bottle", formula])
         out = RunSubprocess(["brew", "bottle", formula]).decode("utf-8")
         ll = [l for l in out.splitlines() if not l.startswith("==")]
         bottle_fname = ll[0]
