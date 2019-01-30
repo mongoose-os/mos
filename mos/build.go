@@ -162,7 +162,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	serverVersionCh := make(chan *version.VersionJson, 1)
 	if true || !*local {
 		go func() {
-			v, err := update.GetServerMosVersion(update.GetUpdateChannel())
+			v, err := update.GetServerMosVersion(string(update.GetUpdateChannel()))
 			if err != nil {
 				// Ignore error, it's not really important
 				return
@@ -258,8 +258,10 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		serverVer := v.BuildVersion
 		localVer := version.Version
 
-		if serverVer != localVer {
-			freportf(logWriterStderr, "By the way, there is a newer version available: %q (you use %q). Run \"mos update\" to upgrade.", serverVer, localVer)
+		if (update.GetUpdateChannel() == update.UpdateChannelRelease && serverVer != localVer) ||
+			(update.GetUpdateChannel() == update.UpdateChannelLatest && strings.Compare(serverVer, localVer) > 0) {
+			freportf(logWriterStderr, "By the way, there is a newer version available: %q (you use %q). "+
+				`Run "mos update" to upgrade.`, serverVer, localVer)
 		}
 	default:
 	}
@@ -466,7 +468,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				// latest app is built with older mos tool.
 
 				serverVersion := libsDefVersion
-				v, err := update.GetServerMosVersion(update.GetUpdateChannel())
+				v, err := update.GetServerMosVersion(string(update.GetUpdateChannel()))
 				if err == nil {
 					serverVersion = v.BuildVersion
 				}

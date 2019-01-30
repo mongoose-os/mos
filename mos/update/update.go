@@ -35,16 +35,21 @@ import (
 	"cesanta.com/mos/dev"
 )
 
+const (
+	UpdateChannelLatest  UpdateChannel = "latest"
+	UpdateChannelRelease               = "release"
+)
+
 var (
 	migrateFlag = flag.Bool("migrate", true, "Migrate data from the previous version if needed")
 
-	brewPackageNames = map[string]string{
-		"release": "mos",
-		"latest":  "mos-latest",
+	brewPackageNames = map[UpdateChannel]string{
+		UpdateChannelRelease: "mos",
+		UpdateChannelLatest:  "mos-latest",
 	}
-	ubuntuPackageNames = map[string]string{
-		"release": "mos",
-		"latest":  "mos-latest",
+	ubuntuPackageNames = map[UpdateChannel]string{
+		UpdateChannelRelease: "mos",
+		UpdateChannelLatest:  "mos-latest",
 	}
 	ubuntuRepoName = "ppa:mongoose-os/mos"
 )
@@ -83,7 +88,7 @@ func GetServerMosVersion(mosVersion string) (*version.VersionJson, error) {
 	return &serverVersion, nil
 }
 
-func doUbuntuUpdate(oldUpdChannel, newUpdChannel string) error {
+func doUbuntuUpdate(oldUpdChannel, newUpdChannel UpdateChannel) error {
 	oldPkg := ubuntuPackageNames[oldUpdChannel]
 	newPkg := ubuntuPackageNames[newUpdChannel]
 
@@ -113,9 +118,9 @@ func doUbuntuUpdate(oldUpdChannel, newUpdChannel string) error {
 	return ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt-get", "install", "-y", newPkg)
 }
 
-func doBrewUpdate(oldUpdChannel, newUpdChannel string) error {
-	oldPkg := ubuntuPackageNames[oldUpdChannel]
-	newPkg := ubuntuPackageNames[newUpdChannel]
+func doBrewUpdate(oldUpdChannel, newUpdChannel UpdateChannel) error {
+	oldPkg := brewPackageNames[oldUpdChannel]
+	newPkg := brewPackageNames[newUpdChannel]
 	ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "update")
 	ourutil.RunCmd(ourutil.CmdOutOnError, "brew", "tap", "cesanta/mos")
 	if oldPkg != newPkg {
@@ -134,7 +139,7 @@ func Update(ctx context.Context, devConn *dev.DevConn) error {
 
 	// newMosVersion is the version which will be fetched from the server;
 	// by default it's equal to the current update channel.
-	newMosVersion := updChannel
+	newMosVersion := string(updChannel)
 
 	if len(args) >= 2 {
 		// Desired mos version is given
@@ -259,17 +264,19 @@ func Update(ctx context.Context, devConn *dev.DevConn) error {
 
 // GetUpdateChannel returns update channel (either "latest" or "release")
 // depending on current mos version.
-func GetUpdateChannel() string {
+func GetUpdateChannel() UpdateChannel {
 	return getUpdateChannelByMosVersion(version.GetMosVersion())
 }
 
+type UpdateChannel string
+
 // getUpdateChannelByMosVersion returns update channel (either "latest" or
 // "release") depending on the given mos version.
-func getUpdateChannelByMosVersion(mosVersion string) string {
+func getUpdateChannelByMosVersion(mosVersion string) UpdateChannel {
 	if mosVersion == "master" || mosVersion == "latest" {
-		return "latest"
+		return UpdateChannelLatest
 	}
-	return "release"
+	return UpdateChannelRelease
 }
 
 func Init() error {

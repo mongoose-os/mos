@@ -97,7 +97,7 @@ func usage() {
 		fmt.Fprintf(w, "Update channel: %q. Checking updates... ", update.GetUpdateChannel())
 		w.Flush()
 
-		serverVersion, err := update.GetServerMosVersion(update.GetUpdateChannel())
+		serverVersion, err := update.GetServerMosVersion(string(update.GetUpdateChannel()))
 		if err != nil {
 			color.New(color.FgRed).Fprintf(w, "Failed to check server version: %s\n", err)
 		} else {
