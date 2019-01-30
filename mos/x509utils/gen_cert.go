@@ -139,7 +139,9 @@ func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, dev
 			return nil, nil, nil, errors.Annotatef(err, "failed to connect to the crypto device")
 		}
 		if atcaCfg.LockConfig != atca.LockModeLocked || atcaCfg.LockValue != atca.LockModeLocked {
-			return nil, nil, nil, errors.Errorf("crypto chip is not fully configured; see step 2 here: https://mongoose-os.com/docs/overview/security.html#setup-guide")
+			return nil, nil, nil, errors.Errorf(
+				"chip is not fully configured; see step 1 here: " +
+					"https://github.com/cesanta/mongoose-os-docs/blob/master/mos/userguide/security.md#setup-guide")
 		}
 		ourutil.Reportf("Generating new private key in slot %d", ATCASlot)
 		if err = devConn.Call(ctx, "ATCA.GenKey", &atca.GenKeyArgs{
