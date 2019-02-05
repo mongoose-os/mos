@@ -20,6 +20,7 @@ import (
 	"cesanta.com/mos/flash/cc3220"
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
+	"cesanta.com/mos/flash/rs14100"
 	"cesanta.com/mos/flash/stm32"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
@@ -28,10 +29,11 @@ import (
 )
 
 var (
-	cc3200FlashOpts cc3200.FlashOpts
-	cc3220FlashOpts cc3220.FlashOpts
-	espFlashOpts    esp.FlashOpts
-	stm32FlashOpts  stm32.FlashOpts
+	cc3200FlashOpts  cc3200.FlashOpts
+	cc3220FlashOpts  cc3220.FlashOpts
+	espFlashOpts     esp.FlashOpts
+	rs14100FlashOpts rs14100.FlashOpts
+	stm32FlashOpts   stm32.FlashOpts
 )
 
 // register advanced flash specific commands
@@ -72,6 +74,9 @@ func init() {
 	flag.Uint32Var(&espFlashOpts.ESP32FlashCryptConf, "esp32-flash-crypt-conf", 0xf,
 		"Value of the FLASH_CRYPT_CONF eFuse setting, affecting how key is tweaked.")
 
+	// RS14100
+	flag.BoolVar(&rs14100FlashOpts.EraseChip, "rs-erase-chip", false, "Erase chip when flashing")
+
 	// STM32
 	if runtime.GOOS == "windows" {
 		// STM32 Windows driver _sometimes_ removes .bin file quite unhurriedly,
@@ -81,6 +86,7 @@ func init() {
 	} else {
 		flag.DurationVar(&stm32FlashOpts.Timeout, "flash-timeout", 30*time.Second, "Maximum flashing time")
 	}
+
 	// add these flags to the hiddenFlags list so that they can be hidden and shown again with --helpfull
 	flag.VisitAll(func(f *flag.Flag) {
 		if strings.HasPrefix(f.Name, "cc3200-") || strings.HasPrefix(f.Name, "esp-") || strings.HasPrefix(f.Name, "esp32-") {
@@ -138,7 +144,7 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 	}
 
 	port := ""
-	if fw.Platform != "stm32" {
+	if fw.Platform != "stm32" && fw.Platform != "rs14100" {
 		port, err = devutil.GetPort()
 		if err != nil {
 			return errors.Trace(err)
@@ -182,6 +188,8 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 		}
 		stm32FlashOpts.ShareName = port
 		err = stm32.Flash(fw, &stm32FlashOpts)
+	case "rs14100":
+		err = rs14100.Flash(fw, &rs14100FlashOpts)
 	default:
 		err = errors.Errorf("%s: unsupported platform '%s'", *firmware, fw.Platform)
 	}

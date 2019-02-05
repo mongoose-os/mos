@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	"github.com/google/gousb"
@@ -36,37 +37,17 @@ type XDS110Client struct {
 
 func NewXDS110Client(serial string) (*XDS110Client, error) {
 	ok := false
-	xc := &XDS110Client{ctx: gousb.NewContext()}
+	xc := &XDS110Client{}
 	defer func() {
 		if !ok {
 			xc.Close()
 		}
 	}()
-	devs, _ := xc.ctx.OpenDevices(func(dd *gousb.DeviceDesc) bool {
-		result := (dd.Vendor == vendorTI && dd.Product == productXDS110)
-		glog.V(1).Infof("Dev %s %s %t %+v", dd.Vendor, dd.Product, result, dd)
-		return result
-	})
-	// OpenDevices may fail overall but still return results.
-	for _, dev := range devs {
-		if xc.dev != nil {
-			dev.Close()
-			continue
-		}
-		sn, err := dev.SerialNumber()
-		glog.V(1).Infof("Dev %+v sn '%s' %s", dev, sn, err)
-		if serial == "" || sn == serial {
-			xc.dev = dev
-		} else {
-			dev.Close()
-		}
-	}
-	if xc.dev == nil {
-		if serial == "" {
-			return nil, errors.Errorf("No XDS110 probe found")
-		} else {
-			return nil, errors.Errorf("XDS110 probe with S/N %s not found", serial)
-		}
+
+	var err error
+	xc.ctx, xc.dev, err = common.OpenUSBDevice(vendorTI, productXDS110, serial)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to open XDS110 probe")
 	}
 
 	cfgNum, err := xc.dev.ActiveConfigNum()

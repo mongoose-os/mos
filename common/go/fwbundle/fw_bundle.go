@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"cesanta.com/common/go/ourutil"
@@ -39,6 +40,23 @@ func (fwb *FirmwareBundle) AddPart(p *FirmwarePart) error {
 	}
 	fwb.FirmwareManifest.Parts[p.Name] = p
 	return nil
+}
+
+type partsByAddr []*FirmwarePart
+
+func (pp partsByAddr) Len() int      { return len(pp) }
+func (pp partsByAddr) Swap(i, j int) { pp[i], pp[j] = pp[j], pp[i] }
+func (pp partsByAddr) Less(i, j int) bool {
+	return pp[i].Addr < pp[j].Addr
+}
+
+func (fwb *FirmwareBundle) PartsByAddr() []*FirmwarePart {
+	var pp []*FirmwarePart
+	for _, p := range fwb.Parts {
+		pp = append(pp, p)
+	}
+	sort.Sort(partsByAddr(pp))
+	return pp
 }
 
 func ReadManifest(fname string) (*FirmwareManifest, error) {
