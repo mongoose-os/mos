@@ -19,7 +19,7 @@ FULLPATH=$DESTDIR/$PROGNAME
 
 if test "$OS" = Linux ; then
   [ -f /etc/lsb-release ] && source /etc/lsb-release
-  if [ "${DISTRIB_ID}" == "Ubuntu" ]; then
+  if [ -z "${NO_PPA}" -a "${DISTRIB_ID}" == "Ubuntu" ]; then
     echo Installing from Ubuntu PPA...
     sudo apt-get install -y software-properties-common
     sudo add-apt-repository -u ppa:mongoose-os/mos
@@ -30,7 +30,7 @@ if test "$OS" = Linux ; then
     MOS_URL=https://mongoose-os.com/downloads/mos-$VERSION/linux/mos
   fi
 elif test "$OS" = Darwin ; then
-  if which brew > /dev/null; then
+  if [ -z "${NO_BREW}" ] && which brew > /dev/null; then
     echo Installing from Homebrew...
     brew tap cesanta/mos
     brew install mos
