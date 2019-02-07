@@ -135,9 +135,8 @@ def UpdateGitHubRelease(spec, tag, token, tmp_dir):
 
     rel, ok = github_api.CallReleasesAPI(repo, token, releases_url=("/tags/%s" % tag))
     if not ok:
-        logging.error("Failed to get release info for %s/%s: %s; (re)creating", repo, tag, rel)
-        # Assume release doesn't exist and create it.
-        return CreateGitHubRelease(spec, tag, token, tmp_dir)
+        logging.error("Failed to get release info for %s/%s: %s", repo, tag, rel)
+        raise RuntimeError
 
     logging.info("  Updating release %s / %s (%d)", repo, tag, rel["id"])
     for asset_name, asset_file in spec["assets"]:
