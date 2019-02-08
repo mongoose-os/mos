@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultFlashMode = "dio"
-	defaultFlashFreq = "40m"
+	defaultFlashFreq = "80m"
 )
 
 type cfResult struct {
