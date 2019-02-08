@@ -101,13 +101,10 @@ def UploaderComm(line, tty):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-            '--release-tag',
-            required = False,
-            default = "",
-            help = 'Release tag, like 1.12')
+    parser.add_argument("--release-tag", default="", help="Release tag, like 1.12")
+    parser.add_argument("--resume", type=int,  default=0, help="Resume from certain point")
 
-    myargs = parser.parse_args()
+    args = parser.parse_args()
 
     platform = "mac" if os.uname()[0] == "Darwin" else "linux"
 
@@ -144,69 +141,72 @@ if __name__ == "__main__":
         communicator=UploaderComm)
     print("Ok, passphrase is correct")
 
-    if myargs.release_tag != "":
+    if args.release_tag != "":
         deb_package = "mos"
-        tag_effective = myargs.release_tag
+        tag_effective = args.release_tag
 
-        # Make sure that the user didn't forget to stop publishing and make release tags.
-        r = input("You made sure that publishing finished and stopped the timer, right? [y|N] ")
-        if r != "y":
-            print("I'm glad I asked. Go do that then.")
-            exit(1)
+        if args.resume == 0:
+            # Make sure that the user didn't forget to stop publishing and make release tags.
+            r = input("You made sure that publishing finished and stopped the timer, right? [y|N] ")
+            if r != "y":
+                print("I'm glad I asked. Go do that then.")
+                exit(1)
 
-        r = input("You ran 'tools/make_release_tags.py --release-tag %s' already, right? [y|N] " % tag_effective)
-        if r != "y":
-            print("I'm glad I asked. Go do that then.")
-            exit(1)
+            r = input("You ran 'tools/make_release_tags.py --release-tag %s' already, right? [y|N] " % tag_effective)
+            if r != "y":
+                print("I'm glad I asked. Go do that then.")
+                exit(1)
 
         RunSubprocess(["git", "checkout", tag_effective])
 
-    print("Pulling the necessary images...")
-    RunSubprocess(["make", "-C", "tools/docker/golang", "pull-all"])
+    if args.resume == 0:
+        print("Pulling the necessary images...")
+        RunSubprocess(["make", "-C", "tools/docker/golang", "pull-all"])
 
     if platform == "mac":
-        print("Deploying binaries...")
-        RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
-        print("Updating Homebrew...")
+        if args.resume <= 10:
+            print("Deploying binaries...")
+            RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
         repo = git.Repo(".")
         head_commit = repo.head.commit
-        formula = ("mos" if myargs.release_tag != "" else "mos-latest")
-        v = json.load(open(os.path.expanduser("~/tmp/mos_gopath/src/cesanta.com/mos/version/version.json"), "r"))
-        hb_cmd = [
-            "tools/update_hb.py",
-            "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
-            "--formula=%s" % formula,
-            "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
-            "--version=%s" % v["build_version"],
-            "--commit", "--push",
-        ]
-        RunSubprocess(hb_cmd)
-        print("Building a bottle...")
-        # We've just updated the formula.
-        RunSubprocess(["brew", "update"])
-        RunSubprocess(["brew", "uninstall", "-f", "mos", "mos-latest"])
-        RunSubprocess(["brew", "install", "--build-bottle", formula])
-        out = RunSubprocess(["brew", "bottle", formula]).decode("utf-8")
-        ll = [l for l in out.splitlines() if not l.startswith("==")]
-        bottle_fname = ll[0]
-        hb_cmd.extend([
-            "--bottle=%s" % bottle_fname,
-            "--bottle-upload-dest=core@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
-        ])
-        RunSubprocess(hb_cmd)
+        formula = ("mos" if args.release_tag != "" else "mos-latest")
+        if args.resume <= 20:
+            print("Updating Homebrew...")
+            v = json.load(open(os.path.expanduser("~/tmp/mos_gopath/src/cesanta.com/mos/version/version.json"), "r"))
+            hb_cmd = [
+                "tools/update_hb.py",
+                "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
+                "--formula=%s" % formula,
+                "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
+                "--version=%s" % v["build_version"],
+                "--commit", "--push",
+            ]
+            RunSubprocess(hb_cmd)
+        if args.resume <= 30:
+            print("Building a bottle...")
+            # We've just updated the formula.
+            RunSubprocess(["brew", "update"])
+            RunSubprocess(["brew", "uninstall", "-f", "mos", "mos-latest"])
+            RunSubprocess(["brew", "install", "--build-bottle", formula])
+            out = RunSubprocess(["brew", "bottle", formula]).decode("utf-8")
+            ll = [l for l in out.splitlines() if not l.startswith("==")]
+            bottle_fname = ll[0]
+            hb_cmd.extend([
+                "--bottle=%s" % bottle_fname,
+                "--bottle-upload-dest=core@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
+            ])
+            RunSubprocess(hb_cmd)
 
-    RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
+    if args.resume <= 40:
+        RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
 
-    for i, distr in enumerate(UBUNTU_VERSIONS):
-        RunSubprocess(
-                ["/bin/bash", BUILD_DEB_PATH, deb_package, distr, myargs.release_tag]
-        )
+    if args.resume <= 50:
+        for i, distr in enumerate(UBUNTU_VERSIONS):
+            RunSubprocess(["/bin/bash", BUILD_DEB_PATH, deb_package, distr, args.release_tag])
 
-    for i, distr in enumerate(UBUNTU_VERSIONS):
-        RunSubprocess(
-                ["/bin/bash", UPLOAD_DEB_PATH, deb_package, distr],
-                communicator=UploaderComm
-        )
+    if args.resume <= 60:
+        for i, distr in enumerate(UBUNTU_VERSIONS):
+            RunSubprocess(["/bin/bash", UPLOAD_DEB_PATH, deb_package, distr], communicator=UploaderComm)
 
     if platform != "mac":
         print("""
