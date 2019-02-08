@@ -58,18 +58,18 @@ type FlasherClient struct {
 	connected bool
 }
 
-func NewFlasherClient(ct esp.ChipType, rc *rom_client.ROMClient, baudRate uint) (*FlasherClient, error) {
+func NewFlasherClient(ct esp.ChipType, rc *rom_client.ROMClient, romBaudRate uint, baudRate uint) (*FlasherClient, error) {
 	if baudRate < 0 || baudRate > 4000000 {
 		return nil, errors.Errorf("invalid flashing baud rate (%d)", baudRate)
 	}
 	fc := &FlasherClient{ct: ct, s: rc.DataPort(), srw: common.NewSLIPReaderWriter(rc.DataPort()), rom: rc}
-	if err := fc.connect(baudRate); err != nil {
+	if err := fc.connect(romBaudRate, baudRate); err != nil {
 		return nil, errors.Trace(err)
 	}
 	return fc, nil
 }
 
-func (fc *FlasherClient) connect(baudRate uint) error {
+func (fc *FlasherClient) connect(romBaudRate, baudRate uint) error {
 	var stubJSON []byte
 	switch fc.ct {
 	case esp.ChipESP8266:
@@ -81,7 +81,7 @@ func (fc *FlasherClient) connect(baudRate uint) error {
 	}
 
 	common.Reportf("Running flasher @ %d...", baudRate)
-	err := fc.rom.RunStub(stubJSON, []uint32{uint32(baudRate)})
+	err := fc.rom.RunStub(stubJSON, []uint32{uint32(romBaudRate), uint32(baudRate)})
 	if err != nil {
 		return errors.Annotatef(err, "failed to run flasher stub")
 	}
@@ -89,6 +89,19 @@ func (fc *FlasherClient) connect(baudRate uint) error {
 		glog.V(1).Infof("Switching to %d...", baudRate)
 		if err := fc.s.SetBaudRate(baudRate); err != nil {
 			return errors.Annotatef(err, "failed to set serial speed to %d", baudRate)
+		}
+	}
+	fc.s.SetReadTimeout(50 * time.Millisecond)
+	buf := make([]byte, 100)
+	if n, err := fc.srw.Read(buf); err == nil && n == 4 {
+		var oldUARTDiv uint32
+		if binary.Read(bytes.NewBuffer(buf), binary.LittleEndian, &oldUARTDiv) == nil {
+			oldUARTdivF := float64(oldUARTDiv)
+			if fc.ct == esp.ChipESP32 {
+				oldUARTdivF /= 16.0
+			}
+			masterCLK := uint32(romBaudRate) * uint32(oldUARTdivF)
+			glog.V(1).Infof("Previous UART divider: %.3f (0x%x), master clk: %d", oldUARTdivF, oldUARTDiv, masterCLK)
 		}
 	}
 	if err = fc.Sync(); err != nil {

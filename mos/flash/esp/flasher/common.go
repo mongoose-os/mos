@@ -59,7 +59,7 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 		}
 	}()
 
-	r.fc, err = NewFlasherClient(ct, r.rc, opts.FlasherBaudRate)
+	r.fc, err = NewFlasherClient(ct, r.rc, opts.ROMBaudRate, opts.FlasherBaudRate)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to run flasher")
 	}
