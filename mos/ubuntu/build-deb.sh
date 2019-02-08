@@ -47,5 +47,5 @@ docker run -i -t --rm \
         git-build-recipe --allow-fallback-to-native --package ${PACKAGE} --distribution ${DISTR} \
             ${RECIPE} /tmp/work && \
         cd /tmp/work/${PACKAGE} && \
-        debuild --no-tgz-check -us -uc -b"
+        debuild --no-tgz-check -us -uc -S"
 
