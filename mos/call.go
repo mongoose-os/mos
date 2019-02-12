@@ -23,9 +23,9 @@ func isJSON(s string) bool {
 }
 
 func callDeviceService(
-	ctx context.Context, devConn *dev.DevConn, method string, args string,
+	ctx context.Context, devConn dev.DevConn, method string, args string,
 ) (string, error) {
-	b, e := devConn.CallB(ctx, method, args)
+	b, e := devConn.(*dev.MosDevConn).CallB(ctx, method, args)
 
 	// TODO(dfrank): instead of that, we should probably add a separate function
 	// for rebooting
@@ -36,7 +36,7 @@ func callDeviceService(
 	return string(b), e
 }
 
-func call(ctx context.Context, devConn *dev.DevConn) error {
+func call(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()[1:]
 	if len(args) < 1 {
 		return errors.Errorf("method required")

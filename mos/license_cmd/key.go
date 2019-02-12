@@ -74,7 +74,7 @@ func saveKey(server, key string) error {
 	return err
 }
 
-func SaveKey(ctx context.Context, devConn *dev.DevConn) error {
+func SaveKey(ctx context.Context, devConn dev.DevConn) error {
 	key := *flags.LicenseServerKey
 	if key == "" && len(flag.Args()) == 2 {
 		key = flag.Args()[1]

@@ -21,7 +21,7 @@ var (
 		"Timeout for entire update operation")
 )
 
-func OTA(ctx context.Context, devConn *dev.DevConn) error {
+func OTA(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 	fwFilename := ""
 	beginArgs := ""

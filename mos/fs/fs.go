@@ -36,7 +36,7 @@ type ListExtResult struct {
 	Size *int64  `json:"size,omitempty"`
 }
 
-func listFiles(ctx context.Context, devConn *dev.DevConn, path string) ([]ListExtResult, error) {
+func listFiles(ctx context.Context, devConn dev.DevConn, path string) ([]ListExtResult, error) {
 	var res []ListExtResult
 	if *longFormat {
 		if err := devConn.Call(ctx, "FS.ListExt", &ListExtArgs{Path: &path}, &res); err != nil {
@@ -62,7 +62,7 @@ func (a byName) Len() int           { return len(a) }
 func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byName) Less(i, j int) bool { return strings.Compare(*a[i].Name, *a[j].Name) < 0 }
 
-func Ls(ctx context.Context, devConn *dev.DevConn) error {
+func Ls(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 	path := "/"
 	if len(args) >= 2 {
@@ -94,7 +94,7 @@ type GetResult struct {
 	Left *int64  `json:"left,omitempty"`
 }
 
-func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, error) {
+func GetFile(ctx context.Context, devConn dev.DevConn, name string) (string, error) {
 	// Get file
 	contents := []byte{}
 	var offset int64
@@ -138,7 +138,7 @@ func GetFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 	return string(contents), nil
 }
 
-func Get(ctx context.Context, devConn *dev.DevConn) error {
+func Get(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("filename is required")
@@ -155,7 +155,7 @@ func Get(ctx context.Context, devConn *dev.DevConn) error {
 	return nil
 }
 
-func Put(ctx context.Context, devConn *dev.DevConn) error {
+func Put(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("filename is required")
@@ -174,7 +174,7 @@ func Put(ctx context.Context, devConn *dev.DevConn) error {
 	return PutFile(ctx, devConn, hostFilename, devFilename)
 }
 
-func PutFile(ctx context.Context, devConn *dev.DevConn, hostFilename, devFilename string) error {
+func PutFile(ctx context.Context, devConn dev.DevConn, hostFilename, devFilename string) error {
 	fileData, err := ourutil.ReadOrFetchFile(hostFilename)
 	if err != nil {
 		return errors.Trace(err)
@@ -183,7 +183,7 @@ func PutFile(ctx context.Context, devConn *dev.DevConn, hostFilename, devFilenam
 	return PutData(ctx, devConn, bytes.NewBuffer(fileData), devFilename)
 }
 
-func PutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilename string) error {
+func PutData(ctx context.Context, devConn dev.DevConn, r io.Reader, devFilename string) error {
 	data := make([]byte, *flags.ChunkSize)
 	appendFlag := false
 
@@ -242,13 +242,13 @@ type RemoveArgs struct {
 	Filename *string `json:"filename,omitempty"`
 }
 
-func fsRemoveFile(ctx context.Context, devConn *dev.DevConn, devFilename string) error {
+func fsRemoveFile(ctx context.Context, devConn dev.DevConn, devFilename string) error {
 	return errors.Trace(devConn.Call(ctx, "FS.Remove", &RemoveArgs{
 		Filename: &devFilename,
 	}, nil))
 }
 
-func Rm(ctx context.Context, devConn *dev.DevConn) error {
+func Rm(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("filename is required")

@@ -11,7 +11,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func wifi(ctx context.Context, devConn *dev.DevConn) error {
+func wifi(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 	if len(args) != 3 {
 		return errors.Errorf("Usage: %s wifi WIFI_NETWORK_NAME WIFI_PASSWORD", os.Args[0])

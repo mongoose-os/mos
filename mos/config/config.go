@@ -20,7 +20,7 @@ var (
 	saveAttempts = 3
 )
 
-func Get(ctx context.Context, devConn *dev.DevConn) error {
+func Get(ctx context.Context, devConn dev.DevConn) error {
 	path := ""
 
 	args := flag.Args()[1:]
@@ -36,7 +36,7 @@ func Get(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	// Get all config from the attached device
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -52,12 +52,12 @@ func Get(ctx context.Context, devConn *dev.DevConn) error {
 	return nil
 }
 
-func Set(ctx context.Context, devConn *dev.DevConn) error {
+func Set(ctx context.Context, devConn dev.DevConn) error {
 	return SetWithArgs(ctx, devConn, flag.Args()[1:])
 }
 
 func SetWithArgs(
-	ctx context.Context, devConn *dev.DevConn, args []string,
+	ctx context.Context, devConn dev.DevConn, args []string,
 ) error {
 	if len(args) < 1 {
 		return errors.Errorf("at least one path.to.value=value pair should be given")
@@ -65,7 +65,7 @@ func SetWithArgs(
 
 	// Get all config from the attached device
 	ourutil.Reportf("Getting configuration...")
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -86,10 +86,10 @@ func SetWithArgs(
 	return SetAndSave(ctx, devConn, devConf)
 }
 
-func SetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.DevConf) error {
+func SetAndSave(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) error {
 	// save changed conf
 	ourutil.Reportf("Setting new configuration...")
-	err := devConn.SetConfig(ctx, devConf)
+	err := dev.SetConfig(ctx, devConn, devConf)
 	if err != nil {
 		return errors.Trace(err)
 	}

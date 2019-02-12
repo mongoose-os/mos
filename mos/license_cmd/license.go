@@ -30,7 +30,7 @@ type licenseResponse struct {
 	Message string `json:"message"`
 }
 
-func License(ctx context.Context, devConn *dev.DevConn) error {
+func License(ctx context.Context, devConn dev.DevConn) error {
 	var err error
 	server := *flags.LicenseServer
 	key := *flags.LicenseServerKey
@@ -95,7 +95,7 @@ func License(ctx context.Context, devConn *dev.DevConn) error {
 	if devConn == nil {
 		return nil
 	}
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to get config")
 	}

@@ -30,7 +30,7 @@ func FileExists(path string) bool {
 	return err == nil
 }
 
-func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
+func GCPIoTSetup(ctx context.Context, devConn dev.DevConn) error {
 	if *flags.GCPProject == "" || *flags.GCPRegion == "" || *flags.GCPRegistry == "" {
 		return errors.Errorf("Please set --gcp-project, --gcp-region and --gcp-registry")
 	}
@@ -45,14 +45,14 @@ func GCPIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	ourutil.Reportf("Connecting to the device...")
-	devInfo, err := devConn.GetInfo(ctx)
+	devInfo, err := dev.GetInfo(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
 	}
 	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
 	ourutil.Reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
 
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to get device config")
 	}

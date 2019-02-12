@@ -82,7 +82,7 @@ func PickCertType(devInfo *dev.GetInfoResult) (CertType, bool, error) {
 	return CertTypeECDSA, false, nil
 }
 
-func checkATCAConfig(ctx context.Context, devConn *dev.DevConn, devConf *dev.DevConf) error {
+func checkATCAConfig(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) error {
 	i2cEnabled, err := devConf.Get(i2cEnableOption)
 	if err != nil {
 		return errors.Annotatef(err, "failed ot get I2C enabled status")
@@ -116,7 +116,7 @@ func checkATCAConfig(ctx context.Context, devConn *dev.DevConn, devConf *dev.Dev
 	return nil
 }
 
-func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult) (crypto.Signer, []byte, []byte, error) {
+func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, devConn dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult) (crypto.Signer, []byte, []byte, error) {
 	var err error
 	var keySigner crypto.Signer
 	var keyPEMBlockType string
@@ -248,7 +248,7 @@ func LoadCertAndKey(certFile, keyFile string) ([]byte, []byte, crypto.Signer, []
 }
 
 func LoadOrGenerateCertAndKey(ctx context.Context, certType CertType, certFile, keyFile string, certTmpl *x509.Certificate, useATCA bool,
-	devConn *dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult) (
+	devConn dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult) (
 	[]byte, []byte, crypto.Signer, []byte, []byte, error) {
 
 	certDERBytes, certPEMBytes, keySigner, keyDERBytes, keyPEMBytes, err := LoadCertAndKey(certFile, keyFile)
@@ -281,7 +281,7 @@ func LoadOrGenerateCertAndKey(ctx context.Context, certType CertType, certFile, 
 
 func WriteAndUploadFile(ctx context.Context,
 	fileType string, data []byte, customName, defaultName string,
-	devConn *dev.DevConn) (string, error) {
+	devConn dev.DevConn) (string, error) {
 	fileName := customName
 	if fileName == "" {
 		fileName = defaultName

@@ -50,7 +50,7 @@ type azureIoTHubInfo struct {
 	} `json:"properties"`
 }
 
-func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
+func AzureIoTSetup(ctx context.Context, devConn dev.DevConn) error {
 	// Perform Azure CLI sanity checks
 	if !azureIoTSkipCLICheck {
 		// Make sure that Azure CLI is installed and logged in.
@@ -106,13 +106,13 @@ func AzureIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	ourutil.Reportf("Using IoT hub %s (%s)", azureIoTHubName, azureIoTHubHostName)
 
 	ourutil.Reportf("Connecting to the device...")
-	devInfo, err := devConn.GetInfo(ctx)
+	devInfo, err := dev.GetInfo(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
 	}
 	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
 	ourutil.Reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to get config")
 	}

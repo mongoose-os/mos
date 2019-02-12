@@ -17,7 +17,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
+func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 	cll, err := getCustomLibLocations()
 	if err != nil {
 		return errors.Trace(err)

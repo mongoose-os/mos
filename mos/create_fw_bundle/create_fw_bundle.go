@@ -18,7 +18,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func CreateFWBundle(ctx context.Context, devConn *dev.DevConn) error {
+func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 	if *flags.Output == "" {
 		return errors.Errorf("--output is required")
 	}

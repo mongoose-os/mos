@@ -225,7 +225,7 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	return ourutil.RunCmdWithInput(input, ourutil.CmdOutAlways, cmd...)
 }
 
-func DebugCoreDump(ctx context.Context, _ *dev.DevConn) error {
+func DebugCoreDump(ctx context.Context, _ dev.DevConn) error {
 	args := flag.Args()
 	var coreFile, elfFile string
 	if len(args) < 2 {

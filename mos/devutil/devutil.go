@@ -14,7 +14,7 @@ import (
 	"github.com/cesanta/errors"
 )
 
-func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []byte)) (*dev.DevConn, error) {
+func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []byte)) (dev.DevConn, error) {
 	port, err := GetPort()
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -79,6 +79,6 @@ func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []b
 	return devConn, errors.Trace(err)
 }
 
-func CreateDevConnFromFlags(ctx context.Context) (*dev.DevConn, error) {
+func CreateDevConnFromFlags(ctx context.Context) (dev.DevConn, error) {
 	return createDevConnWithJunkHandler(ctx, func(junk []byte) {})
 }

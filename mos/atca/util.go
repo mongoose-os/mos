@@ -19,7 +19,7 @@ const (
 	KeyFilePrefix = "ATCA:"
 )
 
-func Connect(ctx context.Context, dc *dev.DevConn) ([]byte, *Config, error) {
+func Connect(ctx context.Context, dc dev.DevConn) ([]byte, *Config, error) {
 	var r GetConfigResult
 
 	if err := dc.Call(ctx, "ATCA.GetConfig", nil, &r); err != nil {

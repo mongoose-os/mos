@@ -14,7 +14,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func Clone(ctx context.Context, devConn *dev.DevConn) error {
+func Clone(ctx context.Context, devConn dev.DevConn) error {
 	var m build.SWModule
 
 	args := flag.Args()

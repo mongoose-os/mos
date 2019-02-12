@@ -43,7 +43,7 @@ func getRRW() (esp.RegReaderWriter, error) {
 	return rc, nil
 }
 
-func esp32EFuseGet(ctx context.Context, devConn *dev.DevConn) error {
+func esp32EFuseGet(ctx context.Context, devConn dev.DevConn) error {
 	rrw, err := getRRW()
 	if err != nil {
 		return errors.Trace(err)
@@ -72,7 +72,7 @@ func esp32EFuseGet(ctx context.Context, devConn *dev.DevConn) error {
 	return nil
 }
 
-func esp32EFuseSet(ctx context.Context, devConn *dev.DevConn) error {
+func esp32EFuseSet(ctx context.Context, devConn dev.DevConn) error {
 
 	if len(flag.Args()) < 2 {
 		return errors.Errorf("one or more ops required. op is 'fuse=value', 'fuse=@file' or 'fuse.{WD|RD}=1'")

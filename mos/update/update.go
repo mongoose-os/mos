@@ -129,7 +129,7 @@ func doBrewUpdate(oldUpdChannel, newUpdChannel UpdateChannel) error {
 	return ourutil.RunCmd(ourutil.CmdOutAlways, "brew", "install", newPkg)
 }
 
-func Update(ctx context.Context, devConn *dev.DevConn) error {
+func Update(ctx context.Context, devConn dev.DevConn) error {
 	args := flag.Args()
 
 	// updChannel and newUpdChannel are needed for the logging, so that it's

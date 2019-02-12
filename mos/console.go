@@ -143,7 +143,7 @@ func (chr *chanReader) Close() error {
 	return nil
 }
 
-func console(ctx context.Context, devConn *dev.DevConn) error {
+func console(ctx context.Context, devConn dev.DevConn) error {
 
 	var r io.Reader
 	var w io.Writer
@@ -218,7 +218,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		if err = devConn.Call(ctx, "Dash.Console.Subscribe", nil, nil); err != nil {
 			return errors.Trace(err)
 		}
-		devConn.RPC.AddHandler("Dash.Console.Event", func(c mgrpc.MgRPC, f *frame.Frame) *frame.Frame {
+		devConn.(*dev.MosDevConn).RPC.AddHandler("Dash.Console.Event", func(c mgrpc.MgRPC, f *frame.Frame) *frame.Frame {
 			var ev struct {
 				DevId string             `json:"id"`
 				Name  string             `json:"name"`

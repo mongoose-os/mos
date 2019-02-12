@@ -22,7 +22,7 @@ var (
 		"Enable flash encryption. This sets a typical set of eFuse options used with flash encryption.")
 )
 
-func esp32GenKey(ctx context.Context, devConn *dev.DevConn) error {
+func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
 	if len(flag.Args()) < 3 {
 		return errors.Errorf("key slot and output file are required")
 	}

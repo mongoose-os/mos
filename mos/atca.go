@@ -50,7 +50,7 @@ func getFormat(f, fn string) string {
 	return f
 }
 
-func atcaGetConfig(ctx context.Context, dc *dev.DevConn) error {
+func atcaGetConfig(ctx context.Context, dc dev.DevConn) error {
 	fn := ""
 	args := flag.Args()
 	if len(args) == 2 {
@@ -89,7 +89,7 @@ func atcaGetConfig(ctx context.Context, dc *dev.DevConn) error {
 	return nil
 }
 
-func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
+func atcaSetConfig(ctx context.Context, dc dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("config filename is required")
@@ -161,7 +161,7 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 	return nil
 }
 
-func atcaLockZone(ctx context.Context, dc *dev.DevConn) error {
+func atcaLockZone(ctx context.Context, dc dev.DevConn) error {
 	args := flag.Args()
 	if len(args) != 2 {
 		return errors.Errorf("lock zone name is required (config or data)")
@@ -268,7 +268,7 @@ func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atca.SetK
 	return req, nil
 }
 
-func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
+func atcaSetKey(ctx context.Context, dc dev.DevConn) error {
 	args := flag.Args()
 	if len(args) != 3 {
 		return errors.Errorf("slot number and key filename are required")
@@ -359,7 +359,7 @@ func writePEM(derBytes []byte, blockType string, outputFileName string) error {
 	return nil
 }
 
-func genCSR(csrTemplateFile string, slot int, dc *dev.DevConn, outputFileName string) error {
+func genCSR(csrTemplateFile string, slot int, dc dev.DevConn, outputFileName string) error {
 	reportf("Generating CSR using template from %s", csrTemplateFile)
 	data, err := ioutil.ReadFile(csrTemplateFile)
 	if err != nil {
@@ -414,7 +414,7 @@ func writePubKey(pubKeyData []byte, outputFileName string) error {
 	return writePEM(pubKeyDERBytes, "PUBLIC KEY", outputFileName)
 }
 
-func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
+func atcaGenKey(ctx context.Context, dc dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("slot number is required")
@@ -469,7 +469,7 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 	}
 }
 
-func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
+func atcaGetPubKey(ctx context.Context, dc dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("slot number is required")

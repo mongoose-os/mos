@@ -137,7 +137,7 @@ func (w *wsWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func startUI(ctx context.Context, devConn *dev.DevConn) error {
+func startUI(ctx context.Context, devConn dev.DevConn) error {
 	fullMosPath, _ := os.Executable()
 	fullWebRootPath, _ := filepath.Abs(wwwRoot)
 

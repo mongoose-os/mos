@@ -19,11 +19,11 @@ import (
 // Implements crypto.Signer interface using ATCA.
 type Signer struct {
 	ctx  context.Context
-	dc   *dev.DevConn
+	dc   dev.DevConn
 	slot int
 }
 
-func NewSigner(ctx context.Context, dc *dev.DevConn, slot int) crypto.Signer {
+func NewSigner(ctx context.Context, dc dev.DevConn, slot int) crypto.Signer {
 	return &Signer{ctx: ctx, dc: dc, slot: slot}
 }
 

@@ -96,7 +96,7 @@ func init() {
 // Build {{{
 
 // Build command handler {{{
-func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
+func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 	var bParams buildParams
 	if *buildParamsFlag != "" {
 		buildParamsBytes, err := ioutil.ReadFile(*buildParamsFlag)

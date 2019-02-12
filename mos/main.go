@@ -89,7 +89,7 @@ const (
 	No               = 0.0
 )
 
-type handler func(ctx context.Context, devConn *dev.DevConn) error
+type handler func(ctx context.Context, devConn dev.DevConn) error
 
 // channel of "junk" messages, which go to the console
 var consoleMsgs chan []byte
@@ -145,13 +145,13 @@ func init() {
 	}
 }
 
-func showHelp(ctx context.Context, devConn *dev.DevConn) error {
+func showHelp(ctx context.Context, devConn dev.DevConn) error {
 	unhideFlags()
 	usage()
 	return nil
 }
 
-func showVersion(ctx context.Context, devConn *dev.DevConn) error {
+func showVersion(ctx context.Context, devConn dev.DevConn) error {
 	fmt.Printf(
 		"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
 		"The Mongoose OS command line tool", version.Version, version.BuildId, update.GetUpdateChannel(),
@@ -159,12 +159,12 @@ func showVersion(ctx context.Context, devConn *dev.DevConn) error {
 	return nil
 }
 
-func showPorts(ctx context.Context, devConn *dev.DevConn) error {
+func showPorts(ctx context.Context, devConn dev.DevConn) error {
 	fmt.Printf("%s\n", strings.Join(devutil.EnumerateSerialPorts(), "\n"))
 	return nil
 }
 
-func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
+func run(c *command, ctx context.Context, devConn dev.DevConn) error {
 	if c != nil {
 		// check required flags
 		if err := checkFlags(c.required); err != nil {
@@ -254,7 +254,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	var devConn *dev.DevConn
+	var devConn dev.DevConn
 
 	cmd := &commands[0]
 	if !isUI {

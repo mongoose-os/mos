@@ -18,11 +18,11 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func flashRead(ctx context.Context, devConn *dev.DevConn) error {
+func flashRead(ctx context.Context, devConn dev.DevConn) error {
 	// if given devConn is not nil, we should disconnect it while flash reading is in progress
 	if devConn != nil {
 		devConn.Disconnect(ctx)
-		defer devConn.Connect(ctx, devConn.Reconnect)
+		defer devConn.Connect(ctx, true)
 	}
 
 	var err error

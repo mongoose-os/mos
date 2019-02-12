@@ -143,7 +143,7 @@ func checkDeviceType(hostName, devType, apiKey, apiToken string) error {
 	return nil
 }
 
-func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
+func WatsonIoTSetup(ctx context.Context, devConn dev.DevConn) error {
 	var err error
 	orgID := getOrgID()
 	if orgID != quickStartOrgID && (WatsonAPIKeyFlag == "" || WatsonAPIAuthTokenFlag == "") {
@@ -151,13 +151,13 @@ func WatsonIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	ourutil.Reportf("Connecting to the device...")
-	devInfo, err := devConn.GetInfo(ctx)
+	devInfo, err := dev.GetInfo(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
 	}
 	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
 	ourutil.Reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to get config")
 	}

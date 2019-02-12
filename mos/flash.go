@@ -104,7 +104,7 @@ func getDemoAppName(platformWithVariation string) string {
 	return appName
 }
 
-func flash(ctx context.Context, devConn *dev.DevConn) error {
+func flash(ctx context.Context, devConn dev.DevConn) error {
 	fwname := *firmware
 	args := flag.Args()
 	if len(args) == 2 {
@@ -134,7 +134,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	// in progress
 	if devConn != nil {
 		devConn.Disconnect(ctx)
-		defer devConn.Connect(ctx, devConn.Reconnect)
+		defer devConn.Connect(ctx, true)
 	}
 
 	port := ""

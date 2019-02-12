@@ -16,7 +16,7 @@ import (
 	"github.com/cesanta/errors"
 )
 
-func getMosRepoDir(ctx context.Context, devConn *dev.DevConn) error {
+func getMosRepoDir(ctx context.Context, devConn dev.DevConn) error {
 	logWriterStderr = io.MultiWriter(&logBuf, os.Stderr)
 	logWriter = io.MultiWriter(&logBuf)
 	if *verbose {

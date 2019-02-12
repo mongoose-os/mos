@@ -66,31 +66,31 @@ func init() {
 	MustAsset(rsaCACert)
 }
 
-func getSvc() (*iot.IoT, error) {
+func getSvc(region, keyID, key string) (*iot.IoT, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	cfg := defaults.Get().Config
 
-	if AWSRegion == "" {
+	if region == "" {
 		output, err := ourutil.GetCommandOutput("aws", "configure", "get", "region")
 		if err != nil {
 			if cfg.Region == nil || *cfg.Region == "" {
 				ourutil.Reportf("Failed to get default AWS region, please specify --aws-region")
 				return nil, errors.New("AWS region not specified")
 			} else {
-				AWSRegion = *cfg.Region
+				region = *cfg.Region
 			}
 		} else {
-			AWSRegion = strings.TrimSpace(output)
+			region = strings.TrimSpace(output)
 		}
 	}
 
-	ourutil.Reportf("AWS region: %s", AWSRegion)
-	cfg.Region = aws.String(AWSRegion)
+	ourutil.Reportf("AWS region: %s", region)
+	cfg.Region = aws.String(region)
 
-	creds, err := GetCredentials()
+	creds, err := GetCredentials(keyID, key)
 	if err != nil {
 		// In UI mode, UI credentials are acquired in a different way.
 		if IsUI {
@@ -105,7 +105,10 @@ func getSvc() (*iot.IoT, error) {
 	return iot.New(sess, cfg), nil
 }
 
-func GetCredentials() (*credentials.Credentials, error) {
+func GetCredentials(keyID, key string) (*credentials.Credentials, error) {
+	if keyID != "" && key != "" {
+		return credentials.NewStaticCredentials(keyID, key, ""), nil
+	}
 	// Try environment first, fall back to shared.
 	creds := credentials.NewEnvCredentials()
 	_, err := creds.Get()
@@ -132,8 +135,8 @@ func GetRegions() []string {
 	return regions
 }
 
-func GetIoTThings() (string, error) {
-	iotSvc, err := getSvc()
+func GetIoTThings(region, keyID, key string) (string, error) {
+	iotSvc, err := getSvc(region, keyID, key)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -144,8 +147,8 @@ func GetIoTThings() (string, error) {
 	return things.String(), nil
 }
 
-func GetAWSIoTPolicyNames() ([]string, error) {
-	iotSvc, err := getSvc()
+func GetAWSIoTPolicyNames(region, keyID, key string) ([]string, error) {
+	iotSvc, err := getSvc(region, keyID, key)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -161,11 +164,11 @@ func GetAWSIoTPolicyNames() ([]string, error) {
 	return policies, nil
 }
 
-func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult, cn, thingName string) ([]byte, []byte, error) {
+func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iotSvc *iot.IoT, devConn dev.DevConn, devConf *dev.DevConf, devInfo *dev.GetInfoResult, cn, thingName, region, policy, keyID, key string) ([]byte, []byte, error) {
 	var err error
 
-	if AWSIoTPolicy == "" {
-		policies, err := GetAWSIoTPolicyNames()
+	if policy == "" {
+		policies, err := GetAWSIoTPolicyNames(region, keyID, key)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -209,9 +212,9 @@ func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iot
 	certPEMBytes := []byte(fmt.Sprintf("CN: %s\r\nID: %s\r\nARN: %s\r\n%s",
 		cn, *ccResp.CertificateId, *ccResp.CertificateArn, *ccResp.CertificatePem))
 
-	if AWSIoTPolicy != awsIoTPolicyNone {
-		if AWSIoTPolicy == AWSIoTPolicyMOS {
-			policies, err := GetAWSIoTPolicyNames()
+	if policy != awsIoTPolicyNone {
+		if policy == AWSIoTPolicyMOS {
+			policies, err := GetAWSIoTPolicyNames(region, keyID, key)
 			if err != nil {
 				return nil, nil, errors.Trace(err)
 			}
@@ -233,7 +236,7 @@ func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iot
 				}
 			}
 		}
-		ourutil.Reportf("Attaching policy %q to the certificate...", AWSIoTPolicy)
+		ourutil.Reportf("Attaching policy %q to the certificate...", policy)
 		_, err := iotSvc.AttachPrincipalPolicy(&iot.AttachPrincipalPolicyInput{
 			PolicyName: aws.String(AWSIoTPolicy),
 			Principal:  ccResp.CertificateArn,
@@ -313,21 +316,22 @@ func askForCreds() (*credentials.Credentials, error) {
 	return StoreCreds(ak, sak)
 }
 
-func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
-	iotSvc, err := getSvc()
+func AWSIoTSetupFull(ctx context.Context, devConn dev.DevConn, region, policy, thing, keyID, key string) error {
+	iotSvc, err := getSvc(region, keyID, key)
 	if err != nil {
 		return err
 	}
 
 	ourutil.Reportf("Connecting to the device...")
-	devInfo, err := devConn.GetInfo(ctx)
+	devInfo, err := dev.GetInfo(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
 	}
+
 	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
 	ourutil.Reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
 
-	devConf, err := devConn.GetConfig(ctx)
+	devConf, err := dev.GetConfig(ctx, devConn)
 	if err != nil {
 		return errors.Annotatef(err, "failed to get config")
 	}
@@ -352,7 +356,7 @@ func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		certCN = devID
 	}
 
-	if awsIoTThing == "" {
+	if thing == "" {
 		awsIoTThing = certCN
 	}
 
@@ -364,7 +368,7 @@ func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	_, certPEMBytes, _, _, keyPEMBytes, err := x509utils.LoadCertAndKey(awsCertFile, awsKeyFile)
 
 	if certPEMBytes == nil {
-		certPEMBytes, keyPEMBytes, err = genCert(ctx, certType, useATCA, iotSvc, devConn, devConf, devInfo, certCN, awsIoTThing)
+		certPEMBytes, keyPEMBytes, err = genCert(ctx, certType, useATCA, iotSvc, devConn, devConf, devInfo, certCN, awsIoTThing, region, policy, keyID, key)
 		if err != nil {
 			return errors.Annotatef(err, "failed to generate certificate")
 		}
@@ -443,8 +447,8 @@ func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		settings["device.id"] = certCN
 	}
 
-	if awsIoTThing != "-" {
-		settings["aws.thing_name"] = awsIoTThing
+	if thing != "-" {
+		settings["aws.thing_name"] = thing
 	}
 
 	if awsGGEnable && awsGGConf != "" {
@@ -459,4 +463,8 @@ func AWSIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	return config.SetAndSave(ctx, devConn, devConf)
+}
+
+func AWSIoTSetup(ctx context.Context, devConn dev.DevConn) error {
+	return AWSIoTSetupFull(ctx, devConn, AWSRegion, AWSIoTPolicy, awsIoTThing, "", "")
 }

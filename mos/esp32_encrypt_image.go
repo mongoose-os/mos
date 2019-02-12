@@ -20,7 +20,7 @@ func init() {
 	flag.Uint32Var(&esp32FlashAddress, "esp32-flash-address", 0, "")
 }
 
-func esp32EncryptImage(ctx context.Context, devConn *dev.DevConn) error {
+func esp32EncryptImage(ctx context.Context, devConn dev.DevConn) error {
 	if len(flag.Args()) != 3 {
 		return errors.Errorf("input and output images are required")
 	}
