@@ -30,6 +30,10 @@
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
     - name: stm32-NUCLEO-F746ZG
       platform: stm32
       build_vars:
@@ -64,6 +68,10 @@
       build_vars:
         BOARD: DISCO-F746NG
         MGOS_ENABLE_LWIP: 1
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
     - name: stm32-NUCLEO-F746ZG
       platform: stm32
       build_vars:
@@ -83,6 +91,10 @@
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
 
 # Demo apps
 - location: https://github.com/mongoose-os-apps/demo-c
@@ -111,6 +123,10 @@
       platform: stm32
       build_vars:
         BOARD: DISCO-F746NG
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
     - name: stm32-NUCLEO-F746ZG
       platform: stm32
       build_vars:

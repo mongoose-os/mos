@@ -177,7 +177,7 @@ def MakeAsset(an, asf, tmp_dir):
     return [an, af]
 
 
-def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
+def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
     parts = loc.split("/")
     pre, name, i, repo_loc, repo_subdir = "", "", 0, loc, ""
     for p in parts:
@@ -224,6 +224,8 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, libs_dir, tmp_dir, no_libs_u
             mos_cmd.append("--repo=%s" % mos_repo_dir)
         if deps_dir:
             mos_cmd.append("--deps-dir=%s" % deps_dir)
+        if binary_libs_dir:
+            mos_cmd.append("--binary-libs-dir=%s" % binary_libs_dir)
         if libs_dir:
             mos_cmd.append("--libs-dir=%s" % libs_dir)
         if no_libs_update:
@@ -303,10 +305,10 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, libs_dir, tmp_dir, no_libs_u
                         raise
 
 
-def ProcessEntry(e, mos, repo_dir, deps_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
+def ProcessEntry(e, mos, repo_dir, deps_dir, binary_libs_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
     for loc in e.get("locations", []) + [e.get("location")]:
         if loc:
-            ProcessLoc(e, loc, mos, repo_dir, deps_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file)
+            ProcessLoc(e, loc, mos, repo_dir, deps_dir, binary_libs_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file)
 
 
 if __name__ == "__main__":
@@ -315,6 +317,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--tmp-dir", type=str, default=os.path.join(os.getenv("TMPDIR", "/tmp"), "mos_prebuild"))
     parser.add_argument("--deps-dir", type=str)
+    parser.add_argument("--binary-libs-dir", type=str)
     parser.add_argument("--libs-dir", type=str)
     parser.add_argument("--repo-dir", type=str)
     parser.add_argument("--no-libs-update", action="store_true")
@@ -330,6 +333,6 @@ if __name__ == "__main__":
         cfg = yaml.load(f)
 
     for e in cfg:
-        ProcessEntry(e, args.mos, args.repo_dir, args.deps_dir, args.libs_dir, args.tmp_dir,
+        ProcessEntry(e, args.mos, args.repo_dir, args.deps_dir, args.binary_libs_dir, args.libs_dir, args.tmp_dir,
                 args.no_libs_update, args.gh_release_tag, args.gh_token_file)
     logging.info("All done")
