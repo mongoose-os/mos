@@ -69,8 +69,7 @@ func ReadZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	return fwb, nil
 }
 
-func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool) error {
-	buf := new(bytes.Buffer)
+func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool) error {
 	zw := zip.NewWriter(buf)
 	// When compressing, use best compression.
 	zw.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
@@ -127,6 +126,14 @@ func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool) er
 	}
 	if err = zw.Close(); err != nil {
 		return errors.Annotatef(err, "error closing the archive")
+	}
+	return nil
+}
+
+func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool) error {
+	buf := new(bytes.Buffer)
+	if err := WriteZipFirmwareBytes(fwb, buf, compress); err != nil {
+		return err
 	}
 	return ioutil.WriteFile(fname, buf.Bytes(), 0644)
 }
