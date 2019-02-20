@@ -105,5 +105,10 @@ func License(ctx context.Context, devConn dev.DevConn) error {
 	if err := config.ApplyDiff(devConf, settings); err != nil {
 		return errors.Trace(err)
 	}
-	return config.SetAndSave(ctx, devConn, devConf)
+	// Save to level 1 by default.
+	level := *flags.Level
+	if level < 0 {
+		level = 1
+	}
+	return config.SetAndSaveLevel(ctx, devConn, devConf, level)
 }

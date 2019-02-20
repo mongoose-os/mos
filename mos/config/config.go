@@ -36,7 +36,7 @@ func Get(ctx context.Context, devConn dev.DevConn) error {
 	}
 
 	// Get all config from the attached device
-	devConf, err := dev.GetConfig(ctx, devConn)
+	devConf, err := dev.GetConfigLevel(ctx, devConn, *flags.Level)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -65,7 +65,7 @@ func SetWithArgs(
 
 	// Get all config from the attached device
 	ourutil.Reportf("Getting configuration...")
-	devConf, err := dev.GetConfig(ctx, devConn)
+	devConf, err := dev.GetConfigLevel(ctx, devConn, *flags.Level)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -86,17 +86,38 @@ func SetWithArgs(
 	return SetAndSave(ctx, devConn, devConf)
 }
 
-func SetAndSave(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) error {
+func SetAndSaveLevel(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf, level int) error {
 	// save changed conf
-	ourutil.Reportf("Setting new configuration...")
-	err := dev.SetConfig(ctx, devConn, devConf)
+	arg := &dev.ConfigSetArg{
+		Save:    !*flags.NoSave,
+		Reboot:  !*flags.NoReboot,
+		TryOnce: *flags.TryOnce,
+	}
+	if level > 0 {
+		arg.Level = level
+		ourutil.Reportf("Setting new configuration (level %d)...", arg.Level)
+	} else {
+		ourutil.Reportf("Setting new configuration...")
+	}
+	saved, err := dev.SetConfig(ctx, devConn, devConf, arg)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
+	// Newer firmware (2.12+) doesn't need explicit save.
+	if arg.Save && saved {
+		if arg.TryOnce {
+			ourutil.Reportf("Note: --try-once is set, config is valid for one reboot only")
+		}
+		if arg.Reboot {
+			time.Sleep(200 * time.Millisecond)
+		}
+		return nil
+	}
+
 	attempts := saveAttempts
-	for !*flags.NoSave {
-		if *flags.NoReboot {
+	for arg.Save {
+		if !arg.Reboot {
 			ourutil.Reportf("Saving...")
 		} else {
 			ourutil.Reportf("Saving and rebooting...")
@@ -104,8 +125,8 @@ func SetAndSave(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) 
 		ctx2, cancel := context.WithTimeout(ctx, saveTimeout)
 		defer cancel()
 		if err = devConn.Call(ctx2, "Config.Save", map[string]interface{}{
-			"reboot":   !*flags.NoReboot,
-			"try_once": *flags.TryOnce,
+			"reboot":   arg.Reboot,
+			"try_once": arg.TryOnce,
 		}, nil); err != nil {
 			attempts -= 1
 			if attempts > 0 {
@@ -114,17 +135,21 @@ func SetAndSave(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) 
 			}
 			return errors.Trace(err)
 		}
-		if *flags.TryOnce {
+		if arg.TryOnce {
 			ourutil.Reportf("Note: --try-once is set, config is valid for one reboot only")
 		}
 
-		if !*flags.NoReboot {
+		if arg.Reboot {
 			time.Sleep(200 * time.Millisecond)
 		}
 		break
 	}
 
 	return nil
+}
+
+func SetAndSave(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) error {
+	return SetAndSaveLevel(ctx, devConn, devConf, *flags.Level)
 }
 
 func parseParamValues(args []string) (map[string]string, error) {
