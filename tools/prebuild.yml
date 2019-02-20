@@ -38,6 +38,8 @@
       platform: stm32
       build_vars:
         BOARD: NUCLEO-F746ZG
+    - name: ubuntu
+      platform: ubuntu
 
 - location: git@github.com:cesanta/mos-libs.git/mongoose
   out:
