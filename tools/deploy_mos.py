@@ -170,17 +170,17 @@ if __name__ == "__main__":
         repo = git.Repo(".")
         head_commit = repo.head.commit
         formula = ("mos" if args.release_tag != "" else "mos-latest")
+        v = json.load(open(os.path.expanduser("~/tmp/mos_gopath/src/cesanta.com/mos/version/version.json"), "r"))
+        hb_cmd = [
+            "tools/update_hb.py",
+            "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
+            "--formula=%s" % formula,
+            "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
+            "--version=%s" % v["build_version"],
+            "--commit", "--push",
+        ]
         if args.resume <= 20:
             print("Updating Homebrew...")
-            v = json.load(open(os.path.expanduser("~/tmp/mos_gopath/src/cesanta.com/mos/version/version.json"), "r"))
-            hb_cmd = [
-                "tools/update_hb.py",
-                "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
-                "--formula=%s" % formula,
-                "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
-                "--version=%s" % v["build_version"],
-                "--commit", "--push",
-            ]
             RunSubprocess(hb_cmd)
         if args.resume <= 30:
             print("Building a bottle...")
