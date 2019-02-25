@@ -46,7 +46,7 @@ func init() {
 	// ESP8266, ESP32
 	flag.UintVar(&espFlashOpts.ROMBaudRate, "esp-rom-baud-rate", 115200,
 		"Data port speed when talking to ROM loader")
-	flag.UintVar(&espFlashOpts.FlasherBaudRate, "esp-baud-rate", 0,
+	flag.UintVar(&espFlashOpts.FlasherBaudRate, "esp-baud-rate", 921600,
 		"Data port speed during flashing. 0 - don't change (== --esp-rom-baud-rate)")
 	flag.StringVar(&espFlashOpts.DataPort, "esp-data-port", "",
 		"If specified, this port will be used to send data during flashing. "+

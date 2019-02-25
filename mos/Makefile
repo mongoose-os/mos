@@ -8,8 +8,10 @@ TMP_GOPATH ?= ~/tmp/mos_gopath
 all: build
 
 generate: version/version.go
-	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
-	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+	@which go-bindata > /dev/null || \
+	  go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
+	@which go-bindata-assetfs > /dev/null || \
+	  go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate ./...
 
 version/version.go version/version.json:

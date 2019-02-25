@@ -43,25 +43,37 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 		}
 	}
 
-	r.rc, err = rom_client.ConnectToROM(ct, opts)
-	if err != nil {
-		return nil, errors.Annotatef(
-			err,
-			"Failed to talk to bootloader.\nSee "+
-				"https://github.com/espressif/esptool/wiki/ESP8266-Boot-Mode-Selection\n"+
-				"for wiring instructions or pull GPIO0 low and reset.",
-		)
-	}
-	ownROMClient := true
+	ownROMClient := false
 	defer func() {
 		if ownROMClient {
 			r.rc.Disconnect()
 		}
 	}()
+	flasherBaudRate := opts.FlasherBaudRate
+	for {
+		r.rc, err = rom_client.ConnectToROM(ct, opts)
+		if err != nil {
+			return nil, errors.Annotatef(
+				err,
+				"Failed to talk to bootloader.\nSee "+
+					"https://github.com/espressif/esptool/wiki/ESP8266-Boot-Mode-Selection\n"+
+					"for wiring instructions or pull GPIO0 low and reset.",
+			)
+		}
+		ownROMClient = true
 
-	r.fc, err = NewFlasherClient(ct, r.rc, opts.ROMBaudRate, opts.FlasherBaudRate)
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to run flasher")
+		r.fc, err = NewFlasherClient(ct, r.rc, opts.ROMBaudRate, flasherBaudRate)
+		if err == nil {
+			break
+		}
+		if flasherBaudRate != 0 {
+			glog.Errorf("failed to run flasher @ %d, falling back to ROM baud rate...", flasherBaudRate)
+			r.rc.Disconnect()
+			ownROMClient = false
+			flasherBaudRate = 0
+		} else {
+			return nil, errors.Annotatef(err, "failed to run flasher")
+		}
 	}
 	if r.flashParams.Size() <= 0 || r.flashParams.Mode() == "" {
 		mfg, flashSize, err := detectFlashSize(r.fc)
