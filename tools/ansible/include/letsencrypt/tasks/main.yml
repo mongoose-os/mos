@@ -38,7 +38,7 @@
     restart_policy: no
 
 - name: SSL certificate renewal timer
-  include: include/systemd_cron/tasks/main.yml
+  import_tasks: include/systemd_cron/tasks/main.yml
   tags: certs
   vars:
     name: renew_certs
