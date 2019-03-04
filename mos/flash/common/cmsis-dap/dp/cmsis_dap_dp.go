@@ -269,7 +269,7 @@ func (v DPDesigner) String() string {
 	if v == 0x477 {
 		return "ARM"
 	}
-	return fmt.Sprintf("0x%03x", v)
+	return fmt.Sprintf("0x%03x", uint16(v))
 }
 
 func (r DPReg) String() string {

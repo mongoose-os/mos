@@ -52,13 +52,25 @@ func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
 		return errors.Errorf("%s is already set", keySlot)
 	}
 
-	key := make([]byte, 32)
+	keyLen := 32
+	kcs := esp32.GetKeyEncodingScheme(fusesByName)
+
+	switch kcs {
+	case esp32.KeyEncodingSchemeNone:
+		keyLen = 32
+	case esp32.KeyEncodingScheme34:
+		keyLen = 24
+	case esp32.KeyEncodingSchemeRepeat:
+		keyLen = 16
+	}
+
+	key := make([]byte, keyLen)
 	_, err = rand.Read(key)
 	if err != nil {
 		return errors.Annotatef(err, "failed to generate key")
 	}
 
-	if err = kf.SetKeyValue(key); err != nil {
+	if err = kf.SetKeyValue(key, kcs); err != nil {
 		return errors.Annotatef(err, "failed to set key value")
 	}
 

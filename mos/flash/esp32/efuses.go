@@ -7,23 +7,36 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"math/bits"
 
 	"cesanta.com/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
 
+type KeyEncodingScheme uint8
+
 const (
-	KeyLen = 32
+	KeyEncodingSchemeNone   KeyEncodingScheme = 0
+	KeyEncodingScheme34                       = 1
+	KeyEncodingSchemeRepeat                   = 2
+)
+
+const (
+	KeyLen       = 32
+	KeyLen34     = 24
+	KeyLenRepeat = 16
 )
 
 var (
-	blockReadBases       = []uint32{0x6001a000, 0x6001a038, 0x6001a058, 0x6001a078}
-	blockWriteBases      = []uint32{0x6001a01c, 0x6001a098, 0x6001a0b8, 0x6001a0d8}
-	blockLengths         = []int{7, 8, 8, 8}
-	ReadDisableFuseName  = "efuse_rd_disable"
-	WriteDisableFuseName = "efuse_wr_disable"
-	MACAddressFuseName   = "WIFI_MAC_Address"
+	blockReadBases            = []uint32{0x6001a000, 0x6001a038, 0x6001a058, 0x6001a078}
+	blockWriteBases           = []uint32{0x6001a01c, 0x6001a098, 0x6001a0b8, 0x6001a0d8}
+	blockLengths              = []int{7, 8, 8, 8}
+	ReadDisableFuseName       = "efuse_rd_disable"
+	WriteDisableFuseName      = "efuse_wr_disable"
+	MACAddressFuseName        = "WIFI_MAC_Address"
+	KeyEncodingSchemeFuseName = "coding_scheme"
+	FlashCryptCntFuseName     = "flash_crypt_cnt"
 )
 
 var (
@@ -55,11 +68,12 @@ type fuseDescriptor struct {
 }
 
 var (
+	keyCodingSchemeFuseDescriptor = fuseDescriptor{name: KeyEncodingSchemeFuseName, block: 0, fields: []bitField{{6, 1, 0}}, wdBit: 10, rdBit: 3}
 	// Fuse definitions as described in ESP32 TRM chapter 11, tables 29 and 30.
 	fuseDescriptors = []fuseDescriptor{
 		{name: WriteDisableFuseName, block: 0, fields: []bitField{{0, 15, 0}}, wdBit: 1, rdBit: -1},
 		{name: ReadDisableFuseName, block: 0, fields: []bitField{{0, 19, 16}}, wdBit: 0, rdBit: -1},
-		{name: "flash_crypt_cnt", block: 0, fields: []bitField{{0, 27, 20}}, wdBit: 2, rdBit: -1},
+		{name: FlashCryptCntFuseName, block: 0, fields: []bitField{{0, 27, 20}}, wdBit: 2, rdBit: -1},
 		// 0, 31, 28 - ?
 		{name: MACAddressFuseName, block: 0, fields: []bitField{{1, 31, 0}, {2, 23, 0}}, wdBit: 3, rdBit: -1},
 		// 2, 31, 24 - ?
@@ -81,7 +95,7 @@ var (
 		{name: "SPI_pad_config_d", block: 0, fields: []bitField{{5, 14, 10}}, wdBit: 6, rdBit: -1},
 		{name: "SPI_pad_config_cs0", block: 0, fields: []bitField{{5, 19, 15}}, wdBit: 6, rdBit: -1},
 		{name: "flash_crypt_config", block: 0, fields: []bitField{{5, 31, 28}}, wdBit: 10, rdBit: 3},
-		{name: "coding_scheme", block: 0, fields: []bitField{{6, 1, 0}}, wdBit: 10, rdBit: 3},
+		keyCodingSchemeFuseDescriptor,
 		{name: "console_debug_disable", block: 0, fields: []bitField{{6, 2, 2}}, wdBit: 15, rdBit: -1},
 		// 6, 3, 3 - ?
 		{name: "abstract_done_0", block: 0, fields: []bitField{{6, 4, 4}}, wdBit: 12, rdBit: -1},
@@ -298,32 +312,70 @@ func (f *Fuse) IsKey() bool {
 	return f.d.block > 0
 }
 
-// Reverse and convert BE -> LE
-func reverseKey(kb []byte) {
-	if len(kb) != KeyLen {
-		glog.Exitf("want %d bytes, got %d", KeyLen, len(kb))
+func reverseKey(kb []byte) []byte {
+	res := make([]byte, len(kb))
+	for i, b := range kb {
+		res[len(kb)-i-1] = b
 	}
-	for wi := 0; wi < 4; wi++ {
-		for bi := 0; bi < 4; bi++ {
-			i := 4*wi + bi
-			j := len(kb) - 1 - 4*wi - (3 - bi)
-			kb[i], kb[j] = kb[j], kb[i]
-		}
+	return res
+}
+
+func beToLE(kb []byte) {
+	for i := 0; i < len(kb); i += 4 {
+		kw := kb[i : i+4]
+		kw[0], kw[1], kw[2], kw[3] = kw[3], kw[2], kw[1], kw[0]
 	}
 }
 
-func (f *Fuse) SetKeyValue(kb []byte) error {
+// Reverse and convert BE -> LE
+func reverseKeyBELE(kbi []byte) []byte {
+	kb := reverseKey(kbi)
+	beToLE(kb)
+	return kb
+}
+
+// Encode according to the "3/4" scheme (see EfuseKeyblockField.apply_34_encoding in esptool.py)
+func encode34(kb []byte) []byte {
+	kbr := reverseKey(kb)
+	var res []byte
+	for i := 0; i < len(kb); i += 6 {
+		kc := kbr[i : i+6]
+		var xor, mul byte
+		for j, b := range kc {
+			xor ^= b
+			mul += byte(j+1) * byte(bits.OnesCount8(b))
+			res = append(res, b)
+		}
+		res = append(res, xor, mul)
+	}
+	beToLE(res)
+	return res
+}
+
+func (f *Fuse) SetKeyValue(kb []byte, kcs KeyEncodingScheme) error {
 	if !f.IsKey() {
 		return errors.Errorf("not a key slot")
 	}
-	if len(kb) != KeyLen {
-		return errors.Errorf("want %d bytes, got %d", KeyLen, len(kb))
+	var kbe []byte
+	switch kcs {
+	case KeyEncodingSchemeNone:
+		if len(kb) != KeyLen {
+			return errors.Errorf("want %d bytes, got %d", KeyLen, len(kb))
+		}
+		kbe = reverseKeyBELE(kb)
+	case KeyEncodingScheme34:
+		if len(kb) != KeyLen34 {
+			return errors.Errorf("want %d bytes, got %d", KeyLen34, len(kb))
+		}
+		kbe = encode34(kb)
+	case KeyEncodingSchemeRepeat:
+		if len(kb) != KeyLenRepeat {
+			return errors.Errorf("want %d bytes, got %d", KeyLenRepeat, len(kb))
+		}
+		kbe = append(kb, kb...) // ? is this correct
 	}
-	kbr := make([]byte, len(kb))
-	copy(kbr, kb)
-	reverseKey(kbr)
 	v := big.NewInt(0)
-	v.SetBytes(kbr)
+	v.SetBytes(kbe)
 	return f.SetValue(v)
 }
 
@@ -353,15 +405,27 @@ func (f *Fuse) String() string {
 		if vflen == 0 {
 			vflen = 1
 		}
-		if f.d.block > 0 {
-			fmt.Fprintf(b, " %s", f.KeyString())
-		} else {
+		kcs := KeyEncodingSchemeNone
+		switch f.d.block {
+		case 0:
 			fmt.Fprintf(b, fmt.Sprintf(" 0x%%0%dx", vflen), v)
 			if f.Name() == MACAddressFuseName {
 				fmt.Fprintf(b, fmt.Sprintf(" (MAC: %s)", f.MACAddressString()))
 			}
 			if vd.Cmp(v) != 0 {
 				fmt.Fprintf(b, fmt.Sprintf(" -> 0x%%0%dx", vflen), vd)
+			}
+		case 1:
+			fallthrough
+		case 2:
+			fallthrough
+		case 3:
+			kcs = GetKeyEncodingScheme(map[string]*Fuse{
+				KeyEncodingSchemeFuseName: &Fuse{d: keyCodingSchemeFuseDescriptor, blocks: f.blocks},
+			})
+			fmt.Fprintf(b, " %s", f.KeyString(kcs))
+			if kcs != KeyEncodingSchemeNone {
+				fmt.Fprintf(b, " (scheme: %s)", kcs)
 			}
 		}
 	} else {
@@ -373,16 +437,22 @@ func (f *Fuse) String() string {
 	return b.String()
 }
 
-func (f *Fuse) KeyString() string {
+func (f *Fuse) KeyString(kcs KeyEncodingScheme) string {
 	if !f.IsKey() || !f.IsReadable() {
 		return ""
 	}
 	vd, _ := f.Value(true /* withDiff */)
-	// Key blocks store key values in reversed order.
 	// Pad to 32 bytes, adding leading zeroes if needed.
-	kb := make([]byte, KeyLen)
-	copy(kb[KeyLen-len(vd.Bytes()):KeyLen], vd.Bytes())
-	reverseKey(kb)
+	kbe := make([]byte, KeyLen)
+	var kb []byte
+	copy(kbe[KeyLen-len(vd.Bytes()):KeyLen], vd.Bytes())
+	switch kcs {
+	case KeyEncodingSchemeNone:
+		kb = reverseKeyBELE(kbe)
+	case KeyEncodingScheme34:
+		kb = reverseKeyBELE(kbe)[8:]
+	case KeyEncodingSchemeRepeat:
+	}
 	return hex.EncodeToString(kb)
 }
 
@@ -474,6 +544,33 @@ func ProgramFuses(rrw esp.RegReaderWriter) error {
 		return errors.Annotatef(err, "failed to perform eFuse read operation")
 	}
 	return nil
+}
+
+func GetKeyEncodingScheme(fusesByName map[string]*Fuse) KeyEncodingScheme {
+	kcsi, _ := fusesByName[KeyEncodingSchemeFuseName].Value(true /* withDiffs */)
+	switch kcsi.Int64() {
+	case 0:
+		return KeyEncodingSchemeNone
+	case 1:
+		return KeyEncodingScheme34
+	case 2:
+		return KeyEncodingSchemeRepeat
+	case 3:
+		return KeyEncodingSchemeNone
+	}
+	return KeyEncodingSchemeNone
+}
+
+func (kcs KeyEncodingScheme) String() string {
+	switch kcs {
+	case KeyEncodingSchemeNone:
+		return "None"
+	case KeyEncodingScheme34:
+		return "3/4"
+	case KeyEncodingSchemeRepeat:
+		return "Repeat"
+	}
+	return ""
 }
 
 func (op eFuseCtlOp) String() string {

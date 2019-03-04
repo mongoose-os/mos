@@ -3,6 +3,7 @@ package flasher
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"math/bits"
 	"sort"
 	"strings"
 	"time"
@@ -38,6 +39,13 @@ func (pp imagesByAddr) Less(i, j int) bool {
 	return pp[i].addr < pp[j].addr
 }
 
+func enDis(enabled bool) string {
+	if enabled {
+		return "enabled"
+	}
+	return "disabled"
+}
+
 func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) error {
 
 	cfr, err := ConnectToFlasherClient(ct, opts)
@@ -52,6 +60,21 @@ func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) er
 		// Based on our knowledge of flash size, adjust type=sys_params image.
 		adjustSysParamsLocation(fw, cfr.flashParams.Size())
 	}
+
+	_, _, fusesByName, err := esp32.ReadFuses(cfr.fc)
+	if err != nil {
+		return errors.Annotatef(err, "failed to read eFuses")
+	}
+
+	encryptionEnabled := false
+	fcnt, err := fusesByName[esp32.FlashCryptCntFuseName].Value(true /* withDiffs */)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	encryptionEnabled = (bits.OnesCount64(fcnt.Uint64())%2 != 0)
+	kcs := esp32.GetKeyEncodingScheme(fusesByName)
+
+	common.Reportf("Flash encryption: %s, scheme: %s", enDis(encryptionEnabled), kcs)
 
 	// Sort images by address
 	var images []*image
@@ -76,13 +99,30 @@ func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) er
 		if im.addr == 0 || im.addr == 0x1000 && len(data) >= 4 && data[0] == 0xe9 {
 			im.data[2], im.data[3] = cfr.flashParams.Bytes()
 		}
-		if p.ESP32Encrypt && len(cfr.esp32EncryptionKey) > 0 {
-			encData, err := esp32.ESP32EncryptImageData(
-				im.data, cfr.esp32EncryptionKey, im.addr, opts.ESP32FlashCryptConf)
-			if err != nil {
-				return errors.Annotatef(err, "%s: failed to encrypt", p.Name)
+		if p.ESP32Encrypt && encryptionEnabled {
+			if len(cfr.esp32EncryptionKey) > 0 {
+				encrKey := cfr.esp32EncryptionKey[:]
+				switch kcs {
+				case esp32.KeyEncodingSchemeNone:
+					if len(cfr.esp32EncryptionKey) != 32 {
+						return errors.Errorf("encryption key must be 32 bytes, got %d", len(cfr.esp32EncryptionKey))
+					}
+				case esp32.KeyEncodingScheme34:
+					if len(cfr.esp32EncryptionKey) != 24 {
+						return errors.Errorf("encryption key must be 24 bytes, got %d", len(cfr.esp32EncryptionKey))
+					}
+					// Extend the key, per 3/4 encoding scheme.
+					encrKey = append(encrKey, encrKey[8:16]...)
+				}
+				encData, err := esp32.ESP32EncryptImageData(
+					im.data, encrKey, im.addr, opts.ESP32FlashCryptConf)
+				if err != nil {
+					return errors.Annotatef(err, "%s: failed to encrypt", p.Name)
+				}
+				im.data = encData
+			} else {
+				return errors.Errorf("flash encryption is enabled but encryption key is not provided")
 			}
-			im.data = encData
 		}
 		images = append(images, im)
 	}

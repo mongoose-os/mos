@@ -16,13 +16,13 @@ func NewFakeFuseController() esp.RegReaderWriter {
 		regs: map[uint32]uint32{
 			// eFuse register block 0
 			// Read
-			0x6001a000: 0x00110080,
+			0x6001a000: 0x00000000,
 			0x6001a004: 0xc40031bc,
 			0x6001a008: 0x0098240a,
 			0x6001a00c: 0x00000000,
 			0x6001a010: 0x00000036,
-			0x6001a014: 0xf0000000,
-			0x6001a018: 0x000003c0,
+			0x6001a014: 0x00000000,
+			0x6001a018: 0x00000001,
 			// Write
 			0x6001a01c: 0x00000000,
 			0x6001a020: 0x00000000,

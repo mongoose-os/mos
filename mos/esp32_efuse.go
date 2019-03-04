@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"io/ioutil"
 	"math/big"
 	"strings"
@@ -127,14 +128,28 @@ func esp32EFuseSet(ctx context.Context, devConn dev.DevConn) error {
 				return err
 			}
 		} else {
-			if strings.HasPrefix(valueStr, "@") {
-				fname := valueStr[1:]
+			if f.IsKey() {
 				var data []byte
-				data, err = ioutil.ReadFile(fname)
-				if err != nil {
-					return errors.Annotatef(err, "%s: failed to read %q", fuseName, fname)
+				if strings.HasPrefix(valueStr, "@") {
+					fname := valueStr[1:]
+					data, err = ioutil.ReadFile(fname)
+					if err != nil {
+						return errors.Annotatef(err, "%s: failed to read %q", fuseName, fname)
+					}
+				} else {
+					if strings.HasPrefix(valueStr, "0x") {
+						valueStr = valueStr[2:]
+					}
+					data, err = hex.DecodeString(valueStr)
+					if err != nil {
+						return errors.Annotatef(err, "%s: invalid key value (want hex string)", fuseName)
+					}
 				}
-				err = f.SetKeyValue(data)
+				kcs := esp32.KeyEncodingSchemeNone
+				if f.Name() == "flash_encryption_key" || f.Name() == "secure_boot_key" {
+					kcs = esp32.GetKeyEncodingScheme(fusesByName)
+				}
+				err = f.SetKeyValue(data, kcs)
 			} else {
 				value := big.NewInt(0)
 				if err = value.UnmarshalText([]byte(valueStr)); err != nil {

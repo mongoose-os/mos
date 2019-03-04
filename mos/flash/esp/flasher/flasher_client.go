@@ -48,6 +48,8 @@ const (
 	cmdFlashEraseChip             = 0x05
 	cmdFlashBootFW                = 0x06
 	cmdEcho                       = 0x08
+	cmdReadReg                    = 0x09
+	cmdWriteReg                   = 0x0a
 )
 
 type FlasherClient struct {
@@ -406,6 +408,30 @@ func (fc *FlasherClient) Read(addr uint32, data []byte) error {
 	return nil
 }
 
+func (fc *FlasherClient) ReadReg(addr uint32) (uint32, error) {
+	if !fc.connected {
+		return 0, errors.New("not connected")
+	}
+	result, err := fc.simpleCmd(cmdReadReg, []uint32{addr}, 1*time.Second)
+	if err != nil {
+		return 0, errors.Trace(err)
+	}
+	if len(result) != 1 || len(result[0]) != 4 {
+		return 0, errors.Errorf("invalid response to ReadReg: %v", result)
+	}
+	var res uint32
+	binary.Read(bytes.NewBuffer(result[0]), binary.LittleEndian, &res)
+	return res, nil
+}
+
+func (fc *FlasherClient) WriteReg(addr uint32, value uint32) error {
+	if !fc.connected {
+		return errors.New("not connected")
+	}
+	_, err := fc.simpleCmd(cmdWriteReg, []uint32{addr, value}, 1*time.Second)
+	return errors.Trace(err)
+}
+
 func (fc *FlasherClient) Digest(addr, length, blockSize uint32) ([][]byte, error) {
 	if !fc.connected {
 		return nil, errors.New("not connected")
@@ -440,6 +466,9 @@ func (fc *FlasherClient) BootFirmware() error {
 	_, err := fc.simpleCmd(cmdFlashBootFW, nil, 1*time.Second) // Jumps to the flash loader routine.
 	fc.rom.BootFirmware()                                      // Performs hw reset using RTS, if possible.
 	return err
+}
+
+func (fc *FlasherClient) Disconnect() {
 }
 
 // TODO(rojer): Use stringer when it actually works.

@@ -38,9 +38,6 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 		if err != nil {
 			return nil, errors.Annotatef(err, "failed to read encryption key")
 		}
-		if len(r.esp32EncryptionKey) != 32 {
-			return nil, errors.Errorf("encryption key must be 32 bytes, got %d", len(r.esp32EncryptionKey))
-		}
 	}
 
 	ownROMClient := false
