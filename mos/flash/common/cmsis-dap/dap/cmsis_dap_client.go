@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/cesanta/errors"
-	"github.com/flynn/hid"
+	"github.com/cesanta/hid"
 	"github.com/golang/glog"
 )
 
