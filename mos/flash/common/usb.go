@@ -1,3 +1,5 @@
+// +build !no_libudev
+
 package common
 
 import (
