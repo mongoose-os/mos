@@ -256,10 +256,10 @@
 			"revisionTime": "2017-01-05T15:26:49Z"
 		},
 		{
-			"checksumSHA1": "RfBs5h2AKeATP05+m1k8vtdW/ME=",
+			"checksumSHA1": "6f+5TuFHFcdfgPFiszF+DU3zqd0=",
 			"path": "github.com/cesanta/hid",
-			"revision": "070068799c96614134563b59637afff7a26a820a",
-			"revisionTime": "2019-03-04T11:22:36Z"
+			"revision": "79d86877855b6912137d60a67291255d20b3bbed",
+			"revisionTime": "2019-03-04T12:23:32Z"
 		},
 		{
 			"checksumSHA1": "6aGvzibOCGGTbCFKOHRWIASC+Us=",

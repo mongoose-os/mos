@@ -62,7 +62,7 @@ win: generate
 	  --user $(shell id -u):$(shell id -g) \
 	docker.io/mgos/gobuild-mingw \
 	  bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc \
-	           go build -v -i -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
+	           go build -v -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
 
 # Set up GOPATH on the side and build there. Because Go is awesome.
 downloads: clean-version version/version.go
