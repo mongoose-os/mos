@@ -8,7 +8,9 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strings"
 
+	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/esp32"
 	"github.com/cesanta/errors"
@@ -23,11 +25,14 @@ var (
 )
 
 func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
-	if len(flag.Args()) < 3 {
-		return errors.Errorf("key slot and output file are required")
+	if len(flag.Args()) < 2 {
+		return errors.Errorf("key slot is required")
 	}
-
-	keySlot, outFile := flag.Args()[1], flag.Args()[2]
+	keySlot := flag.Args()[1]
+	outFile := espFlashOpts.ESP32EncryptionKeyFile
+	if len(flag.Args()) > 2 {
+		outFile = flag.Args()[2]
+	}
 
 	rrw, err := getRRW()
 	if err != nil {
@@ -40,7 +45,8 @@ func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
 		return errors.Annotatef(err, "failed to read eFuses")
 	}
 
-	reportf("Device MAC address: %s", fusesByName[esp32.MACAddressFuseName].MACAddressString())
+	mac := fusesByName[esp32.MACAddressFuseName].MACAddressString()
+	reportf("Device MAC address: %s", mac)
 
 	kf := fusesByName[keySlot]
 	if kf == nil || !kf.IsKey() {
@@ -113,11 +119,17 @@ func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
 
 	reportf("")
 	if outFile != "" {
+		if outFile != "-" {
+			outFile = moscommon.ExpandPlaceholders(outFile, "?", strings.ToUpper(strings.Replace(mac, ":", "", -1)))
+			if _, err := os.Stat(outFile); err == nil {
+				return errors.Errorf("key output file %q already exists", outFile)
+			}
+		}
 		if !*dryRun {
 			if outFile == "-" {
 				os.Stdout.Write(key)
 			} else {
-				if err = ioutil.WriteFile(outFile, key, 0600); err != nil {
+				if err = ioutil.WriteFile(outFile, key, 0400); err != nil {
 					return errors.Annotatef(err, "failed to write key")
 				}
 				reportf("Wrote key to %s", outFile)

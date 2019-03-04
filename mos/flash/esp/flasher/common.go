@@ -1,8 +1,6 @@
 package flasher
 
 import (
-	"io/ioutil"
-
 	"cesanta.com/mos/flash/esp"
 	"cesanta.com/mos/flash/esp/rom_client"
 	"github.com/cesanta/errors"
@@ -15,10 +13,9 @@ const (
 )
 
 type cfResult struct {
-	rc                 *rom_client.ROMClient
-	fc                 *FlasherClient
-	flashParams        flashParams
-	esp32EncryptionKey []byte
+	rc          *rom_client.ROMClient
+	fc          *FlasherClient
+	flashParams flashParams
 }
 
 func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, error) {
@@ -31,13 +28,6 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 
 	if err = r.flashParams.ParseString(ct, opts.FlashParams); err != nil {
 		return nil, errors.Annotatef(err, "invalid flash params (%q)", opts.FlashParams)
-	}
-
-	if ct == esp.ChipESP32 && opts.ESP32EncryptionKeyFile != "" {
-		r.esp32EncryptionKey, err = ioutil.ReadFile(opts.ESP32EncryptionKeyFile)
-		if err != nil {
-			return nil, errors.Annotatef(err, "failed to read encryption key")
-		}
 	}
 
 	ownROMClient := false
