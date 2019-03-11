@@ -301,7 +301,7 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
                             rel, ok = github_api.CallReleasesAPI(gh_out["repo"], token,
                                                                  releases_url=("/tags/%s" % gh_release_tag))
                             if ok:
-                                DeleteRelease(repo, token, rel["id"])
+                                DeleteRelease(gh_out["repo"], token, rel["id"])
                         raise
 
 
