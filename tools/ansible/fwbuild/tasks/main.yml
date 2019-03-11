@@ -33,6 +33,6 @@
     name: rm_fwbuild_volumes
     time: hourly
     cmd: |
-      /bin/bash -c 'find /fwbuild-volumes -name "build_ctx_*" \
+      /bin/bash -c 'find {{ fwbuild_volumes_dir }} -name "build_ctx_*" \
         -type d -mtime +3 | xargs rm -rf'
 

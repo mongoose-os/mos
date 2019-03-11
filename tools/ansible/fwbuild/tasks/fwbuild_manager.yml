@@ -22,14 +22,14 @@
       - 80
     command: >-
       --logtostderr --v=2
-      --volumes-dir=/fwbuild-volumes
+      --volumes-dir={{ fwbuild_volumes_dir }}
       --port=80
       --port-tls=443
       --cert-file=/data/letsencrypt/live/mongoose.cloud/fullchain.pem
       --key-file=/data/letsencrypt/live/mongoose.cloud/privkey.pem
 
     volumes:
-      - /fwbuild-volumes:/fwbuild-volumes
+      - "{{ fwbuild_volumes_dir }}:{{ fwbuild_volumes_dir }}"
       - /var/run/docker.sock:/var/run/docker.sock
       - /data/letsencrypt:/data/letsencrypt:ro
     state: started
