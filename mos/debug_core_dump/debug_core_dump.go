@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
 
 	"cesanta.com/common/go/ourutil"
 	"github.com/cesanta/errors"
@@ -35,27 +35,32 @@ type platformDebugParams struct {
 var (
 	debugParams = map[string]platformDebugParams{
 		"cc3200": platformDebugParams{
-			image:              "docker.io/mgos/cc3200-build:1.3.0-r8",
+			image:              "docker.io/mgos/cc3200-build:1.3.0-r11",
 			extraGDBArgs:       []string{},
 			extraServeCoreArgs: []string{},
 		},
 		"cc3220": platformDebugParams{
-			image:              "docker.io/mgos/cc3220-build:2.10.00.04-r2",
+			image:              "docker.io/mgos/cc3220-build:2.10.00.04-r4",
 			extraGDBArgs:       []string{},
 			extraServeCoreArgs: []string{},
 		},
 		"esp32": platformDebugParams{
-			image:              "docker.io/mgos/esp32-build:3.0-r11",
+			image:              "docker.io/mgos/esp32-build:3.2-r3",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000", "--xtensa_addr_fixup=true"},
 		},
 		"esp8266": platformDebugParams{
-			image:              "docker.io/mgos/esp8266-build:2.2.1-1.5.0-r3",
+			image:              "docker.io/mgos/esp8266-build:2.2.1-1.5.0-r4",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000"},
 		},
 		"stm32": platformDebugParams{
-			image:              "docker.io/mgos/stm32-build:r9",
+			image:              "docker.io/mgos/stm32-build:r14",
+			extraGDBArgs:       []string{},
+			extraServeCoreArgs: []string{},
+		},
+		"rs14100": platformDebugParams{
+			image:              "docker.io/mgos/rs14100-build:1.0.4-r1",
 			extraGDBArgs:       []string{},
 			extraServeCoreArgs: []string{},
 		},
@@ -158,29 +163,45 @@ func GetInfoFromCoreDumpFile(cdFile string) (CoreDumpInfo, error) {
 }
 
 func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
-	if cdFile == "" {
-		return errors.Errorf("cdFile is required")
-	}
-	cdFile, err := filepath.Abs(cdFile)
-	if err != nil {
-		return errors.Annotatef(err, "invalid file name %s", cdFile)
-	}
-	info, err := GetInfoFromCoreDumpFile(cdFile)
-	if err != nil {
-		return errors.Annotatef(err, "unable to parse %s", cdFile)
-	}
-	if info.App != "" {
-		ourutil.Reportf("Core dump by %s/%s %s %s", info.App, info.Platform, info.Version, info.BuildID)
-	}
-	dp, ok := debugParams[strings.ToLower(info.Platform)]
-	if !ok {
-		return errors.Errorf("don't know how to handle %q", info.Platform)
+	var ok bool
+	var err error
+	var info CoreDumpInfo
+	if cdFile != "" {
+		cdFile2 := cdFile
+		cdFile, err = filepath.Abs(cdFile)
+		if err != nil {
+			return errors.Annotatef(err, "invalid file name %s", cdFile2)
+		}
+		info, err = GetInfoFromCoreDumpFile(cdFile)
+		if err != nil {
+			return errors.Annotatef(err, "unable to parse %s", cdFile)
+		}
+		if info.App != "" {
+			ourutil.Reportf("Core dump by %s/%s %s %s", info.App, info.Platform, info.Version, info.BuildID)
+		}
+	} else {
+		info.Platform = flags.Platform()
+		if info.Platform == "" {
+			return errors.Errorf("--platform is required when running with no dump")
+		}
 	}
 	if elfFile == "" {
 		elfFile = getFwELFFile(info.App, info.Platform, info.Version, info.BuildID)
 		if elfFile == "" {
 			return errors.Errorf("--fw-elf-file is not set and could not be guessed")
 		}
+	}
+	dp, ok := debugParams[strings.ToLower(info.Platform)]
+	if !ok {
+		return errors.Errorf("don't know how to handle %q", info.Platform)
+	}
+	elfFile2 := elfFile
+	elfFile, err = filepath.Abs(elfFile)
+	if err != nil {
+		return errors.Annotatef(err, "invalid file name %s", elfFile2)
+	}
+	if _, err := os.Stat(elfFile); err != nil {
+		return errors.Annotatef(err, "invalid file %s", elfFile)
 	}
 	ourutil.Reportf("Using ELF file at: %s", elfFile)
 	dockerImage := info.BuildImage
@@ -192,10 +213,10 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	if !traceOnly {
 		cmd = append(cmd, "-i", "--tty=true")
 	}
-	cmd = append(cmd,
-		"-v", fmt.Sprintf("%s:/fw.elf", ourutil.GetPathForDocker(elfFile)),
-		"-v", fmt.Sprintf("%s:/core", ourutil.GetPathForDocker(cdFile)),
-	)
+	cmd = append(cmd, "-v", fmt.Sprintf("%s:/fw.elf", ourutil.GetPathForDocker(elfFile)))
+	if cdFile != "" {
+		cmd = append(cmd, "-v", fmt.Sprintf("%s:/core", ourutil.GetPathForDocker(cdFile)))
+	}
 	mosSrcPath := getMosSrcPath()
 	if mosSrcPath != "" {
 		ourutil.Reportf("Using Mongoose OS souces at: %s", mosSrcPath)
@@ -205,21 +226,28 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 		cmd = append(cmd, "-v", fmt.Sprintf("%s:%s", cwd, ourutil.GetPathForDocker(cwd)))
 	}
 	cmd = append(cmd, dockerImage)
-	shellCmd := []string{"/usr/local/bin/serve_core.py"}
-	shellCmd = append(shellCmd, dp.extraServeCoreArgs...)
-	shellCmd = append(shellCmd, []string{"/fw.elf", "/core", "&"}...)
-	shellCmd = append(shellCmd, []string{
-		"$MGOS_TARGET_GDB", // Defined in the Docker build image.
-		"/fw.elf",
-		"-ex", "'target remote 127.0.0.1:1234'",
-		"-ex", "'set confirm off'",
-		"-ex", "bt",
-	}...)
-	var input io.Reader
-	if traceOnly {
-		shellCmd = append(shellCmd, []string{"-ex", "quit"}...)
+	input := os.Stdin
+	var shellCmd []string
+	if cdFile != "" {
+		shellCmd = append(shellCmd, "/usr/local/bin/serve_core.py")
+		shellCmd = append(shellCmd, dp.extraServeCoreArgs...)
+		shellCmd = append(shellCmd, "/fw.elf", "/core", "&")
+		shellCmd = append(shellCmd,
+			"$MGOS_TARGET_GDB", // Defined in the Docker build image.
+			"/fw.elf",
+			"-ex", "'target remote 127.0.0.1:1234'",
+			"-ex", "'set confirm off'",
+			"-ex", "bt",
+		)
+		if traceOnly {
+			shellCmd = append(shellCmd, []string{"-ex", "quit"}...)
+			input = nil
+		}
 	} else {
-		input = os.Stdin
+		shellCmd = append(shellCmd,
+			"$MGOS_TARGET_GDB", // Defined in the Docker build image.
+			"/fw.elf",
+		)
 	}
 	cmd = append(cmd, "bash", "-c", strings.Join(shellCmd, " "))
 	return ourutil.RunCmdWithInput(input, ourutil.CmdOutAlways, cmd...)
