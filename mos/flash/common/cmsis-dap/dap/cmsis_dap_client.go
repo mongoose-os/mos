@@ -194,7 +194,7 @@ func (dapc *dapClient) TransferConfigure(ctx context.Context, idleCycles uint8, 
 	return errors.Trace(dapc.execCheckStatus(ctx, args))
 }
 
-func (dapc *dapClient) Transfer(ctx context.Context, dapIndex uint8, reqs []TransferRequest) (TransferStatus, []uint32, error) {
+func (dapc *dapClient) doTransfer(ctx context.Context, dapIndex uint8, reqs []TransferRequest) (TransferStatus, []uint32, error) {
 	args := newCmd(cmdTransfer)
 	binary.Write(args, binary.LittleEndian, dapIndex)
 	binary.Write(args, binary.LittleEndian, uint8(len(reqs)))
@@ -251,6 +251,17 @@ func (dapc *dapClient) Transfer(ctx context.Context, dapIndex uint8, reqs []Tran
 		data = append(data, d)
 	}
 	return st, data, nil
+}
+
+func (dapc *dapClient) Transfer(ctx context.Context, dapIndex uint8, reqs []TransferRequest) (TransferStatus, []uint32, error) {
+	for i := 0; i < 5; i++ {
+		st, res, err := dapc.doTransfer(ctx, dapIndex, reqs)
+		if err != nil && st == TransferStatusWait {
+			continue
+		}
+		return st, res, err
+	}
+	return TransferStatusWait, nil, errors.Errorf("transfer timeout")
 }
 
 func (dapc *dapClient) GetTransferBlockMaxSize() int {

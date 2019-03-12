@@ -65,6 +65,10 @@ type TransferRequest struct {
 
 type TransferStatus uint8
 
+const (
+	TransferStatusWait TransferStatus = 2
+)
+
 func (ts TransferStatus) Ok() bool {
 	return ts.AckValue() == 1 && !ts.SWDError() && !ts.ValueMismatch()
 }
