@@ -42,11 +42,7 @@ type broker struct {
 	msgID   uint32
 	subs    map[string][]*client
 	pending map[int]pendingMsg
-
-	auth          AuthFunc
-	closeHook     CloseFunc
-	publishHook   PublishFunc
-	subscribeHook SubscribeFunc
+	hooks   *Hooks
 }
 
 type client struct {
@@ -72,12 +68,9 @@ func NewBroker(hooks *Hooks) Broker {
 		hooks = &Hooks{}
 	}
 	brk := &broker{
-		auth:          hooks.Auth,
-		closeHook:     hooks.Close,
-		publishHook:   hooks.Publish,
-		subscribeHook: hooks.Subscribe,
-		subs:          map[string][]*client{},
-		pending:       map[int]pendingMsg{},
+		hooks:   hooks,
+		subs:    map[string][]*client{},
+		pending: map[int]pendingMsg{},
 	}
 	return brk
 }
@@ -196,8 +189,8 @@ func (c *client) run() {
 	)
 	defer func() {
 		c.conn.Close()
-		if c.broker.closeHook != nil {
-			c.broker.closeHook(c.id, c.username, c.password)
+		if c.broker.hooks.Close != nil {
+			c.broker.hooks.Close(c.id, c.username, c.password)
 		}
 	}()
 	r := bufio.NewReader(c.conn)
@@ -225,10 +218,11 @@ func (c *client) run() {
 			if flags&(1<<2) != 0 {
 				fields = append(fields, &c.willTopic, &c.willMessage)
 			}
-			if flags&0xfc == 0xc0 {
-				fields = append(fields, &c.username, &c.password)
-			} else if c.broker.auth != nil {
-				c.writePacket(connack<<4, []byte{0, 5})
+			if flags&0x80 != 0 {
+				fields = append(fields, &c.username)
+			}
+			if flags&0x40 != 0 {
+				fields = append(fields, &c.password)
 			}
 			data := data[protoLen+6:]
 			c.id, c.username, c.password, c.willTopic, c.willMessage = "", "", "", "", ""
@@ -246,8 +240,8 @@ func (c *client) run() {
 			if c.willTopic != "" {
 				defer c.broker.Publish(c.willTopic, []byte(c.willMessage))
 			}
-			if c.broker.auth != nil {
-				if err := c.broker.auth(c.id, c.username, c.password); err != nil {
+			if c.broker.hooks.Auth != nil {
+				if err := c.broker.hooks.Auth(c.id, c.username, c.password); err != nil {
 					c.writePacket(connack<<4, []byte{0, 4})
 					return
 				}
@@ -278,8 +272,8 @@ func (c *client) run() {
 				c.broker.enqueue(c, msgID, cid)
 				payload = data[4+size:]
 			}
-			if c.broker.publishHook != nil {
-				topic, payload, err = c.broker.publishHook(c.id, c.username, c.password, topic, payload)
+			if c.broker.hooks.Publish != nil {
+				topic, payload, err = c.broker.hooks.Publish(c.id, c.username, c.password, topic, payload)
 				if err != nil {
 					return
 				}
@@ -314,9 +308,9 @@ func (c *client) run() {
 					c.writePacket(suback<<4, []byte{hi, lo, 0x80})
 					return
 				}
-				if c.broker.subscribeHook != nil {
+				if c.broker.hooks.Subscribe != nil {
 					origTopic := topic
-					topic, err = c.broker.subscribeHook(c.id, c.username, c.password, topic)
+					topic, err = c.broker.hooks.Subscribe(c.id, c.username, c.password, topic)
 					c.subAlias[origTopic] = topic
 					c.pubAlias[topic] = origTopic
 				}
