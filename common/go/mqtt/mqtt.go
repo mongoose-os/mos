@@ -272,6 +272,7 @@ func (c *client) run() {
 				c.broker.enqueue(c, msgID, cid)
 				payload = data[4+size:]
 			}
+			origTopic := topic
 			if c.broker.hooks.Publish != nil {
 				topic, payload, err = c.broker.hooks.Publish(c.id, c.username, c.password, topic, payload)
 				if err != nil {
@@ -280,8 +281,9 @@ func (c *client) run() {
 			}
 			for _, sub := range c.broker.subscribers(topic) {
 				topicAlias, ok := sub.pubAlias[topic]
+				// log.Printf("PUB-> [%s] [%s]\n", topic, topicAlias)
 				if !ok {
-					topicAlias = topic
+					topicAlias = origTopic
 				}
 				sub.publish(header, msgID, topicAlias, payload)
 			}
@@ -311,6 +313,7 @@ func (c *client) run() {
 				if c.broker.hooks.Subscribe != nil {
 					origTopic := topic
 					topic, err = c.broker.hooks.Subscribe(c.id, c.username, c.password, topic)
+					// log.Printf("SUB: [%s] [%s]\n", origTopic, topic)
 					c.subAlias[origTopic] = topic
 					c.pubAlias[topic] = origTopic
 				}
@@ -379,7 +382,9 @@ func (c *client) writePacket(header byte, payload []byte) error {
 	buf := make([]byte, binary.MaxVarintLen64+1)
 	buf[0] = header
 	n := binary.PutUvarint(buf[1:], uint64(len(payload)))
-	_, err := c.conn.Write(append(buf[:n+1], payload...))
+	pkt := append(buf[:n+1], payload...)
+	// log.Println("-->", hex.EncodeToString(pkt))
+	_, err := c.conn.Write(pkt)
 	return err
 }
 
@@ -407,10 +412,19 @@ func (h *WebSocketHandler) Accept() (net.Conn, error) {
 	return <-h.c, nil
 }
 
+type BinaryWebsocketConn struct {
+	ws *websocket.Conn
+	websocket.Conn
+}
+
+func (x *BinaryWebsocketConn) Write(msg []byte) (n int, err error) {
+	return n, websocket.Message.Send(x.ws, msg)
+}
+
 func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	websocket.Handler(func(ws *websocket.Conn) {
-		h.c <- ws
+		h.c <- &BinaryWebsocketConn{ws, *ws}
 		<-ws.Request().Context().Done()
 	}).ServeHTTP(w, r)
 }
