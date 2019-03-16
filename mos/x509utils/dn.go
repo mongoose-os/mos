@@ -49,7 +49,7 @@ type DN struct {
 }
 
 // ParseDN returns a distinguishedName or an error
-func ParseDN(str string) (*pkix.Name, error) {
+func ParseDN(str string) (*DN, error) {
 	dn := new(DN)
 	dn.RDNs = make([]*RelativeDN, 0)
 	rdn := new(RelativeDN)
@@ -158,10 +158,10 @@ func ParseDN(str string) (*pkix.Name, error) {
 		rdn.Attributes = append(rdn.Attributes, attribute)
 		dn.RDNs = append(dn.RDNs, rdn)
 	}
-	return dn.ToName()
+	return dn, nil
 }
 
-func (dn *DN) ToName() (*pkix.Name, error) {
+func (dn *DN) ToPKIXName() (*pkix.Name, error) {
 	var ns pkix.RDNSequence
 	for _, rdn := range dn.RDNs {
 		var s pkix.RelativeDistinguishedNameSET

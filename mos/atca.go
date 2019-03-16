@@ -390,7 +390,11 @@ func genCSR(ctx context.Context, csrTemplateFile string, subject string, slot in
 		}
 	}
 	if subject != "" {
-		subj, err := x509utils.ParseDN(subject)
+		dn, err := x509utils.ParseDN(subject)
+		if err != nil {
+			return nil, errors.Annotatef(err, "invalid subject %q", subject)
+		}
+		subj, err := dn.ToPKIXName()
 		if err != nil {
 			return nil, errors.Annotatef(err, "invalid subject %q", subject)
 		}
@@ -492,7 +496,11 @@ func genCert(ctx context.Context, certTemplateFile string, subject string, valid
 		}
 	}
 	if subject != "" {
-		subj, err := x509utils.ParseDN(subject)
+		dn, err := x509utils.ParseDN(subject)
+		if err != nil {
+			return nil, errors.Annotatef(err, "invalid subject %q", subject)
+		}
+		subj, err := dn.ToPKIXName()
 		if err != nil {
 			return nil, errors.Annotatef(err, "invalid subject %q", subject)
 		}
