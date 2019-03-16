@@ -135,6 +135,8 @@ func init() {
 		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, Yes, true},
 		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, Yes, true},
 		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, Yes, true},
+		{"atca-gen-csr", atcaGenCSR, `Generate a random key in a given slot and generate a certificate request file`, nil, []string{"port"}, Yes, true},
+		{"atca-gen-cert", atcaGenCert, `Generate a random key in a given slot and issue a certificate`, nil, []string{"port"}, Yes, true},
 		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, No, true},
 		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, No, true},
 		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, No, true},

@@ -226,6 +226,21 @@ func LoadCertAndKey(certFile, keyFile string) ([]byte, []byte, crypto.Signer, []
 					if keySigner, err1 = x509.ParsePKCS1PrivateKey(kpb.Bytes); err1 != nil {
 						return nil, nil, nil, nil, nil, errors.Annotatef(err1, "invalid RSA private key %s", keyFile)
 					}
+				case "PRIVATE KEY":
+					k, err1 := x509.ParsePKCS8PrivateKey(kpb.Bytes)
+					if err1 != nil {
+						return nil, nil, nil, nil, nil, errors.Annotatef(err1, "invalid private key %s", keyFile)
+					}
+					switch k.(type) {
+					case *rsa.PrivateKey:
+						kt = "RSA"
+						keySigner = k.(*rsa.PrivateKey)
+					case *ecdsa.PrivateKey:
+						kt = "ECDSA"
+						keySigner = k.(*ecdsa.PrivateKey)
+					default:
+						return nil, nil, nil, nil, nil, errors.Errorf("unknown key type %T in %s", k, keyFile)
+					}
 				case "EC PRIVATE KEY":
 					kt = "ECDSA"
 					if keySigner, err1 = x509.ParseECPrivateKey(kpb.Bytes); err1 != nil {

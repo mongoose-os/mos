@@ -30,7 +30,6 @@ var (
 )
 
 func initFlags() {
-	initATCAFlags()
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	hideFlags()
 	flag.Usage = usage

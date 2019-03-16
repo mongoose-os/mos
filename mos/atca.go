@@ -1,39 +1,33 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	"context"
+	"crypto"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"io"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
 	"strings"
-
-	"context"
+	"time"
 
 	"cesanta.com/mos/atca"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/flags"
+	"cesanta.com/mos/x509utils"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
 
 var (
-	format      string
-	writeKey    string
 	csrTemplate string
 )
-
-func initATCAFlags() {
-	flag.StringVar(&format, "format", "", "Config format, hex or json")
-	flag.StringVar(&writeKey, "write-key", "", "Write key file")
-	flag.StringVar(&csrTemplate, "csr-template", "", "CSR template to use")
-}
 
 func getFormat(f, fn string) string {
 	f = strings.ToLower(f)
@@ -62,7 +56,7 @@ func atcaGetConfig(ctx context.Context, dc dev.DevConn) error {
 		return errors.Annotatef(err, "Connect")
 	}
 
-	f := getFormat(format, fn)
+	f := getFormat(*flags.Format, fn)
 
 	var s []byte
 	if f == "json" || f == "yaml" {
@@ -101,7 +95,7 @@ func atcaSetConfig(ctx context.Context, dc dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	f := getFormat(format, fn)
+	f := getFormat(*flags.Format, fn)
 
 	var confData []byte
 	if f == "yaml" || f == "json" {
@@ -245,20 +239,20 @@ func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atca.SetK
 					"are not enabled, key cannot be set", slot)
 		}
 		wks := int64(cfg.SlotInfo[slot].SlotConfig.WriteKey)
-		if writeKey == "" {
+		if *flags.WriteKey == "" {
 			return nil, errors.Errorf(
 				"data zone is locked, --write-key for slot %d "+
 					"is required to modify slot %d", wks, slot)
 		}
 		reportf("Data zone is locked, "+
-			"will perform encrypted write using slot %d using %s", wks, writeKey)
-		wKeyData, err := ioutil.ReadFile(writeKey)
+			"will perform encrypted write using slot %d using %s", wks, *flags.WriteKey)
+		wKeyData, err := ioutil.ReadFile(*flags.WriteKey)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 		wKey := atca.ReadHex(wKeyData)
 		if len(wKey) != atca.KeySize {
-			return nil, errors.Errorf("%s: expected %d bytes, got %d", writeKey, atca.KeySize, len(wKey))
+			return nil, errors.Errorf("%s: expected %d bytes, got %d", *flags.WriteKey, atca.KeySize, len(wKey))
 		}
 		b64wk := base64.StdEncoding.EncodeToString(wKey)
 		req.Wkslot = &wks
@@ -335,141 +329,7 @@ func atcaSetKey(ctx context.Context, dc dev.DevConn) error {
 	return nil
 }
 
-func writePEM(derBytes []byte, blockType string, outputFileName string) error {
-	var out io.Writer
-	switch outputFileName {
-	case "":
-		out = os.Stdout
-	case "-":
-		out = os.Stdout
-	case "--":
-		out = os.Stderr
-	default:
-		f, err := os.OpenFile(outputFileName, os.O_RDWR|os.O_CREATE, 0644)
-		if err != nil {
-			return errors.Annotatef(err, "failed to open %s for writing", outputFileName)
-		}
-		out = f
-		defer func() {
-			f.Close()
-			reportf("Wrote %s", outputFileName)
-		}()
-	}
-	pem.Encode(out, &pem.Block{Type: blockType, Bytes: derBytes})
-	return nil
-}
-
-func genCSR(csrTemplateFile string, slot int, dc dev.DevConn, outputFileName string) error {
-	reportf("Generating CSR using template from %s", csrTemplateFile)
-	data, err := ioutil.ReadFile(csrTemplateFile)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	var pb *pem.Block
-	pb, _ = pem.Decode(data)
-	if pb == nil {
-		return errors.Errorf("%s: not a PEM file", csrTemplateFile)
-	}
-	if pb.Type != "CERTIFICATE REQUEST" {
-		return errors.Errorf("%s: expected to find certificate, found %s", csrTemplateFile, pb.Type)
-	}
-	csrTemplate, err := x509.ParseCertificateRequest(pb.Bytes)
-	if err != nil {
-		return errors.Annotatef(err, "%s: failed to parse certificate", csrTemplateFile)
-	}
-	reportf("%s: public key type %d, signature type %d\n%s",
-		csrTemplateFile, csrTemplate.PublicKeyAlgorithm, csrTemplate.SignatureAlgorithm,
-		csrTemplate.Subject.ToRDNSequence())
-	if csrTemplate.PublicKeyAlgorithm != x509.ECDSA ||
-		csrTemplate.SignatureAlgorithm != x509.ECDSAWithSHA256 {
-		return errors.Errorf("%s: wrong public key and/or signature type; "+
-			"expected ECDSA(%d) and SHA256(%d), got %d %d",
-			csrTemplateFile,
-			x509.ECDSA, x509.ECDSAWithSHA256, csrTemplate.PublicKeyAlgorithm,
-			csrTemplate.SignatureAlgorithm)
-	}
-	signer := atca.NewSigner(context.Background(), dc, slot)
-	csr, err := x509.CreateCertificateRequest(nil, csrTemplate, signer)
-	if err != nil {
-		return errors.Annotatef(err, "failed to create new CSR")
-	}
-
-	return writePEM(csr, "CERTIFICATE REQUEST", outputFileName)
-}
-
-func writePubKey(pubKeyData []byte, outputFileName string) error {
-	if len(pubKeyData) != 64 {
-		return errors.Errorf("expected 64 bytes of public key data, got %d", len(pubKeyData))
-	}
-	pubKey := &ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     big.NewInt(0).SetBytes(pubKeyData[0:32]),
-		Y:     big.NewInt(0).SetBytes(pubKeyData[32:64]),
-	}
-	pubKeyDERBytes, err := x509.MarshalPKIXPublicKey(pubKey)
-	if err != nil {
-		return errors.Annotatef(err, "failed to marshal public key")
-	}
-	return writePEM(pubKeyDERBytes, "PUBLIC KEY", outputFileName)
-}
-
 func atcaGenKey(ctx context.Context, dc dev.DevConn) error {
-	args := flag.Args()
-	if len(args) < 2 {
-		return errors.Errorf("slot number is required")
-	}
-	slot, err := strconv.ParseInt(args[1], 0, 64)
-	if err != nil || slot < 0 || slot > 15 {
-		return errors.Errorf("invalid slot number %q", args[1])
-	}
-
-	outputFileName := ""
-	if len(args) == 3 {
-		outputFileName = args[2]
-	}
-
-	if _, _, err = atca.Connect(ctx, dc); err != nil {
-		return errors.Annotatef(err, "Connect")
-	}
-
-	req := &atca.GenKeyArgs{Slot: &slot}
-
-	if *dryRun {
-		reportf("This is a dry run, would have sent the following request:\n\n"+
-			"GenKey %s\n\n"+
-			"Set --dry-run=false to confirm.",
-			atca.JSONStr(*req))
-		return nil
-	}
-
-	var r atca.GenKeyResult
-	if err := dc.Call(ctx, "ATCA.GenKey", req, &r); err != nil {
-		return errors.Annotatef(err, "GenKey")
-	}
-
-	if r.Pubkey == nil {
-		return errors.New("no public key in response")
-	}
-
-	keyData, err := base64.StdEncoding.DecodeString(*r.Pubkey)
-	if err != nil {
-		return errors.Annotatef(err, "failed to decode pub key data")
-	}
-	if len(keyData) != atca.PublicKeySize {
-		return errors.Errorf("expected %d bytes, got %d", atca.PublicKeySize, len(keyData))
-	}
-
-	reportf("Generated new ECC key on slot %d", slot)
-
-	if csrTemplate != "" {
-		return genCSR(csrTemplate, int(slot), dc, outputFileName)
-	} else {
-		return writePubKey(keyData, outputFileName)
-	}
-}
-
-func atcaGetPubKey(ctx context.Context, dc dev.DevConn) error {
 	args := flag.Args()
 	if len(args) < 2 {
 		return errors.Errorf("slot number is required")
@@ -487,29 +347,253 @@ func atcaGetPubKey(ctx context.Context, dc dev.DevConn) error {
 	if _, _, err := atca.Connect(ctx, dc); err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
-
-	req := &atca.GetPubKeyArgs{Slot: &slot}
-
-	var r atca.GetPubKeyResult
-	if err := dc.Call(ctx, "ATCA.GetPubKey", req, nil); err != nil {
-		return errors.Annotatef(err, "GetPubKey")
-	}
-
-	if r.Pubkey == nil {
-		return errors.New("no public key in response")
-	}
-
-	keyData, err := base64.StdEncoding.DecodeString(*r.Pubkey)
+	pubKeyData, err := atca.GenKey(ctx, int(slot), *dryRun, dc)
 	if err != nil {
-		return errors.Annotatef(err, "failed to decode pub key data")
+		return errors.Trace(err)
 	}
-	if len(keyData) != atca.PublicKeySize {
-		return errors.Errorf("expected %d bytes, got %d", atca.PublicKeySize, len(keyData))
+	if pubKeyData == nil { // dry run
+		return nil
 	}
 
-	if csrTemplate != "" {
-		return genCSR(csrTemplate, int(slot), dc, outputFileName)
-	} else {
-		return writePubKey(keyData, outputFileName)
+	return x509utils.WritePubKey(pubKeyData, outputFileName)
+}
+
+func genCSR(ctx context.Context, csrTemplateFile string, subject string, slot int, dc dev.DevConn, outputFileName string) ([]byte, error) {
+	if csrTemplateFile == "" && subject == "" {
+		return nil, errors.Errorf("CSR template file or subject is required")
 	}
+	var csrTemplate *x509.CertificateRequest
+	if csrTemplateFile != "" {
+		reportf("Generating CSR using template from %s", csrTemplateFile)
+		data, err := ioutil.ReadFile(csrTemplateFile)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		var pb *pem.Block
+		pb, _ = pem.Decode(data)
+		if pb == nil {
+			return nil, errors.Errorf("%s: not a PEM file", csrTemplateFile)
+		}
+		if pb.Type != "CERTIFICATE REQUEST" {
+			return nil, errors.Errorf("%s: expected to find certificate request, found %s", csrTemplateFile, pb.Type)
+		}
+		csrTemplate, err = x509.ParseCertificateRequest(pb.Bytes)
+		if err != nil {
+			return nil, errors.Annotatef(err, "%s: failed to parse certificate request template", csrTemplateFile)
+		}
+	} else {
+		// Create a simple CSR.
+		csrTemplate = &x509.CertificateRequest{
+			PublicKeyAlgorithm: x509.ECDSA,
+			SignatureAlgorithm: x509.ECDSAWithSHA256,
+		}
+	}
+	if subject != "" {
+		subj, err := x509utils.ParseDN(subject)
+		if err != nil {
+			return nil, errors.Annotatef(err, "invalid subject %q", subject)
+		}
+		csrTemplate.Subject = *subj
+	}
+	reportf("Subject: %s", csrTemplate.Subject.ToRDNSequence())
+	if csrTemplate.PublicKeyAlgorithm != x509.ECDSA ||
+		csrTemplate.SignatureAlgorithm != x509.ECDSAWithSHA256 {
+		return nil, errors.Errorf("%s: wrong public key and/or signature type; "+
+			"expected ECDSA(%d) and SHA256(%d), got %d %d",
+			csrTemplateFile,
+			x509.ECDSA, x509.ECDSAWithSHA256, csrTemplate.PublicKeyAlgorithm,
+			csrTemplate.SignatureAlgorithm)
+	}
+	signer := atca.NewSigner(ctx, dc, slot)
+	csrData, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, signer)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to create new CSR")
+	}
+
+	return csrData, nil
+}
+
+func atcaGenCSR(ctx context.Context, dc dev.DevConn) error {
+	args := flag.Args()
+	if len(args) < 2 {
+		return errors.Errorf("slot number is required")
+	}
+	slot, err := strconv.ParseInt(args[1], 0, 64)
+	if err != nil || slot < 0 || slot > 15 {
+		return errors.Errorf("invalid slot number %q", args[1])
+	}
+	outputFileName := ""
+	if len(args) == 3 {
+		outputFileName = args[2]
+	}
+	if *flags.CSRTemplate == "" && *flags.Subject == "" {
+		return errors.Errorf("--csr-template or --subject is required")
+	}
+
+	if _, _, err := atca.Connect(ctx, dc); err != nil {
+		return errors.Annotatef(err, "Connect")
+	}
+	pubKeyData, err := atca.GenKey(ctx, int(slot), *dryRun, dc)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if pubKeyData == nil { // dry run
+		return nil
+	}
+
+	csrData, err := genCSR(ctx, *flags.CSRTemplate, *flags.Subject, int(slot), dc, outputFileName)
+	if err != nil {
+		return errors.Annotatef(err, "genCSR")
+	}
+
+	return x509utils.WritePEM(csrData, "CERTIFICATE REQUEST", outputFileName)
+}
+
+func genCert(ctx context.Context, certTemplateFile string, subject string, validityDays int, slot int, caCert *x509.Certificate, caSigner crypto.Signer, dc dev.DevConn, outputFileName string) ([]byte, error) {
+	if certTemplateFile == "" && subject == "" {
+		return nil, errors.Errorf("cert template file or subject is required")
+	}
+	if !caCert.IsCA {
+		return nil, errors.Errorf("signing cert is not a CA cert")
+	}
+	var certTemplate *x509.Certificate
+	if certTemplateFile != "" {
+		reportf("Generating cert using template from %s", certTemplateFile)
+		data, err := ioutil.ReadFile(certTemplateFile)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		var pb *pem.Block
+		pb, _ = pem.Decode(data)
+		if pb == nil {
+			return nil, errors.Errorf("%s: not a PEM file", certTemplateFile)
+		}
+		if pb.Type != "CERTIFICATE" {
+			return nil, errors.Errorf("%s: expected to find certificate, found %s", certTemplateFile, pb.Type)
+		}
+		certTemplate, err = x509.ParseCertificate(pb.Bytes)
+		if err != nil {
+			return nil, errors.Annotatef(err, "%s: failed to parse certificate template", certTemplateFile)
+		}
+	} else {
+		// Create a simple cert.
+		sn, _ := rand.Int(rand.Reader, big.NewInt(1<<63-1))
+		certTemplate = &x509.Certificate{
+			SerialNumber:       sn,
+			PublicKeyAlgorithm: x509.ECDSA,
+			SignatureAlgorithm: x509.ECDSAWithSHA256,
+			KeyUsage:           x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement | x509.KeyUsageKeyEncipherment,
+			ExtKeyUsage: []x509.ExtKeyUsage{
+				x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth,
+			},
+			IsCA: false,
+			BasicConstraintsValid: true,
+		}
+	}
+	if subject != "" {
+		subj, err := x509utils.ParseDN(subject)
+		if err != nil {
+			return nil, errors.Annotatef(err, "invalid subject %q", subject)
+		}
+		certTemplate.Subject = *subj
+	}
+	if validityDays > 0 {
+		certTemplate.NotBefore = time.Now()
+		certTemplate.NotAfter = time.Now().Add(time.Duration(validityDays*24) * time.Hour)
+	}
+	if time.Now().After(certTemplate.NotAfter) {
+		return nil, errors.Errorf("invalid certificate validity, must be provided by template or --cert-days")
+	}
+	reportf("Subject: %s", certTemplate.Subject.ToRDNSequence())
+	if certTemplate.PublicKeyAlgorithm != x509.ECDSA ||
+		certTemplate.SignatureAlgorithm != x509.ECDSAWithSHA256 {
+		return nil, errors.Errorf("%s: wrong public key and/or signature type; "+
+			"expected ECDSA(%d) and SHA256(%d), got %d %d",
+			certTemplateFile,
+			x509.ECDSA, x509.ECDSAWithSHA256, certTemplate.PublicKeyAlgorithm,
+			certTemplate.SignatureAlgorithm)
+	}
+	pubKey, err := atca.GetPubKey(ctx, slot, dc)
+	if err != nil {
+		return nil, errors.Annotatef(err, "GetPubKey")
+	}
+	certData, err := x509.CreateCertificate(rand.Reader, certTemplate, caCert, pubKey, caSigner)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to create new certificate")
+	}
+	return certData, nil
+}
+
+func atcaGenCert(ctx context.Context, dc dev.DevConn) error {
+	args := flag.Args()
+	if len(args) < 2 {
+		return errors.Errorf("slot number is required")
+	}
+	slot, err := strconv.ParseInt(args[1], 0, 64)
+	if err != nil || slot < 0 || slot > 15 {
+		return errors.Errorf("invalid slot number %q", args[1])
+	}
+	if *flags.CAFile == "" && *flags.CAKeyFile == "" {
+		return errors.Errorf("--ca-cert-file and --ca-key-file are required")
+	}
+	outputFileName := ""
+	if len(args) == 3 {
+		outputFileName = args[2]
+	}
+
+	if *flags.CertTemplate == "" && *flags.Subject == "" {
+		return errors.Errorf("--cert-template or --subject is required")
+	}
+	reportf("Signing certificate:")
+	caCertDERBytes, _, caSigner, _, _, err := x509utils.LoadCertAndKey(*flags.CAFile, *flags.CAKeyFile)
+	if err != nil {
+		return errors.Annotatef(err, "failed to load signing cert")
+	}
+	caCert, err := x509.ParseCertificate(caCertDERBytes)
+	if err != nil {
+		return errors.Annotatef(err, "invalid signing cert")
+	}
+
+	if _, _, err := atca.Connect(ctx, dc); err != nil {
+		return errors.Annotatef(err, "Connect")
+	}
+	pubKey, err := atca.GenKey(ctx, int(slot), *dryRun, dc)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if pubKey == nil { // dry run
+		return nil
+	}
+
+	certData, err := genCert(ctx, *flags.CertTemplate, *flags.Subject, *flags.CertDays, int(slot), caCert, caSigner, dc, outputFileName)
+	if err != nil {
+		return errors.Annotatef(err, "genCert")
+	}
+
+	_, err = x509utils.WriteAndUploadFile(ctx, "certificate", certData, outputFileName, fmt.Sprintf("atca-%d.crt.pem", slot), dc)
+	return err
+}
+
+func atcaGetPubKey(ctx context.Context, dc dev.DevConn) error {
+	args := flag.Args()
+	if len(args) < 2 {
+		return errors.Errorf("slot number is required")
+	}
+	slot, err := strconv.ParseInt(args[1], 0, 64)
+	if err != nil || slot < 0 || slot > 15 {
+		return errors.Errorf("invalid slot number %q", args[1])
+	}
+	outputFileName := ""
+	if len(args) == 3 {
+		outputFileName = args[2]
+	}
+	if _, _, err := atca.Connect(ctx, dc); err != nil {
+		return errors.Annotatef(err, "Connect")
+	}
+	pubKey, err := atca.GetPubKey(ctx, int(slot), dc)
+	if err != nil {
+		return errors.Annotatef(err, "getPubKey")
+	}
+	return x509utils.WritePubKey(pubKey, outputFileName)
 }

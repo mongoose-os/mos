@@ -35,7 +35,8 @@ var (
 	UID            = flag.String("uid", "", "")
 	CertFile       = flag.String("cert-file", "", "Certificate file name")
 	KeyFile        = flag.String("key-file", "", "Key file name")
-	CAFile         = flag.String("ca-cert-file", "", "CA cert for TLS server verification")
+	CAFile         = flag.String("ca-cert-file", "", "CA certificate file name")
+	CAKeyFile      = flag.String("ca-key-file", "", "CA key file name (for cert signing)")
 	RPCUARTNoDelay = flag.Bool("rpc-uart-no-delay", false, "Do not introduce delay into UART over RPC")
 	Timeout        = flag.Duration("timeout", 20*time.Second, "Timeout for the device connection and call operation")
 	Reconnect      = flag.Bool("reconnect", false, "Enable reconnection")
@@ -60,6 +61,13 @@ var (
 	NoReboot = flag.Bool("no-reboot", false, "Save config but don't reboot the device.")
 	NoSave   = flag.Bool("no-save", false, "Don't save config and don't reboot the device")
 	TryOnce  = flag.Bool("try-once", false, "When saving the config, do it in such a way that it's only applied on the next boot")
+
+	Format       = flag.String("format", "", "Config format, hex or json")
+	WriteKey     = flag.String("write-key", "", "Write key file")
+	CSRTemplate  = flag.String("csr-template", "", "CSR template to use")
+	CertTemplate = flag.String("cert-template", "", "cert template to use")
+	CertDays     = flag.Int("cert-days", 0, "new cert validity, days")
+	Subject      = flag.String("subject", "", "Subject for CSR or certificate")
 )
 
 func Platform() string {
