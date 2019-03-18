@@ -35,6 +35,7 @@ type Accepter interface {
 type Broker interface {
 	Run(l Accepter) error
 	Publish(topic string, payload []byte)
+	PublishEx(header byte, msgID int, id, user, pass, topic string, payload []byte)
 }
 
 type broker struct {
@@ -173,6 +174,20 @@ func (b *broker) Publish(topic string, payload []byte) {
 	}()
 }
 
+func (b *broker) PublishEx(header byte, msgID int, id, user, pass, topic string, payload []byte) {
+	origTopic := topic
+	if b.hooks.Publish != nil {
+		topic, payload, _ = b.hooks.Publish(id, user, pass, topic, payload)
+	}
+	for _, sub := range b.subscribers(topic) {
+		topicAlias, ok := sub.pubAlias[topic]
+		if !ok {
+			topicAlias = origTopic
+		}
+		sub.publish(header, msgID, topicAlias, payload)
+	}
+}
+
 func (c *client) run() {
 	const (
 		connect     = 1
@@ -238,7 +253,7 @@ func (c *client) run() {
 				data = data[2+n:]
 			}
 			if c.willTopic != "" {
-				defer c.broker.Publish(c.willTopic, []byte(c.willMessage))
+				defer c.broker.PublishEx(0x30, -1, c.id, c.username, c.password, c.willTopic, []byte(c.willMessage))
 			}
 			if c.broker.hooks.Auth != nil {
 				if err := c.broker.hooks.Auth(c.id, c.username, c.password); err != nil {
@@ -272,21 +287,7 @@ func (c *client) run() {
 				c.broker.enqueue(c, msgID, cid)
 				payload = data[4+size:]
 			}
-			origTopic := topic
-			if c.broker.hooks.Publish != nil {
-				topic, payload, err = c.broker.hooks.Publish(c.id, c.username, c.password, topic, payload)
-				if err != nil {
-					return
-				}
-			}
-			for _, sub := range c.broker.subscribers(topic) {
-				topicAlias, ok := sub.pubAlias[topic]
-				// log.Printf("PUB-> [%s] [%s]\n", topic, topicAlias)
-				if !ok {
-					topicAlias = origTopic
-				}
-				sub.publish(header, msgID, topicAlias, payload)
-			}
+			c.broker.PublishEx(header, msgID, c.id, c.username, c.password, topic, payload)
 		case subscribe:
 			if len(data) < 2 {
 				return
