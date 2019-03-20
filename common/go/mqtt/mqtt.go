@@ -2,7 +2,9 @@ package mqtt
 
 import (
 	"bufio"
+	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -129,7 +131,7 @@ func (b *broker) match(topic, wildcard string) bool {
 			return false
 		}
 	}
-	return len(parts) == len(wild) || (len(parts) == len(wild)-1 && wild[len(wild)-1] == "#")
+	return len(parts) == len(wild) //|| (len(parts) == len(wild)-1 && wild[len(wild)-1] == "#")
 }
 
 func (b *broker) subscribers(topic string) (clients []*client) {
@@ -138,6 +140,7 @@ func (b *broker) subscribers(topic string) (clients []*client) {
 	// If wildcards were not supported, then it's rather simple: return b.subs[topic]
 	for t, c := range b.subs {
 		if b.match(topic, t) {
+			// log.Printf("---> [%s] [%s]\n", topic, t)
 			clients = append(clients, c...)
 		}
 	}
@@ -163,6 +166,7 @@ func (b *broker) dequeue(brokerID int) (c *client, id int) {
 func (b *broker) Publish(topic string, payload []byte) {
 	go func() {
 		for _, sub := range b.subscribers(topic) {
+			// log.Println("-->Publish", sub.id, topic, string(payload))
 			b.Lock()
 			topicAlias, ok := sub.pubAlias[topic]
 			b.Unlock()
@@ -180,6 +184,7 @@ func (b *broker) PublishEx(header byte, msgID int, id, user, pass, topic string,
 		topic, payload, _ = b.hooks.Publish(id, user, pass, topic, payload)
 	}
 	for _, sub := range b.subscribers(topic) {
+		// log.Println("-->PublishEx", sub.id, id, topic, string(payload))
 		topicAlias, ok := sub.pubAlias[topic]
 		if !ok {
 			topicAlias = origTopic
@@ -252,6 +257,12 @@ func (c *client) run() {
 				*s = string(data[2 : 2+n])
 				data = data[2+n:]
 			}
+
+			// Make client ID unique by appending some random string to it
+			buf := make([]byte, 4)
+			rand.Read(buf)
+			c.id += "." + hex.EncodeToString(buf)
+
 			if c.willTopic != "" {
 				defer c.broker.PublishEx(0x30, -1, c.id, c.username, c.password, c.willTopic, []byte(c.willMessage))
 			}
@@ -314,7 +325,7 @@ func (c *client) run() {
 				if c.broker.hooks.Subscribe != nil {
 					origTopic := topic
 					topic, err = c.broker.hooks.Subscribe(c.id, c.username, c.password, topic)
-					// log.Printf("SUB: [%s] [%s]\n", origTopic, topic)
+					// log.Printf("SUB: [%s] [%s] [%s]\n", c.id, origTopic, topic)
 					c.subAlias[origTopic] = topic
 					c.pubAlias[topic] = origTopic
 				}
@@ -396,6 +407,7 @@ func (c *client) publish(header byte, msgID int, topic string, payload []byte) e
 	}
 	msg = append([]byte(topic), msg...)
 	msg = append([]byte{byte(len(topic) >> 8), byte(len(topic))}, msg...)
+	// log.Println("-->pub", c.id, msgID, topic, string(payload))
 	return c.writePacket(header, msg)
 }
 
