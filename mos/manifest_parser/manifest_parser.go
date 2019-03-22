@@ -269,6 +269,9 @@ func ReadManifestFinal(
 			var fetchErrs []error
 			if (len(manifest.LibsHandled[k].Sources) == 0 && len(origSources) != 0) || preferPrebuiltLibs {
 				var variants []string
+				if lcur.Lib.Variant != "" {
+					variants = append(variants, lcur.Lib.Variant)
+				}
 				libVersion := lcur.Lib.GetVersion(manifest.LibsVersion)
 				if v, ok := interp.MVars.GetVar("build_vars.BOARD"); ok && v.(string) != "" {
 					variants = append(variants, fmt.Sprintf("%s-%s", manifest.Platform, v.(string)))

@@ -32,6 +32,7 @@ type SWModule struct {
 	Location  string `yaml:"location,omitempty" json:"location,omitempty"`
 	Version   string `yaml:"version,omitempty" json:"version,omitempty"`
 	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
+	Variant   string `yaml:"variant,omitempty" json:"variant,omitempty"`
 
 	localPath string
 }
