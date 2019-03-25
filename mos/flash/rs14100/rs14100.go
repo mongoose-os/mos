@@ -255,7 +255,7 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 		}
 		if !erasedChip {
 			ea := p.Addr
-			es := (len(pData) + flashSectorSize) & ^(flashSectorSize - 1)
+			es := (len(pData) + flashSectorSize - 1) & ^(flashSectorSize - 1)
 			ourutil.Reportf("Erasing %d @ 0x%x...", es, ea)
 			for es > 0 {
 				if err := runFlasherFunc(ctx, cm4d, flasherFuncEraseSector, []uint32{ea}, 2*time.Second); err != nil {
