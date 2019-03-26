@@ -55,6 +55,7 @@ const (
 const (
 	flashPageSize   = 256
 	flashSectorSize = 0x1000
+	flashBase       = 0x8000000
 )
 
 type FlashDevice struct {
@@ -248,13 +249,17 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	for _, p := range fw.PartsByAddr() {
 		pData, err := p.GetData()
 		if err != nil {
-			return errors.Annotatef(err, "faild to get part %q data", p.Name)
+			return errors.Annotatef(err, "failed to get part %q data", p.Name)
 		}
 		for len(pData)%flashPageSize != 0 {
 			pData = append(pData, 0xff)
 		}
+		pAddr := p.Addr
+		if pAddr < flashBase {
+			pAddr += flashBase
+		}
 		if !erasedChip {
-			ea := p.Addr
+			ea := pAddr
 			es := (len(pData) + flashSectorSize - 1) & ^(flashSectorSize - 1)
 			ourutil.Reportf("Erasing %d @ 0x%x...", es, ea)
 			for es > 0 {
@@ -266,7 +271,7 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 			}
 		}
 		wi := 0
-		wa := p.Addr
+		wa := pAddr
 		ourutil.Reportf("Writing %d @ 0x%x...", len(pData), wa)
 		glog.V(1).Infof("Running Init(write)...")
 		if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 2}, 1*time.Second); err != nil {
