@@ -77,12 +77,29 @@ func (mapc *memAPClient) ReadTargetReg(ctx context.Context, addr uint32) (uint32
 }
 
 func (mapc *memAPClient) ReadTargetMem(ctx context.Context, addr uint32, length int) ([]uint32, error) {
-	if err := mapc.WriteReg(ctx, TAR, addr); err != nil {
-		return nil, errors.Trace(err)
-	}
-	values, err := mapc.dpc.ReadAPRegMulti(ctx, mapc.apSel, uint8(DRW), length)
 	glog.V(4).Infof("ReadTargetMem(0x%08x, %d)", addr, length)
-	return values, errors.Trace(err)
+	if addr%4 != 0 {
+		return nil, errors.Errorf("addr must be word-aligned, got 0x%x", addr)
+	}
+	var res []uint32
+	for i := 0; i < length; {
+		if err := mapc.WriteReg(ctx, TAR, addr); err != nil {
+			return nil, errors.Trace(err)
+		}
+		// Autoincrement only works on lower 10 bits.
+		cl := int((0x400 - addr&0x3ff) / 4)
+		if cl > length-i {
+			cl = length - i
+		}
+		values, err := mapc.dpc.ReadAPRegMulti(ctx, mapc.apSel, uint8(DRW), cl)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		res = append(res, values...)
+		addr += uint32(cl * 4)
+		i += cl
+	}
+	return res, nil
 }
 
 func (mapc *memAPClient) WriteTargetReg(ctx context.Context, addr uint32, value uint32) error {
@@ -94,11 +111,26 @@ func (mapc *memAPClient) WriteTargetReg(ctx context.Context, addr uint32, value 
 }
 
 func (mapc *memAPClient) WriteTargetMem(ctx context.Context, addr uint32, data []uint32) error {
-	if err := mapc.WriteReg(ctx, TAR, addr); err != nil {
-		return errors.Trace(err)
-	}
 	glog.V(4).Infof("WriteTargetMem(0x%08x, %d)", addr, len(data))
-	return mapc.dpc.WriteAPRegMulti(ctx, mapc.apSel, uint8(DRW), data)
+	if addr%4 != 0 {
+		return errors.Errorf("addr must be word-aligned, got 0x%x", addr)
+	}
+	for i := 0; i < len(data); {
+		if err := mapc.WriteReg(ctx, TAR, addr); err != nil {
+			return errors.Trace(err)
+		}
+		// Autoincrement only works on lower 10 bits.
+		cl := int((0x400 - addr&0x3ff) / 4)
+		if cl > len(data)-i {
+			cl = len(data) - i
+		}
+		if err := mapc.dpc.WriteAPRegMulti(ctx, mapc.apSel, uint8(DRW), data[i:i+cl]); err != nil {
+			return errors.Trace(err)
+		}
+		addr += uint32(cl * 4)
+		i += cl
+	}
+	return nil
 }
 
 func (r MemAPReg) String() string {

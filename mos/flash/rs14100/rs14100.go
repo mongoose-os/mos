@@ -33,8 +33,8 @@ const (
 	flasherAsset        = "data/RS14100_SF_4MB.FLM.bin"
 	flasherBaseAddr     = 0x00000000
 	flasherStack        = 0x0004000
-	flasherWriteBuf     = 0x0004000
-	flasherWriteBufSize = 0x0001000
+	flasherWriteBufAddr = 0x0010000
+	flasherWriteBufSize = 0x0010000
 	// prefix length, applied to all function offsets.
 	flasherFuncOffset = 56
 	// Function offsets (as shown by objdump).
@@ -234,16 +234,20 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	if err := cm4d.SetRegs(ctx, &regs); err != nil {
 		return errors.Trace(err)
 	}
-	glog.V(1).Infof("Running Init(erase)...")
-	if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 1}, 1*time.Second); err != nil {
-		return errors.Annotatef(err, "failed to init flasher")
-	}
+	var tErase, tSend, tWrite time.Duration
+	start := time.Now()
 	erasedChip := false
 	if opts.EraseChip {
+		eraseStart := time.Now()
+		glog.V(1).Infof("Running Init(erase)...")
+		if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 1}, 1*time.Second); err != nil {
+			return errors.Annotatef(err, "failed to init flasher")
+		}
 		ourutil.Reportf("Erasing chip...")
 		if err := runFlasherFunc(ctx, cm4d, flasherFuncEraseChip, nil, 60*time.Second); err != nil {
 			return errors.Annotatef(err, "failed to erase chip")
 		}
+		tErase += time.Since(eraseStart)
 		erasedChip = true
 	}
 	for _, p := range fw.PartsByAddr() {
@@ -261,38 +265,53 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 		if !erasedChip {
 			ea := pAddr
 			es := (len(pData) + flashSectorSize - 1) & ^(flashSectorSize - 1)
+			glog.V(1).Infof("Running Init(erase)...")
+			if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 1}, 1*time.Second); err != nil {
+				return errors.Annotatef(err, "failed to init flasher")
+			}
 			ourutil.Reportf("Erasing %d @ 0x%x...", es, ea)
+			eraseStart := time.Now()
 			for es > 0 {
+				glog.V(1).Infof("Erasing %d @ 0x%x...", flashSectorSize, ea)
 				if err := runFlasherFunc(ctx, cm4d, flasherFuncEraseSector, []uint32{ea}, 2*time.Second); err != nil {
 					return errors.Annotatef(err, "failed to erase sector @ 0x%x", ea)
 				}
 				es -= flashSectorSize
 				ea += flashSectorSize
 			}
+			tErase += time.Since(eraseStart)
 		}
-		wi := 0
-		wa := pAddr
+		wa := int(pAddr)
 		ourutil.Reportf("Writing %d @ 0x%x...", len(pData), wa)
 		glog.V(1).Infof("Running Init(write)...")
 		if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 2}, 1*time.Second); err != nil {
 			return errors.Annotatef(err, "failed to init flasher")
 		}
-		for wi < len(pData) {
+		for wi := 0; wi < len(pData); {
 			wl := len(pData) - wi
 			if wl > flasherWriteBufSize {
 				wl = flasherWriteBufSize
 			}
-			glog.V(1).Infof("Writing %d @ 0x%x...", wl, wa)
-			if err := mapc.WriteTargetMem(ctx, flasherWriteBuf, toWords(pData[wi:wi+wl], 0xff)); err != nil {
+			glog.V(1).Infof("Sending %d to 0x%x...", wl, flasherWriteBufAddr)
+			sendStart := time.Now()
+			data := toWords(pData[wi:wi+wl], 0xff)
+			if err := mapc.WriteTargetMem(ctx, flasherWriteBufAddr, data); err != nil {
 				return errors.Annotatef(err, "failed to upload data @ 0x%x", wi)
 			}
-			if err := runFlasherFunc(ctx, cm4d, flasherFuncProgramPage, []uint32{wa, uint32(wl), flasherWriteBuf}, 5*time.Second); err != nil {
-				return errors.Annotatef(err, "failed to write page @ 0x%x", wa)
+			tSend += time.Since(sendStart)
+			writeStart := time.Now()
+			glog.V(1).Infof("Writing %d @ 0x%x...", wl, wa)
+			if err := runFlasherFunc(ctx, cm4d, flasherFuncProgramPage, []uint32{uint32(wa), uint32(wl), uint32(flasherWriteBufAddr)}, 5*time.Second); err != nil {
+				return errors.Annotatef(err, "failed to write @ 0x%x", wa)
 			}
+			tWrite += time.Since(writeStart)
+			wa += wl
 			wi += wl
-			wa += uint32(wl)
 		}
 	}
+	tAll := time.Since(start)
+	glog.Infof("Took %.3f (%.3f erase, %.3f send, %.3f write)",
+		tAll.Seconds(), tErase.Seconds(), tSend.Seconds(), tWrite.Seconds())
 	ourutil.Reportf("Done! Running firmware...")
 	if err := cm4d.ResetRun(ctx); err != nil {
 		return errors.Annotatef(err, "failed to reset-run the target")
