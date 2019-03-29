@@ -52,6 +52,20 @@ func buildLocal(ctx context.Context, bParams *buildParams) error {
 	return buildErr
 }
 
+func generateCflags(cflags []string, cdefs map[string]string) string {
+	kk := []string{}
+	for k, _ := range cdefs {
+		kk = append(kk, k)
+	}
+	sort.Strings(kk)
+	for _, k := range kk {
+		v := cdefs[k]
+		cflags = append(cflags, fmt.Sprintf("-D%s=%s", k, v))
+	}
+
+	return strings.Join(append(cflags), " ")
+}
+
 func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err error) {
 	dockerAppPath := "/app"
 	dockerMgosPath := "/mongoose-os"

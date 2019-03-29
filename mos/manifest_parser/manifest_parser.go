@@ -82,6 +82,7 @@ type ReadManifestCallbacks struct {
 type ManifestAdjustments struct {
 	Platform  string
 	BuildVars map[string]string
+	CDefs     map[string]string
 	CFlags    []string
 	CXXFlags  []string
 	ExtraLibs []build.SWModule
@@ -573,7 +574,7 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 
 		// Also, remove any build vars from adjustments, so that they won't be set on
 		// deps' manifest we're going to read as well
-		pc.adjustments.BuildVars = make(map[string]string)
+		pc.adjustments.BuildVars = nil
 
 		if !manifest.NoImplInitDeps {
 			found := false
@@ -595,6 +596,9 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		}
 		pc.adjustments.ExtraLibs = nil
 
+		for k, v := range pc.adjustments.CDefs {
+			manifest.CDefs[k] = v
+		}
 		manifest.CFlags = append(manifest.CFlags, pc.adjustments.CFlags...)
 		pc.adjustments.CFlags = nil
 		manifest.CXXFlags = append(manifest.CXXFlags, pc.adjustments.CXXFlags...)

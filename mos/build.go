@@ -3,12 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -57,7 +55,8 @@ var (
 
 	preferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
 
-	buildVarsSlice []string
+	buildVarsSlice = flag.StringSlice("build-var", []string{}, `Build variable in the format "NAME=VALUE". Can be used multiple times.`)
+	cdefsSlice     = flag.StringSlice("cdef", []string{}, `C/C++ define in the format "NAME=VALUE". Can be used multiple times.`)
 
 	noLibsUpdate  = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
 	skipCleanLibs = flag.Bool("skip-clean-libs", true, "if false, then during the remote build all libs will be uploaded to the builder")
@@ -89,8 +88,6 @@ type buildParams struct {
 
 func init() {
 	hiddenFlags = append(hiddenFlags, "docker_images")
-
-	flag.StringSliceVar(&buildVarsSlice, "build-var", []string{}, "build variable in the format \"NAME:VALUE\" Can be used multiple times.")
 }
 
 // Build {{{
@@ -125,6 +122,11 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 			return errors.Trace(err)
 		}
 
+		cdefsFromCLI, err := getCdefsFromCLI()
+		if err != nil {
+			return errors.Trace(err)
+		}
+
 		libsFromCLI, err := getLibsFromCLI()
 		if err != nil {
 			return errors.Trace(err)
@@ -134,6 +136,7 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 			ManifestAdjustments: manifest_parser.ManifestAdjustments{
 				Platform:  flags.Platform(),
 				BuildVars: buildVarsFromCLI,
+				CDefs:     cdefsFromCLI,
 				CFlags:    *cflagsExtra,
 				CXXFlags:  *cxxflagsExtra,
 				ExtraLibs: libsFromCLI,
@@ -269,13 +272,8 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	return err
 }
 
-func getBuildVarsFromCLI() (map[string]string, error) {
-	m := map[string]string{
-		"BOARD": *flags.Board,
-	}
-
-	// Add build vars from CLI flags
-	for _, v := range buildVarsSlice {
+func parseVarsSlice(varsSlice []string, vars map[string]string) error {
+	for _, v := range varsSlice {
 		pp1 := strings.SplitN(v, ":", 2)
 		pp2 := strings.SplitN(v, "=", 2)
 		var pp []string
@@ -291,11 +289,28 @@ func getBuildVarsFromCLI() (map[string]string, error) {
 				pp = pp2
 			}
 		default:
-			return nil, errors.Errorf("invalid --build-var spec: %q", v)
+			return errors.Errorf("invalid var specification: %q", v)
 		}
-		m[pp[0]] = pp[1]
+		vars[pp[0]] = pp[1]
 	}
+	return nil
+}
 
+func getBuildVarsFromCLI() (map[string]string, error) {
+	m := map[string]string{
+		"BOARD": *flags.Board,
+	}
+	if err := parseVarsSlice(*buildVarsSlice, m); err != nil {
+		return nil, errors.Annotatef(err, "invalid --build-var")
+	}
+	return m, nil
+}
+
+func getCdefsFromCLI() (map[string]string, error) {
+	m := map[string]string{}
+	if err := parseVarsSlice(*cdefsSlice, m); err != nil {
+		return nil, errors.Annotatef(err, "invalid --cdef")
+	}
 	return m, nil
 }
 
@@ -366,20 +381,6 @@ func getCustomLibLocations() (map[string]string, error) {
 		customLibLocations[parts[0]] = parts[1]
 	}
 	return customLibLocations, nil
-}
-
-func generateCflags(cflags []string, cdefs map[string]string) string {
-	kk := []string{}
-	for k, _ := range cdefs {
-		kk = append(kk, k)
-	}
-	sort.Strings(kk)
-	for _, k := range kk {
-		v := cdefs[k]
-		cflags = append(cflags, fmt.Sprintf("-D%s=%s", k, v))
-	}
-
-	return strings.Join(append(cflags), " ")
 }
 
 func newMosVars() *interpreter.MosVars {
