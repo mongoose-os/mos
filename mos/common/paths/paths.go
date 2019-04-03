@@ -1,7 +1,6 @@
 package paths
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"cesanta.com/mos/version"
 
 	"github.com/cesanta/errors"
+	flag "github.com/spf13/pflag"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 
 	TmpDir         = ""
 	depsDirFlag    = ""
-	LibsDirFlag    = ""
+	LibsDirFlag    = []string{}
 	AppsDir        = ""
 	modulesDirFlag = ""
 
@@ -31,7 +31,7 @@ var (
 func init() {
 	flag.StringVar(&TmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
 	flag.StringVar(&depsDirFlag, "deps-dir", "", "Directory to fetch libs, modules into")
-	flag.StringVar(&LibsDirFlag, "libs-dir", "", "Directory to find libs in")
+	flag.StringSliceVar(&LibsDirFlag, "libs-dir", []string{}, "Directory to find libs in. Can be used multiple times.")
 	flag.StringVar(&AppsDir, "apps-dir", AppsDirTpl, "Directory to store apps into")
 	flag.StringVar(&modulesDirFlag, "modules-dir", "", "Directory to store modules into")
 
@@ -52,9 +52,11 @@ func Init() error {
 		return errors.Trace(err)
 	}
 
-	LibsDirFlag, err = NormalizePath(LibsDirFlag, version.GetMosVersion())
-	if err != nil {
-		return errors.Trace(err)
+	for i, s := range LibsDirFlag {
+		LibsDirFlag[i], err = NormalizePath(s, version.GetMosVersion())
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	AppsDir, err = NormalizePath(AppsDir, version.GetMosVersion())

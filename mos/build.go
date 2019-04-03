@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -11,8 +12,6 @@ import (
 	"sync"
 	"time"
 	"unicode"
-
-	"context"
 
 	"cesanta.com/common/go/fwbundle"
 	"cesanta.com/common/go/ourutil"
@@ -27,6 +26,7 @@ import (
 	"cesanta.com/mos/update"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -434,11 +434,17 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	}
 
 	// If --libs-dir is set, this is where all the libs are.
-	if paths.LibsDirFlag != "" {
+	if len(paths.LibsDirFlag) > 0 {
 		name2, _ := m.GetName2()
-		libDirAbs := filepath.Join(paths.LibsDirFlag, name2)
-		ourutil.Freportf(lpr.logWriter, "%s: Using %q (--libs-dir) %s", name, libDirAbs, name2)
-		return libDirAbs, nil
+		for _, libsDir := range paths.LibsDirFlag {
+			libDir := filepath.Join(libsDir, name2)
+			glog.V(2).Infof("%s (%s): Trying %s...", name, name2, libDir)
+			if fi, err := os.Stat(libDir); err == nil && fi.IsDir() {
+				ourutil.Freportf(lpr.logWriter, "%s: Using %q (--libs-dir)", name, libDir)
+				return libDir, nil
+			}
+		}
+		return "", errors.Errorf("%s not found in --libs-dir", name2)
 	}
 
 	// Try to fetch
