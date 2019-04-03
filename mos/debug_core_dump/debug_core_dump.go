@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"cesanta.com/mos/dev"
@@ -229,7 +230,7 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	input := os.Stdin
 	var shellCmd []string
 	if cdFile != "" {
-		shellCmd = append(shellCmd, "/usr/local/bin/serve_core.py")
+		shellCmd = append(shellCmd, *flags.GDBServerCmd)
 		shellCmd = append(shellCmd, dp.extraServeCoreArgs...)
 		shellCmd = append(shellCmd, "/fw.elf", "/core", "&")
 		shellCmd = append(shellCmd,
@@ -253,13 +254,45 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	return ourutil.RunCmdWithInput(input, ourutil.CmdOutAlways, cmd...)
 }
 
+type coreFileInfo []os.FileInfo
+
+func (pp coreFileInfo) Len() int      { return len(pp) }
+func (pp coreFileInfo) Swap(i, j int) { pp[i], pp[j] = pp[j], pp[i] }
+func (pp coreFileInfo) Less(i, j int) bool {
+	// By ModTime in reverse order
+	return pp[i].ModTime().UnixNano() > pp[j].ModTime().UnixNano()
+}
+
+func findLatestCoreFile() string {
+	fileNames, err := filepath.Glob("core-?*-*-*-*")
+	if err != nil {
+		return ""
+	}
+	var cfi coreFileInfo
+	for _, fn := range fileNames {
+		if fi, err := os.Stat(fn); err == nil {
+			cfi = append(cfi, fi)
+		}
+	}
+	if len(cfi) == 0 {
+		return ""
+	}
+	sort.Sort(cfi)
+	ourutil.Reportf("Using %s", cfi[0].Name())
+	return cfi[0].Name()
+}
+
 func DebugCoreDump(ctx context.Context, _ dev.DevConn) error {
 	args := flag.Args()
 	var coreFile, elfFile string
-	if len(args) < 2 {
-		return errors.Errorf("core dump file name is required")
+	if len(args) >= 2 {
+		coreFile = args[1]
+	} else {
+		coreFile = findLatestCoreFile()
+		if coreFile == "" {
+			return errors.Errorf("core dump file name was not given and not core-* files were found")
+		}
 	}
-	coreFile = args[1]
 	if len(args) > 2 {
 		elfFile = args[2]
 	}

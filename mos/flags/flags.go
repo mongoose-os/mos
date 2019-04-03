@@ -68,6 +68,8 @@ var (
 	CertTemplate = flag.String("cert-template", "", "cert template to use")
 	CertDays     = flag.Int("cert-days", 0, "new cert validity, days")
 	Subject      = flag.String("subject", "", "Subject for CSR or certificate")
+
+	GDBServerCmd = flag.String("gdb-server-cmd", "/usr/local/bin/serve_core.py", "")
 )
 
 func Platform() string {
