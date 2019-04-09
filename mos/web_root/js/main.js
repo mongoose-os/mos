@@ -301,15 +301,18 @@ var mklink = function(url, title) {
 
 var Header = function() {
   var sep = h('span', {class: 'mx-1'}, '|');
-  var links = h(
-      'div', {class: 'float-right mt-1 text-muted'},
-      h('span', {class: 'd-none d-lg-inline'},
-        mklink('https://mongoose-os.com/docs/quickstart/setup.md', 'docs'), sep,
-        mklink(
-            'https://www.youtube.com/channel/UCZ9lQ7b-4bDbLOLpKwjpSAw/videos',
-            'youtube'),
-        sep, mklink('https://gitter.im/cesanta/mongoose-os', 'chat'), sep,
-        mklink('http://dash.mongoose-os.com', 'mDash')));
+  var links =
+      h('div', {class: 'float-right mt-1 text-muted'},
+        h('span', {class: 'd-none d-lg-inline'},
+          mklink(
+              'https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md',
+              'docs'),
+          sep,
+          mklink(
+              'https://www.youtube.com/channel/UCZ9lQ7b-4bDbLOLpKwjpSAw/videos',
+              'youtube'),
+          sep, mklink('https://community.mongoose-os.com', 'forum'), sep,
+          mklink('http://dash.mongoose-os.com', 'mDash')));
 
   var portDropdown =
       h(Dropdown, {
