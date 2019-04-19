@@ -130,6 +130,15 @@ func toWords(data []byte, padWith byte) []uint32 {
 	return dataWords
 }
 
+func isAllFF(data []byte) bool {
+	for _, b := range data {
+		if b != 0xff {
+			return false
+		}
+	}
+	return true
+}
+
 func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	ctx := context.Background()
 	dapc, err := dap.NewClient(ctx, vid, pid, "", intf, epIn, epOut)
@@ -281,6 +290,10 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 			}
 			tErase += time.Since(eraseStart)
 		}
+		if isAllFF(pData) {
+			glog.V(1).Infof("Skipped writing %d, all FFs", len(pData))
+			continue
+		}
 		wa := int(pAddr)
 		ourutil.Reportf("Writing %d @ 0x%x...", len(pData), wa)
 		glog.V(1).Infof("Running Init(write)...")
@@ -292,19 +305,24 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 			if wl > flasherWriteBufSize {
 				wl = flasherWriteBufSize
 			}
-			glog.V(1).Infof("Sending %d to 0x%x...", wl, flasherWriteBufAddr)
-			sendStart := time.Now()
-			data := toWords(pData[wi:wi+wl], 0xff)
-			if err := mapc.WriteTargetMem(ctx, flasherWriteBufAddr, data); err != nil {
-				return errors.Annotatef(err, "failed to upload data @ 0x%x", wi)
+			chunk := pData[wi : wi+wl]
+			if !isAllFF(chunk) {
+				glog.V(1).Infof("Sending %d to 0x%x...", wl, flasherWriteBufAddr)
+				sendStart := time.Now()
+				data := toWords(chunk, 0xff)
+				if err := mapc.WriteTargetMem(ctx, flasherWriteBufAddr, data); err != nil {
+					return errors.Annotatef(err, "failed to upload data @ 0x%x", wi)
+				}
+				tSend += time.Since(sendStart)
+				writeStart := time.Now()
+				glog.V(1).Infof("Writing %d @ 0x%x...", wl, wa)
+				if err := runFlasherFunc(ctx, cm4d, flasherFuncProgramPage, []uint32{uint32(wa), uint32(wl), uint32(flasherWriteBufAddr)}, 5*time.Second); err != nil {
+					return errors.Annotatef(err, "failed to write @ 0x%x", wa)
+				}
+				tWrite += time.Since(writeStart)
+			} else {
+				glog.V(1).Infof("Skipped writing %d @ 0x%x, all FFs", len(chunk), wa)
 			}
-			tSend += time.Since(sendStart)
-			writeStart := time.Now()
-			glog.V(1).Infof("Writing %d @ 0x%x...", wl, wa)
-			if err := runFlasherFunc(ctx, cm4d, flasherFuncProgramPage, []uint32{uint32(wa), uint32(wl), uint32(flasherWriteBufAddr)}, 5*time.Second); err != nil {
-				return errors.Annotatef(err, "failed to write @ 0x%x", wa)
-			}
-			tWrite += time.Since(writeStart)
 			wa += wl
 			wi += wl
 		}
