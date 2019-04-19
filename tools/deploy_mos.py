@@ -193,7 +193,7 @@ if __name__ == "__main__":
             bottle_fname = ll[0]
             hb_cmd.extend([
                 "--bottle=%s" % bottle_fname,
-                "--bottle-upload-dest=core@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
+                "--bottle-upload-dest=root@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
             ])
             RunSubprocess(hb_cmd)
 
