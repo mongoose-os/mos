@@ -16,10 +16,10 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-type AuthFunc func(id, username, password string) error
-type CloseFunc func(id, username, password string) error
+type AuthFunc func(c *Client) error
+type CloseFunc func(c *Client) error
 type PublishFunc func(id, username, password, topic string, payload []byte) (string, []byte, error)
-type SubscribeFunc func(id, username, password, topic string) (string, error)
+type SubscribeFunc func(c *Client, topic string) (string, error)
 
 type Hooks struct {
 	Auth      AuthFunc
@@ -43,26 +43,26 @@ type Broker interface {
 type broker struct {
 	sync.Mutex
 	msgID   uint32
-	subs    map[string][]*client
+	subs    map[string][]*Client
 	pending map[int]pendingMsg
 	hooks   *Hooks
 }
 
-type client struct {
-	broker      *broker
-	conn        net.Conn
-	id          string
-	username    string
-	password    string
-	willTopic   string
-	willMessage string
+type Client struct {
+	Broker      *broker
+	Conn        net.Conn
+	ID          string
+	Username    string
+	Password    string
+	WillTopic   string
+	WillMessage string
 	subAlias    map[string]string
 	pubAlias    map[string]string
 }
 
 type pendingMsg struct {
 	id int
-	c  *client
+	c  *Client
 }
 
 // NewBroker creates a new MQTT broker with a user-defined authorization function
@@ -72,7 +72,7 @@ func NewBroker(hooks *Hooks) Broker {
 	}
 	brk := &broker{
 		hooks:   hooks,
-		subs:    map[string][]*client{},
+		subs:    map[string][]*Client{},
 		pending: map[int]pendingMsg{},
 	}
 	return brk
@@ -84,9 +84,9 @@ func (b *broker) Run(l Accepter) error {
 		if err != nil {
 			return err
 		}
-		client := &client{
-			broker:   b,
-			conn:     conn,
+		client := &Client{
+			Broker:   b,
+			Conn:     conn,
 			subAlias: map[string]string{},
 			pubAlias: map[string]string{},
 		}
@@ -94,7 +94,7 @@ func (b *broker) Run(l Accepter) error {
 	}
 }
 
-func (b *broker) sub(c *client, topics ...string) {
+func (b *broker) sub(c *Client, topics ...string) {
 	b.Lock()
 	defer b.Unlock()
 	for _, topic := range topics {
@@ -102,12 +102,12 @@ func (b *broker) sub(c *client, topics ...string) {
 	}
 }
 
-func (b *broker) unsub(c *client, topics ...string) {
+func (b *broker) unsub(c *Client, topics ...string) {
 	b.Lock()
 	defer b.Unlock()
 	for _, topic := range topics {
 		clients := b.subs[topic]
-		newClients := make([]*client, 0, len(clients))
+		newClients := make([]*Client, 0, len(clients))
 		for _, sub := range clients {
 			if sub != c {
 				newClients = append(newClients, sub)
@@ -134,7 +134,7 @@ func (b *broker) match(topic, wildcard string) bool {
 	return len(parts) == len(wild) //|| (len(parts) == len(wild)-1 && wild[len(wild)-1] == "#")
 }
 
-func (b *broker) subscribers(topic string) (clients []*client) {
+func (b *broker) subscribers(topic string) (clients []*Client) {
 	b.Lock()
 	defer b.Unlock()
 	// If wildcards were not supported, then it's rather simple: return b.subs[topic]
@@ -147,13 +147,13 @@ func (b *broker) subscribers(topic string) (clients []*client) {
 	return clients
 }
 
-func (b *broker) enqueue(c *client, brokerID, clientID int) {
+func (b *broker) enqueue(c *Client, brokerID, clientID int) {
 	b.Lock()
 	defer b.Unlock()
 	b.pending[brokerID] = pendingMsg{id: clientID, c: c}
 }
 
-func (b *broker) dequeue(brokerID int) (c *client, id int) {
+func (b *broker) dequeue(brokerID int) (c *Client, id int) {
 	b.Lock()
 	defer b.Unlock()
 	if p, ok := b.pending[brokerID]; ok {
@@ -193,7 +193,7 @@ func (b *broker) PublishEx(header byte, msgID int, id, user, pass, topic string,
 	}
 }
 
-func (c *client) run() {
+func (c *Client) run() {
 	const (
 		connect     = 1
 		connack     = 2
@@ -208,12 +208,12 @@ func (c *client) run() {
 		disconnect  = 14
 	)
 	defer func() {
-		c.conn.Close()
-		if c.broker.hooks.Close != nil {
-			c.broker.hooks.Close(c.id, c.username, c.password)
+		c.Conn.Close()
+		if c.Broker.hooks.Close != nil {
+			c.Broker.hooks.Close(c)
 		}
 	}()
-	r := bufio.NewReader(c.conn)
+	r := bufio.NewReader(c.Conn)
 	for {
 		header, data, err := c.readPacket(r)
 		if err != nil {
@@ -234,18 +234,18 @@ func (c *client) run() {
 				return
 			}
 			flags := data[protoLen+3]
-			fields := []*string{&c.id}
+			fields := []*string{&c.ID}
 			if flags&(1<<2) != 0 {
-				fields = append(fields, &c.willTopic, &c.willMessage)
+				fields = append(fields, &c.WillTopic, &c.WillMessage)
 			}
 			if flags&0x80 != 0 {
-				fields = append(fields, &c.username)
+				fields = append(fields, &c.Username)
 			}
 			if flags&0x40 != 0 {
-				fields = append(fields, &c.password)
+				fields = append(fields, &c.Password)
 			}
 			data := data[protoLen+6:]
-			c.id, c.username, c.password, c.willTopic, c.willMessage = "", "", "", "", ""
+			c.ID, c.Username, c.Password, c.WillTopic, c.WillMessage = "", "", "", "", ""
 			for _, s := range fields {
 				if len(data) < 2 {
 					return
@@ -261,13 +261,13 @@ func (c *client) run() {
 			// Make client ID unique by appending some random string to it
 			buf := make([]byte, 4)
 			rand.Read(buf)
-			c.id += "." + hex.EncodeToString(buf)
+			c.ID += "." + hex.EncodeToString(buf)
 
-			if c.willTopic != "" {
-				defer c.broker.PublishEx(0x30, -1, c.id, c.username, c.password, c.willTopic, []byte(c.willMessage))
+			if c.WillTopic != "" {
+				defer c.Broker.PublishEx(0x30, -1, c.ID, c.Username, c.Password, c.WillTopic, []byte(c.WillMessage))
 			}
-			if c.broker.hooks.Auth != nil {
-				if err := c.broker.hooks.Auth(c.id, c.username, c.password); err != nil {
+			if c.Broker.hooks.Auth != nil {
+				if err := c.Broker.hooks.Auth(c); err != nil {
 					c.writePacket(connack<<4, []byte{0, 4})
 					return
 				}
@@ -294,11 +294,11 @@ func (c *client) run() {
 					return
 				}
 				cid := int(data[2+size])*256 + int(data[3+size])
-				msgID = int(atomic.AddUint32(&c.broker.msgID, 1) & 0xffff)
-				c.broker.enqueue(c, msgID, cid)
+				msgID = int(atomic.AddUint32(&c.Broker.msgID, 1) & 0xffff)
+				c.Broker.enqueue(c, msgID, cid)
 				payload = data[4+size:]
 			}
-			c.broker.PublishEx(header, msgID, c.id, c.username, c.password, topic, payload)
+			c.Broker.PublishEx(header, msgID, c.ID, c.Username, c.Password, topic, payload)
 		case subscribe:
 			if len(data) < 2 {
 				return
@@ -322,14 +322,14 @@ func (c *client) run() {
 					c.writePacket(suback<<4, []byte{hi, lo, 0x80})
 					return
 				}
-				if c.broker.hooks.Subscribe != nil {
+				if c.Broker.hooks.Subscribe != nil {
 					origTopic := topic
-					topic, err = c.broker.hooks.Subscribe(c.id, c.username, c.password, topic)
-					// log.Printf("SUB: [%s] [%s] [%s]\n", c.id, origTopic, topic)
+					topic, err = c.Broker.hooks.Subscribe(c, topic)
+					// log.Printf("SUB: [%s] [%s] [%s]\n", c.ID, origTopic, topic)
 					c.subAlias[origTopic] = topic
 					c.pubAlias[topic] = origTopic
 				}
-				c.broker.sub(c, topic)
+				c.Broker.sub(c, topic)
 				data = data[3+n:]
 			}
 			c.writePacket(suback<<4, []byte{hi, lo, 0})
@@ -353,13 +353,13 @@ func (c *client) run() {
 				if !ok {
 					topicAlias = topic
 				}
-				c.broker.unsub(c, topicAlias)
+				c.Broker.unsub(c, topicAlias)
 				data = data[2+n:]
 			}
 			c.writePacket(unsuback<<4, []byte{hi, lo})
 		case puback:
 			bid := int(data[0])*256 + int(data[1])
-			pub, id := c.broker.dequeue(bid)
+			pub, id := c.Broker.dequeue(bid)
 			if pub != nil {
 				pub.writePacket(puback<<4, []byte{byte(id >> 8), byte(id)})
 			}
@@ -371,7 +371,7 @@ func (c *client) run() {
 	}
 }
 
-func (c *client) readPacket(r *bufio.Reader) (byte, []byte, error) {
+func (c *Client) readPacket(r *bufio.Reader) (byte, []byte, error) {
 	header, err := r.ReadByte()
 	if err != nil {
 		return 0, nil, err
@@ -390,24 +390,24 @@ func (c *client) readPacket(r *bufio.Reader) (byte, []byte, error) {
 	}
 }
 
-func (c *client) writePacket(header byte, payload []byte) error {
+func (c *Client) writePacket(header byte, payload []byte) error {
 	buf := make([]byte, binary.MaxVarintLen64+1)
 	buf[0] = header
 	n := binary.PutUvarint(buf[1:], uint64(len(payload)))
 	pkt := append(buf[:n+1], payload...)
 	// log.Println("-->", hex.EncodeToString(pkt))
-	_, err := c.conn.Write(pkt)
+	_, err := c.Conn.Write(pkt)
 	return err
 }
 
-func (c *client) publish(header byte, msgID int, topic string, payload []byte) error {
+func (c *Client) publish(header byte, msgID int, topic string, payload []byte) error {
 	msg := payload
 	if msgID >= 0 {
 		msg = append([]byte{byte(msgID >> 8), byte(msgID)}, payload...)
 	}
 	msg = append([]byte(topic), msg...)
 	msg = append([]byte{byte(len(topic) >> 8), byte(len(topic))}, msg...)
-	// log.Println("-->pub", c.id, msgID, topic, string(payload))
+	// log.Println("-->pub", c.ID, msgID, topic, string(payload))
 	return c.writePacket(header, msg)
 }
 

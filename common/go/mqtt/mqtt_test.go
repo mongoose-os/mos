@@ -35,8 +35,8 @@ func TestUserPasswordAuth(t *testing.T) {
 	}
 	defer ln.Close()
 	b := NewBroker(&Hooks{
-		Auth: func(id, username, password string) error {
-			if username != "test" && password != "t3$t" {
+		Auth: func(c *Client) error {
+			if c.Username != "test" && c.Password != "t3$t" {
 				return errors.New("bad credentials")
 			}
 			return nil
@@ -228,7 +228,7 @@ func TestHooks(t *testing.T) {
 			}
 			return topic, payload, nil
 		},
-		Subscribe: func(id, user, passwd, topic string) (string, error) {
+		Subscribe: func(c *Client, topic string) (string, error) {
 			if topic == "bar" {
 				return "test/bar", nil
 			}
