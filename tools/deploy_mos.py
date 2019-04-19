@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
     # Check ssh access to site. If agent is used, this will unlock the key.
     print("Checking SSH access to the site...")
-    RunSubprocess(["ssh", "core@mongoose-os.com", "echo", "Ok"])
+    RunSubprocess(["ssh", "root@mongoose-os.com", "echo", "Ok"])
 
     # Request the user for the passphrase
     passphrase = getpass.getpass("Passphrase for the key in %s: " % GPG_KEY_PATH)
