@@ -278,7 +278,7 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 			if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 1}, 1*time.Second); err != nil {
 				return errors.Annotatef(err, "failed to init flasher")
 			}
-			ourutil.Reportf("Erasing %d @ 0x%x...", es, ea)
+			ourutil.Reportf("Erasing %d @ 0x%x (%s)...", es, ea, p.Name)
 			eraseStart := time.Now()
 			for es > 0 {
 				glog.V(1).Infof("Erasing %d @ 0x%x...", flashSectorSize, ea)
@@ -295,7 +295,7 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 			continue
 		}
 		wa := int(pAddr)
-		ourutil.Reportf("Writing %d @ 0x%x...", len(pData), wa)
+		ourutil.Reportf("Writing %d @ 0x%x (%s)...", len(pData), wa, p.Name)
 		glog.V(1).Infof("Running Init(write)...")
 		if err := runFlasherFunc(ctx, cm4d, flasherFuncInit, []uint32{0x8012000, 12000000, 2}, 1*time.Second); err != nil {
 			return errors.Annotatef(err, "failed to init flasher")

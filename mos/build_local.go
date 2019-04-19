@@ -89,8 +89,6 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 
 	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
-	elfFilename := moscommon.GetFirmwareElfFilePath(buildDir)
-
 	// Perform cleanup before the build {{{
 	if clean {
 		// Cleanup build dir, but leave build log intact, because we're already
@@ -449,14 +447,6 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 		err = ourio.LinkOrCopyFile(
 			filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, manifest.Platform)),
 			fwFilename,
-		)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Copy ELF file to fw.elf
-		err = ourio.LinkOrCopyFile(
-			filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)), elfFilename,
 		)
 		if err != nil {
 			return errors.Trace(err)

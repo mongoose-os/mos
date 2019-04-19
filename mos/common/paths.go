@@ -61,10 +61,6 @@ func GetMakeVarsFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "vars.mk")
 }
 
-func GetFirmwareElfFilePath(buildDir string) string {
-	return filepath.Join(GetObjectDir(buildDir), "fw.elf")
-}
-
 func GetOrigLibArchiveFilePath(buildDir, platform string) string {
 	if platform == "esp32" {
 		return filepath.Join(GetObjectDir(buildDir), "moslib", "libmoslib.a")

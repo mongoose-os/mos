@@ -118,15 +118,16 @@ func getFwELFFile(app, platform, version, buildID string) string {
 		return ""
 	}
 	// Are we in the app dir? Use file from build dir.
-	try := filepath.Join(cwd, "build", "objs", "fw.elf")
-	glog.V(2).Infof("Trying %q", try)
-	if _, err := os.Stat(try); err == nil {
-		return try
-	}
-	try = filepath.Join(cwd, "build", "objs", fmt.Sprintf("%s.elf", app))
-	glog.V(2).Infof("Trying %q", try)
-	if _, err := os.Stat(try); err == nil {
-		return try
+	for _, try := range []string{
+		filepath.Join(cwd, "build", "objs", "fw.elf"),
+		filepath.Join(cwd, "build", "objs", fmt.Sprintf("%s.elf", app)),
+		// Only one of them is the right one, but for now there's no way to tell which...
+		filepath.Join(cwd, "build", "objs", fmt.Sprintf("%s.0.elf", app)),
+		filepath.Join(cwd, "build", "objs", fmt.Sprintf("%s.1.elf", app))} {
+		glog.V(2).Infof("Trying %q", try)
+		if _, err := os.Stat(try); err == nil {
+			return try
+		}
 	}
 	return ""
 }
