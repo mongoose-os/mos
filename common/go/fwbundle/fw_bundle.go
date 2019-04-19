@@ -53,7 +53,9 @@ func (pp partsByAddr) Less(i, j int) bool {
 func (fwb *FirmwareBundle) PartsByAddr() []*FirmwarePart {
 	var pp []*FirmwarePart
 	for _, p := range fwb.Parts {
-		pp = append(pp, p)
+		if p.Flash == nil || *p.Flash {
+			pp = append(pp, p)
+		}
 	}
 	sort.Sort(partsByAddr(pp))
 	return pp

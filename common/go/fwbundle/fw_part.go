@@ -21,6 +21,7 @@ type firmwarePart struct {
 	Addr           uint32 `json:"addr,omitempty"`
 	Size           uint32 `json:"size,omitempty"`
 	Fill           *uint8 `json:"fill,omitempty"`
+	Flash          *bool  `json:"flash,omitempty"`
 	ChecksumSHA1   string `json:"cs_sha1,omitempty"`
 	ChecksumSHA256 string `json:"cs_sha256,omitempty"`
 	// For SPIFFS images.
