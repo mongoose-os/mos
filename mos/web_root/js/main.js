@@ -401,7 +401,7 @@ var checkPorts = function() {
           '  - A device is disconnected. Connect and press Ctrl-l.\n',
           '  - A USB-To-Serial driver is not installed. ', 'To install, see ',
           mklink(
-              'https://mongoose-os.com/docs/quickstart/setup.md#usb-to-serial-drivers',
+              'https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md#3-usb-to-serial-drivers',
               'instructions'),
           '.\n', '    When done, restart this tool.\n\n'));
     }
@@ -423,11 +423,11 @@ var HelpMessage = function() {
       'div', {class: 'text-muted mx-0 my-1 p-0'}, h('img', img),
       'Mongoose OS\n', 'Welcome to the mos tool!\n', 'New user? Follow the ',
       mklink(
-          'https://mongoose-os.com/docs/quickstart/setup.md',
+          'https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md',
           'quickstart guide'),
       '\n', 'Experienced? Follow the ',
       mklink(
-          'https://mongoose-os.com/docs/quickstart/develop-in-c.md',
+          'https://mongoose-os.com/docs/mongoose-os/quickstart/develop-in-c.md',
           'advanced usage guide'),
       '\n\n', 'Enter any mos command, e.g.: "mos help"\n',
       'or any system command, e.g.: "cd c:/mos" or "ls -l"\n',
