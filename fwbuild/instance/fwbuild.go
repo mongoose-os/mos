@@ -509,9 +509,9 @@ func buildFirmware() error {
 		return errors.Trace(err)
 	}
 
-	// Pack build directory ignoring build/objs/* except build/objs/fw.elf
+	// Pack build directory ignoring build/objs/* except build/objs/*.elf
 	matcher := ourglob.PatItems{
-		{"build/objs/fw.elf", true},
+		{"build/objs/*.elf", true},
 		{"build/objs/*", false},
 		{"*", true},
 	}
