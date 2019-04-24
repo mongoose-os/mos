@@ -34,7 +34,7 @@
 
 import argparse
 import copy
-import github_api
+import glob
 import logging
 import os
 import shutil
@@ -42,9 +42,7 @@ import subprocess
 import time
 import yaml
 
-# Debian/Ubuntu: apt-get install python-git
-# PIP: pip install GitPython
-import git
+import github_api
 
 # NB: only support building from master right now.
 
@@ -254,7 +252,9 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
                 assets.append(MakeAsset("lib%s-%s.a" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "lib.a"), tmp_dir))
             else:
                 assets.append(MakeAsset("%s-%s.zip" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "fw.zip"), tmp_dir))
-                assets.append(MakeAsset("%s-%s.elf" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "objs", "fw.elf"), tmp_dir))
+                for fn in glob.glob(os.path.join(tgt_dir, "build", "objs", "*.elf")):
+                    an = os.path.basename(fn).replace(tgt_name, "%s-%s" % (tgt_name, v["name"]))
+                    assets.append(MakeAsset(an, fn, tmp_dir))
     outs = e.get("out", [])
     if not outs and loc.startswith("https://github.com/"):
         outs = [{"github": {"repo": "%s/%s" % (pre, tgt_name)}}]
