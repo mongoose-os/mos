@@ -14,14 +14,16 @@
     cxxflags: -DMGOS_FREE_BUILD
     mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
   variants:
-    - name: esp8266
-      platform: esp8266
-    - name: esp32
-      platform: esp32
     - name: cc3200
       platform: cc3200
     - name: cc3220
       platform: cc3220
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: rs14100
+      platform: rs14100
     - name: stm32-B-L475E-IOT01A
       platform: stm32
       build_vars:
@@ -50,14 +52,16 @@
     cxxflags: -DMGOS_FREE_BUILD
     mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
   variants:
-    - name: esp8266
-      platform: esp8266
-    - name: esp32
-      platform: esp32
     - name: cc3200
       platform: cc3200
     - name: cc3220
       platform: cc3220
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: rs14100
+      platform: rs14100
     - name: stm32-B-L475E-IOT01A
       platform: stm32
       build_vars:
@@ -85,6 +89,8 @@
 # Bootloader
 - location: https://github.com/mongoose-os-apps/bootloader
   variants:
+    - name: rs14100
+      platform: rs14100
     - name: stm32-B-L475E-IOT01A
       platform: stm32
       build_vars:
@@ -101,6 +107,10 @@
 # Demo apps
 - location: https://github.com/mongoose-os-apps/demo-c
   variants:
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
     - name: esp8266
       platform: esp8266
     - name: esp8266-1M
@@ -113,10 +123,8 @@
         BOARD: esp8266-2M
     - name: esp32
       platform: esp32
-    - name: cc3200
-      platform: cc3200
-    - name: cc3220
-      platform: cc3220
+    - name: rs14100
+      platform: rs14100
     - name: stm32-B-L475E-IOT01A
       platform: stm32
       build_vars:
@@ -136,12 +144,14 @@
 
 - location: https://github.com/mongoose-os-apps/demo-js
   variants:
+    - name: cc3220
+      platform: cc3220
     - name: esp8266
       platform: esp8266
     - name: esp32
       platform: esp32
-    - name: cc3220
-      platform: cc3220
+    - name: rs14100
+      platform: rs14100
     - name: stm32-B-L475E-IOT01A
       platform: stm32
       build_vars:
