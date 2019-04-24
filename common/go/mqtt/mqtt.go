@@ -18,8 +18,8 @@ import (
 
 type AuthFunc func(c *Client) error
 type CloseFunc func(c *Client) error
-type PublishFunc func(id, username, password, topic string, payload []byte) (string, []byte, error)
-type SubscribeFunc func(c *Client, topic string) (string, error)
+type PublishFunc func(c *Client, topic string, payload []byte) error
+type SubscribeFunc func(c *Client, topic string) error
 
 type Hooks struct {
 	Auth      AuthFunc
@@ -37,7 +37,7 @@ type Accepter interface {
 type Broker interface {
 	Run(l Accepter) error
 	Publish(topic string, payload []byte)
-	PublishEx(header byte, msgID int, id, user, pass, topic string, payload []byte)
+	PublishEx(header byte, msgID int, topic string, payload []byte)
 }
 
 type broker struct {
@@ -56,8 +56,7 @@ type Client struct {
 	Password    string
 	WillTopic   string
 	WillMessage string
-	subAlias    map[string]string
-	pubAlias    map[string]string
+	TopicPrefix string
 }
 
 type pendingMsg struct {
@@ -85,10 +84,8 @@ func (b *broker) Run(l Accepter) error {
 			return err
 		}
 		client := &Client{
-			Broker:   b,
-			Conn:     conn,
-			subAlias: map[string]string{},
-			pubAlias: map[string]string{},
+			Broker: b,
+			Conn:   conn,
 		}
 		go client.run()
 	}
@@ -163,34 +160,16 @@ func (b *broker) dequeue(brokerID int) (c *Client, id int) {
 	return nil, 0
 }
 
-func (b *broker) Publish(topic string, payload []byte) {
-	go func() {
-		for _, sub := range b.subscribers(topic) {
-			// log.Println("-->Publish", sub.id, topic, string(payload))
-			b.Lock()
-			topicAlias, ok := sub.pubAlias[topic]
-			b.Unlock()
-			if !ok {
-				topicAlias = topic
-			}
-			sub.publish(0x30, -1, topicAlias, payload)
-		}
-	}()
+func (b *broker) PublishEx(header byte, msgID int, topic string, payload []byte) {
+	// log.Println("--> PublishEX", topic, string(payload))
+	for _, sub := range b.subscribers(topic) {
+		// log.Println("   ", sub.ID, sub.TopicPrefix, topic, string(payload))
+		go sub.publish(header, msgID, topic, payload)
+	}
 }
 
-func (b *broker) PublishEx(header byte, msgID int, id, user, pass, topic string, payload []byte) {
-	origTopic := topic
-	if b.hooks.Publish != nil {
-		topic, payload, _ = b.hooks.Publish(id, user, pass, topic, payload)
-	}
-	for _, sub := range b.subscribers(topic) {
-		// log.Println("-->PublishEx", sub.id, id, topic, string(payload))
-		topicAlias, ok := sub.pubAlias[topic]
-		if !ok {
-			topicAlias = origTopic
-		}
-		sub.publish(header, msgID, topicAlias, payload)
-	}
+func (b *broker) Publish(topic string, payload []byte) {
+	b.PublishEx(0x30, -1, topic, payload)
 }
 
 func (c *Client) run() {
@@ -264,7 +243,7 @@ func (c *Client) run() {
 			c.ID += "." + hex.EncodeToString(buf)
 
 			if c.WillTopic != "" {
-				defer c.Broker.PublishEx(0x30, -1, c.ID, c.Username, c.Password, c.WillTopic, []byte(c.WillMessage))
+				defer c.Broker.Publish(c.TopicPrefix+c.WillTopic, []byte(c.WillMessage))
 			}
 			if c.Broker.hooks.Auth != nil {
 				if err := c.Broker.hooks.Auth(c); err != nil {
@@ -298,7 +277,9 @@ func (c *Client) run() {
 				c.Broker.enqueue(c, msgID, cid)
 				payload = data[4+size:]
 			}
-			c.Broker.PublishEx(header, msgID, c.ID, c.Username, c.Password, topic, payload)
+			if c.Broker.hooks.Publish == nil || c.Broker.hooks.Publish(c, topic, payload) == nil {
+				c.Broker.PublishEx(header, msgID, c.TopicPrefix+topic, payload)
+			}
 		case subscribe:
 			if len(data) < 2 {
 				return
@@ -322,14 +303,10 @@ func (c *Client) run() {
 					c.writePacket(suback<<4, []byte{hi, lo, 0x80})
 					return
 				}
-				if c.Broker.hooks.Subscribe != nil {
-					origTopic := topic
-					topic, err = c.Broker.hooks.Subscribe(c, topic)
+				if c.Broker.hooks.Subscribe == nil || c.Broker.hooks.Subscribe(c, topic) == nil {
 					// log.Printf("SUB: [%s] [%s] [%s]\n", c.ID, origTopic, topic)
-					c.subAlias[origTopic] = topic
-					c.pubAlias[topic] = origTopic
+					c.Broker.sub(c, c.TopicPrefix+topic)
 				}
-				c.Broker.sub(c, topic)
 				data = data[3+n:]
 			}
 			c.writePacket(suback<<4, []byte{hi, lo, 0})
@@ -349,11 +326,7 @@ func (c *Client) run() {
 					return
 				}
 				topic := string(data[2 : 2+n])
-				topicAlias, ok := c.subAlias[topic]
-				if !ok {
-					topicAlias = topic
-				}
-				c.Broker.unsub(c, topicAlias)
+				c.Broker.unsub(c, c.TopicPrefix+topic)
 				data = data[2+n:]
 			}
 			c.writePacket(unsuback<<4, []byte{hi, lo})
@@ -401,13 +374,14 @@ func (c *Client) writePacket(header byte, payload []byte) error {
 }
 
 func (c *Client) publish(header byte, msgID int, topic string, payload []byte) error {
+	// log.Println("-->pub", c.ID, msgID, c.TopicPrefix, topic, string(payload))
 	msg := payload
 	if msgID >= 0 {
 		msg = append([]byte{byte(msgID >> 8), byte(msgID)}, payload...)
 	}
+	topic = strings.TrimPrefix(topic, c.TopicPrefix)
 	msg = append([]byte(topic), msg...)
 	msg = append([]byte{byte(len(topic) >> 8), byte(len(topic))}, msg...)
-	// log.Println("-->pub", c.ID, msgID, topic, string(payload))
 	return c.writePacket(header, msg)
 }
 

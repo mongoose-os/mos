@@ -3,6 +3,7 @@ package mqtt
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"testing"
@@ -10,6 +11,18 @@ import (
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 )
+
+func mqttexpect(t *testing.T, c chan MQTT.Message, topic, payload string) {
+	select {
+	case m := <-c:
+		// log.Println("exp", topic, "->", string(m.Payload()))
+		if m.Topic() != topic || string(m.Payload()) != payload {
+			t.Fatal(m)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timeout")
+	}
+}
 
 func TestNoAuthConnectDisconnect(t *testing.T) {
 	ln, err := net.Listen("tcp", ":0")
@@ -89,24 +102,10 @@ func TestSimplePubSub(t *testing.T) {
 	}
 
 	c.Publish("test/foo", 0, false, "msg1").Wait()
-	select {
-	case m := <-msgs:
-		if m.Topic() != "test/foo" || string(m.Payload()) != "msg1" {
-			t.Fatal(m)
-		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("timeout")
-	}
+	mqttexpect(t, msgs, "test/foo", "msg1")
 
 	c.Publish("test/baz", 0, false, "msg2").Wait()
-	select {
-	case m := <-msgs:
-		if m.Topic() != "test/baz" || string(m.Payload()) != "msg2" {
-			t.Fatal(m)
-		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("timeout")
-	}
+	mqttexpect(t, msgs, "test/baz", "msg2")
 
 	if !c.Unsubscribe("test/baz").WaitTimeout(time.Second) {
 		t.Fatal()
@@ -139,7 +138,7 @@ func TestQoS1(t *testing.T) {
 	msgc := make(chan MQTT.Message, 1)
 	if token := c.Subscribe("test/foo", 1, func(c MQTT.Client, m MQTT.Message) {
 		msgc <- m
-	}); token.Wait() && token.Error() != nil {
+	}); token.WaitTimeout(time.Millisecond*200) && token.Error() != nil {
 		t.Fatal(token.Error())
 	}
 	c.Publish("test/foo", 1, false, "hello world").Wait()
@@ -184,15 +183,7 @@ func TestWill(t *testing.T) {
 		}
 		c.Disconnect(250)
 	}()
-
-	select {
-	case m := <-msgc:
-		if m.Topic() != "test/bye" || string(m.Payload()) != "goodbye!" {
-			t.Fatal(m)
-		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("timeout")
-	}
+	mqttexpect(t, msgc, "test/bye", "goodbye!")
 }
 
 func TestWebsocket(t *testing.T) {
@@ -222,30 +213,47 @@ func TestHooks(t *testing.T) {
 	}
 	defer ln.Close()
 	broker := NewBroker(&Hooks{
-		Publish: func(id, user, passwd, topic string, payload []byte) (string, []byte, error) {
-			if topic == "foo" {
-				return "test/foo", bytes.ToUpper(payload), nil
-			}
-			return topic, payload, nil
+		Auth: func(c *Client) error {
+			c.TopicPrefix = c.Username + "/"
+			return nil
 		},
-		Subscribe: func(c *Client, topic string) (string, error) {
+		Publish: func(c *Client, topic string, payload []byte) error {
 			if topic == "bar" {
-				return "test/bar", nil
+				upper := bytes.ToUpper(payload)
+				for i := range upper {
+					payload[i] = upper[i]
+				}
 			}
-			return topic, nil
+			// bytes.ToUpper(payload)
+			return nil
+		},
+		Subscribe: func(c *Client, topic string) error {
+			if topic == "baz" {
+				return fmt.Errorf("nope!")
+			}
+			return nil
 		},
 	})
 	go broker.Run(ln)
 
 	opts := MQTT.NewClientOptions().AddBroker("tcp://" + ln.Addr().String())
+	opts.SetUsername("coolio")
 	c := MQTT.NewClient(opts)
 	if token := c.Connect(); token.Wait() && token.Error() != nil {
 		t.Fatal(token.Error())
 	}
 	defer c.Disconnect(250)
 
+	opts2 := MQTT.NewClientOptions().AddBroker("tcp://" + ln.Addr().String())
+	opts2.SetUsername("bobby")
+	c2 := MQTT.NewClient(opts2)
+	if token := c2.Connect(); token.Wait() && token.Error() != nil {
+		t.Fatal(token.Error())
+	}
+	defer c2.Disconnect(250)
+
 	msgc := make(chan MQTT.Message, 2)
-	if token := c.Subscribe("test/foo", 0, func(c MQTT.Client, m MQTT.Message) {
+	if token := c.Subscribe("foo", 0, func(c MQTT.Client, m MQTT.Message) {
 		msgc <- m
 	}); token.Wait() && token.Error() != nil {
 		t.Fatal(token.Error())
@@ -256,25 +264,12 @@ func TestHooks(t *testing.T) {
 		t.Fatal(token.Error())
 	}
 
-	c.Publish("foo", 0, false, "hello world").Wait()
-	select {
-	case m := <-msgc:
-		if m.Topic() != "test/foo" || string(m.Payload()) != "HELLO WORLD" {
-			t.Fatal(m)
-		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("timeout")
-	}
+	c2.Publish("foo", 0, false, "must not be received by c").Wait()
+	c.Publish("foo", 1, false, "hello world").Wait()
+	mqttexpect(t, msgc, "foo", "hello world")
 
-	c.Publish("test/bar", 0, false, "hello world").Wait()
-	select {
-	case m := <-msgc:
-		if m.Topic() != "bar" || string(m.Payload()) != "hello world" {
-			t.Fatal(m)
-		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("timeout")
-	}
+	c.Publish("bar", 0, false, "hello world").Wait()
+	mqttexpect(t, msgc, "bar", "HELLO WORLD")
 }
 
 func BenchmarkPublishSubscribe(b *testing.B) {
