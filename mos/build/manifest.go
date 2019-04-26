@@ -69,6 +69,12 @@ type FWAppManifest struct {
 	CDefs          map[string]string  `yaml:"cdefs,omitempty" json:"cdefs"`
 	Tags           []string           `yaml:"tags,omitempty" json:"tags"`
 
+	// The following two are mostly intended to be used in conds.
+	// If mos encounters a manifest with this key during build, it will print the text and continue.
+	Warning string `yaml:"warning,omitempty" json:"warning"`
+	// If mos encounters a manifest with this key during build, it will print the text and fail the build.
+	Error string `yaml:"error,omitempty" json:"error"`
+
 	LibsVersion       string `yaml:"libs_version,omitempty" json:"libs_version"`
 	ModulesVersion    string `yaml:"modules_version,omitempty" json:"modules_version"`
 	MongooseOsVersion string `yaml:"mongoose_os_version,omitempty" json:"mongoose_os_version"`
@@ -83,6 +89,10 @@ type FWAppManifest struct {
 	LibsHandled []FWAppManifestLibHandled `yaml:"libs_handled,omitempty" json:"libs_handled"`
 
 	InitDeps []string `yaml:"init_deps,omitempty" json:"init_deps"`
+
+	// Origin of this manifest - file name or something else that will help user identify the location.
+	// This field is not persisted and is only kept at runtime.
+	Origin string `yaml:"-" json:"-"`
 }
 
 // ConfigSchemaItem represents a single config schema item, like this:

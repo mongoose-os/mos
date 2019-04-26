@@ -1,0 +1,1 @@
+testset_09_error/test_01_error_app/app/mos.yml: BOOM

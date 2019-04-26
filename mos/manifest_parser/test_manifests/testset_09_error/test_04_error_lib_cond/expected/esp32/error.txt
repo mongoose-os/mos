@@ -1,0 +1,1 @@
+testset_09_error/test_04_error_lib_cond/libs/core/mos.yml cond 1: Unsupported platform

@@ -1,0 +1,11 @@
+author: mongoose-os
+description: MyCoreLib
+type: lib
+version: 1.0
+
+conds:
+  - when: mos.platform != "esp8266"
+    apply:
+      error: Unsupported platform
+
+manifest_version: 2019-04-26

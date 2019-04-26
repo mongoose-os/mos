@@ -1,0 +1,7 @@
+author: mongoose-os
+description: My app
+version: 1.0
+
+# Core dep is added implicitly
+
+manifest_version: 2019-04-26

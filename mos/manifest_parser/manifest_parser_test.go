@@ -25,6 +25,7 @@ const (
 	finalManifestName  = "mos_final.yml"
 	depsInitName       = "mgos_deps_init.c"
 	testDescriptorName = "test_desc.yml"
+	errorTextFile      = "error.txt"
 
 	testPrefix    = "test_"
 	testSetPrefix = "testset_"
@@ -140,7 +141,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 		logWriter := &bytes.Buffer{}
 		interp := interpreter.NewInterpreter(newMosVars())
 
-		t.Logf("testing %q for %q", appPath, platform)
+		t.Logf("testing %q for %q %s descrFilename", appPath, platform, descrFilename)
 
 		manifest, _, err := ReadManifestFinal(
 			filepath.Join(appPath, appDir), &ManifestAdjustments{
@@ -149,8 +150,25 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			}, logWriter, interp,
 			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{}}, true, descr.PreferBinaryLibs,
 		)
+
+		expectedErrorFilename := filepath.Join(appPath, expectedDir, platform, errorTextFile)
+		expectedErrorBytes, _ := ioutil.ReadFile(expectedErrorFilename)
+		expectedError := strings.TrimSpace(string(expectedErrorBytes))
+
 		if err != nil {
+			if expectedError != "" {
+				if strings.Contains(err.Error(), expectedError) {
+					continue
+				} else {
+					return errors.Errorf("%s: expected error message to contain %q but it didn't (the message was: %q); see %s",
+						appPath, expectedError, err.Error(), expectedErrorFilename)
+				}
+			}
 			return errors.Trace(err)
+		} else {
+			if expectedError != "" {
+				return errors.Errorf("%s: expected parsing to fail but it didn't", appPath)
+			}
 		}
 
 		depsInitData, err := getDepsInitCCode(manifest)
@@ -187,8 +205,6 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			if err = compareFiles(actualFilename, expectedFilename); err != nil {
 				return errors.Trace(err)
 			}
-		} else {
-			t.Logf("no expected init deps %s", expectedFilename)
 		}
 	}
 

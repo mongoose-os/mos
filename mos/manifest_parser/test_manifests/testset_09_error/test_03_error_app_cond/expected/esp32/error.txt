@@ -1,0 +1,1 @@
+testset_09_error/test_03_error_app_cond/app/mos.yml cond 1: Unsupported platform

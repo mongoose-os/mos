@@ -41,8 +41,9 @@ const (
 	// - 2018-08-13: added support for non-GitHub Git repos
 	// - 2018-08-29: added support for adding libs under conds
 	// - 2018-09-24: added special handling of the "boards" lib
+	// - 2019-04-26: added warning and error
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2018-09-24"
+	maxManifestVersion = "2019-04-26"
 
 	depsApp = "app"
 
@@ -836,6 +837,17 @@ func ReadManifest(
 	return manifest, mtime, nil
 }
 
+func checkWarningAndError(manifest *build.FWAppManifest) error {
+	if manifest.Error != "" {
+		ourutil.Reportf("Error: %s: %s", manifest.Origin, manifest.Error)
+		return errors.Errorf("%s: %s", manifest.Origin, manifest.Error)
+	}
+	if manifest.Warning != "" {
+		ourutil.Reportf("Warning: %s: %s", manifest.Origin, manifest.Warning)
+	}
+	return nil
+}
+
 // ReadManifestFile reads single manifest file (which can be either "main" app
 // or lib manifest, or some arch-specific adjustment manifest)
 func ReadManifestFile(
@@ -862,6 +874,8 @@ func ReadManifestFile(
 		return nil, time.Time{}, errors.Annotatef(err, "parsing manifest %q", manifestFullName)
 	}
 
+	manifest.Origin = manifestFullName
+
 	if manifest.ManifestVersion != "" {
 		// Check if manifest manifest version is supported by the mos tool
 		if manifest.ManifestVersion < minManifestVersion {
@@ -881,6 +895,10 @@ func ReadManifestFile(
 		return nil, time.Time{}, errors.Errorf(
 			"manifest version is missing in %q", manifestFullName,
 		)
+	}
+
+	if err = checkWarningAndError(&manifest); err != nil {
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	for i, _ := range manifest.Modules {
@@ -1161,7 +1179,7 @@ func ExpandManifestConds(
 		return errors.Trace(err)
 	}
 
-	for _, cond := range conds {
+	for i, cond := range conds {
 		res, err := interp.EvaluateExprBool(cond.When)
 		if err != nil {
 			return errors.Annotatef(err, "evaluating cond %q expression '%s'", "when", cond.When)
@@ -1180,6 +1198,7 @@ func ExpandManifestConds(
 
 		// Apply submanifest if present
 		if cond.Apply != nil {
+			cond.Apply.Origin = fmt.Sprintf("%s cond %d", dstManifest.Origin, i+1)
 			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", "", interp, &extendManifestOptions{
 				skipFailedExpansions: true,
 			}); err != nil {
@@ -1227,6 +1246,14 @@ func extendManifest(
 
 	if opts == nil {
 		opts = &extendManifestOptions{}
+	}
+
+	if err := checkWarningAndError(m1); err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := checkWarningAndError(m2); err != nil {
+		return errors.Trace(err)
 	}
 
 	// Extend sources

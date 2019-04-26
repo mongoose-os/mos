@@ -1,0 +1,1 @@
+testset_09_error/test_02_error_lib/libs/core/mos.yml: The core is rotten
