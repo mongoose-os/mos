@@ -95,6 +95,7 @@ func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
 			value int64
 		}{
 			{"flash_crypt_cnt", 1},
+			{"flash_crypt_cnt.WD", 1}, // write-protect the counter so encryption cannot be disabled.
 			{"JTAG_disable", 1},
 			{"download_dis_encrypt", 1},
 			{"download_dis_decrypt", 1},
