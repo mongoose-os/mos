@@ -2,6 +2,7 @@ package moscommon
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	flag "github.com/spf13/pflag"
@@ -46,7 +47,23 @@ func GetFilesystemStagingDir(buildDir string) string {
 }
 
 func GetPlatformMakefilePath(mosDir, platform string) string {
-	return filepath.Join(mosDir, "fw", "platforms", platform, "Makefile.build")
+	// New repo layout introduced on 2019/04/29, current release is 2.13.1.
+	oldPath := filepath.Join(mosDir, "fw", "platforms", platform, "Makefile.build")
+	newPath := filepath.Join(mosDir, "platforms", platform, "Makefile.build")
+	if _, err := os.Stat(newPath); err == nil {
+		return newPath
+	}
+	return oldPath
+}
+
+func GetSdkVersionFile(mosDir, platform string) string {
+	// New repo layout introduced on 2019/04/29, current release is 2.13.1.
+	oldPath := filepath.Join(mosDir, "fw", "platforms", platform, "sdk.version")
+	newPath := filepath.Join(mosDir, "platforms", platform, "sdk.version")
+	if _, err := os.Stat(newPath); err == nil {
+		return newPath
+	}
+	return oldPath
 }
 
 func GetBuildCtxFilePath(buildDir string) string {
@@ -103,8 +120,4 @@ func GetBinaryLibFilePath(buildDir, name, variant, version string) string {
 		bld = GetObjectDir(buildDir)
 	}
 	return filepath.Join(bld, fmt.Sprintf("lib%s-%s-%s.a", name, variant, version))
-}
-
-func GetSdkVersionFile(mosDir, platform string) string {
-	return filepath.Join(mosDir, "fw", "platforms", platform, "sdk.version")
 }

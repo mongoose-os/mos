@@ -240,7 +240,6 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 
 	var errs error
 	for k, v := range map[string]string{
-		"MGOS_PATH":      dockerMgosPath,
 		"PLATFORM":       manifest.Platform,
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
@@ -278,9 +277,9 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 		return errors.Trace(err)
 	}
 
+	makeFilePath := moscommon.GetPlatformMakefilePath(fp.MosDirEffective, manifest.Platform)
 	makeVarsFileSupported := false
-	if data, err := ioutil.ReadFile(
-		moscommon.GetPlatformMakefilePath(fp.MosDirEffective, manifest.Platform)); err == nil {
+	if data, err := ioutil.ReadFile(makeFilePath); err == nil {
 		makeVarsFileSupported = bytes.Contains(data, []byte("MGOS_VARS_FILE"))
 	}
 
@@ -316,6 +315,8 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 		mp.addMountPoint(appMountPath, dockerAppPath)
 		mp.addMountPoint(fp.MosDirEffective, dockerMgosPath)
 		mp.addMountPoint(fp.MosDirEffective, ourutil.GetPathForDocker(fp.MosDirEffective))
+
+		manifest.BuildVars["MGOS_PATH"] = ourutil.GetPathForDocker(fp.MosDirEffective)
 
 		// Mount build dir
 		mp.addMountPoint(buildDirAbs, ourutil.GetPathForDocker(buildDirAbs))
@@ -396,6 +397,7 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 
 		makeArgs, err := getMakeArgs(
 			filepath.ToSlash(fmt.Sprintf("%s%s", dockerAppPath, appSubdir)),
+			makeFilePath,
 			bParams.BuildTarget,
 			buildDirAbs,
 			manifest,
@@ -420,7 +422,14 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 
 		manifest.BuildVars["MGOS_PATH"] = fp.MosDirEffective
 
-		makeArgs, err := getMakeArgs(appPath, bParams.BuildTarget, buildDirAbs, manifest, makeVarsFileSupported)
+		makeArgs, err := getMakeArgs(
+			appPath,
+			makeFilePath,
+			bParams.BuildTarget,
+			buildDirAbs,
+			manifest,
+			makeVarsFileSupported,
+		)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -468,7 +477,7 @@ func isInDockerToolbox() bool {
 	return os.Getenv("DOCKER_HOST") != ""
 }
 
-func getMakeArgs(dir, target, buildDirAbs string, manifest *build.FWAppManifest, makeVarsFileSupported bool) ([]string, error) {
+func getMakeArgs(dir, makeFilePath, target, buildDirAbs string, manifest *build.FWAppManifest, makeVarsFileSupported bool) ([]string, error) {
 	j := *buildParalellism
 	if j == 0 {
 		j = runtime.NumCPU()
@@ -489,10 +498,7 @@ func getMakeArgs(dir, target, buildDirAbs string, manifest *build.FWAppManifest,
 	makeArgs := []string{
 		"-j", fmt.Sprintf("%d", j),
 		"-C", dir,
-		// NOTE that we use path instead of filepath, because it'll run in a docker
-		// container, and thus will use Linux path separator
-		"-f", ourutil.GetPathForDocker(moscommon.GetPlatformMakefilePath(
-			manifest.BuildVars["MGOS_PATH"], manifest.BuildVars["PLATFORM"])),
+		"-f", ourutil.GetPathForDocker(makeFilePath),
 		target,
 	}
 
