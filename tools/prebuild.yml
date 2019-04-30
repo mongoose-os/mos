@@ -5,7 +5,6 @@
     - git@github.com:cesanta/mos-libs.git/cron
     - git@github.com:cesanta/mos-libs.git/crontab
     - git@github.com:cesanta/mos-libs.git/dash
-    - git@github.com:cesanta/mos-libs.git/vfs-dev-encr
   out:
     - github:
         repo: mongoose-os-libs/%(name)s
