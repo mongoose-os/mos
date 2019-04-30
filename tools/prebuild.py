@@ -175,7 +175,7 @@ def MakeAsset(an, asf, tmp_dir):
     return [an, af]
 
 
-def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
+def ProcessLoc(e, loc, args):
     parts = loc.split("/")
     pre, name, i, repo_loc, repo_subdir = "", "", 0, loc, ""
     for p in parts:
@@ -187,7 +187,7 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
             repo_subdir = "/".join(parts[i:])
             name = p[:-4]
             break
-    repo_dir = os.path.join(tmp_dir, pre, name)
+    repo_dir = os.path.join(args.tmp_dir, pre, name)
     if os.path.exists(repo_loc):
         rl = repo_loc + ("/" if not repo_loc.endswith("/") else "")
         os.makedirs(repo_dir, exist_ok=True)
@@ -217,16 +217,19 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
     # Build all the variants, collect assets
     for v in e["variants"]:
         logging.info(" %s %s", tgt_name, v["name"])
-        mos_cmd = [mos, "build", "-C", tgt_dir, "--local", "--clean"]
-        if mos_repo_dir:
-            mos_cmd.append("--repo=%s" % mos_repo_dir)
-        if deps_dir:
-            mos_cmd.append("--deps-dir=%s" % deps_dir)
-        if binary_libs_dir:
-            mos_cmd.append("--binary-libs-dir=%s" % binary_libs_dir)
-        if libs_dir:
-            mos_cmd.append("--libs-dir=%s" % libs_dir)
-        if no_libs_update:
+        mos_cmd = [args.mos, "build", "-C", tgt_dir, "--local", "--clean"]
+        if args.repo_dir:
+            mos_cmd.append("--repo=%s" % args.repo_dir)
+        if args.deps_dir:
+            mos_cmd.append("--deps-dir=%s" % args.deps_dir)
+        if args.binary_libs_dir:
+            mos_cmd.append("--binary-libs-dir=%s" % args.binary_libs_dir)
+        if args.lib:
+            for lib in args.lib:
+                mos_cmd.append("--lib=%s" % lib)
+        if args.libs_dir:
+            mos_cmd.append("--libs-dir=%s" % args.libs_dir)
+        if args.no_libs_update:
             mos_cmd.append("--no-libs-update")
         mos_cmd.append("--platform=%s" % v["platform"])
         for bvk, bvv in sorted(list(common.get("build_vars", {}).items()) +
@@ -242,19 +245,19 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
         if mos_args:
             mos_cmd.extend(mos_args)
         RunCmd(mos_cmd)
-        bl = os.path.join(tmp_dir, "%s-%s-build.log" % (tgt_name, v["name"]))
+        bl = os.path.join(args.tmp_dir, "%s-%s-build.log" % (tgt_name, v["name"]))
         logging.info("  Saving build log to %s", bl)
         shutil.copy(os.path.join(tgt_dir, "build", "build.log"), bl)
         # Ok, what did we just build?
         with open(os.path.join(tgt_dir, "mos.yml")) as f:
             m = yaml.load(f)
             if m.get("type", "") == "lib":
-                assets.append(MakeAsset("lib%s-%s.a" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "lib.a"), tmp_dir))
+                assets.append(MakeAsset("lib%s-%s.a" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "lib.a"), args.tmp_dir))
             else:
-                assets.append(MakeAsset("%s-%s.zip" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "fw.zip"), tmp_dir))
+                assets.append(MakeAsset("%s-%s.zip" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "fw.zip"), args.tmp_dir))
                 for fn in glob.glob(os.path.join(tgt_dir, "build", "objs", "*.elf")):
                     an = os.path.basename(fn).replace(tgt_name, "%s-%s" % (tgt_name, v["name"]))
-                    assets.append(MakeAsset(an, fn, tmp_dir))
+                    assets.append(MakeAsset(an, fn, args.tmp_dir))
     outs = e.get("out", [])
     if not outs and loc.startswith("https://github.com/"):
         outs = [{"github": {"repo": "%s/%s" % (pre, tgt_name)}}]
@@ -268,14 +271,14 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
                 "repo_subdir": repo_subdir,
             }
 
-            if not gh_token_file:
+            if not args.gh_token_file:
                 logging.info("Token file not set, GH uploads disabled")
                 return
-            if not os.path.isfile(gh_token_file):
-                logging.error("Token file %s does not exist", gh_token_file)
+            if not os.path.isfile(args.gh_token_file):
+                logging.error("Token file %s does not exist", args.gh_token_file)
                 exit(1)
-            logging.debug("Using token file at %s", gh_token_file)
-            with open(gh_token_file, "r") as f:
+            logging.debug("Using token file at %s", args.gh_token_file)
+            with open(args.gh_token_file, "r") as f:
                 token = f.read().strip()
             i = 1
             while True:
@@ -286,9 +289,9 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
                         # So we try once, try twice and on the third time we re-create the release
                         # even if it exists.
                         re_create = (i > 2)
-                        CreateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir, re_create=re_create)
+                        CreateGitHubRelease(gh_out, args.gh_release_tag, token, args.tmp_dir, re_create=re_create)
                     else:
-                        UpdateGitHubRelease(gh_out, gh_release_tag, token, tmp_dir)
+                        UpdateGitHubRelease(gh_out, args.gh_release_tag, token, args.tmp_dir)
                     break
                 except (Exception, KeyboardInterrupt) as e:
                     logging.exception("Exception (attempt %d): %s", i, e)
@@ -299,16 +302,16 @@ def ProcessLoc(e, loc, mos, mos_repo_dir, deps_dir, binary_libs_dir, libs_dir, t
                         if not isinstance(e, KeyboardInterrupt) and gh_out.get("update"):
                             logging.error("*BUG* Phantom asset (probably), nuking release")
                             rel, ok = github_api.CallReleasesAPI(gh_out["repo"], token,
-                                                                 releases_url=("/tags/%s" % gh_release_tag))
+                                                                 releases_url=("/tags/%s" % args.gh_release_tag))
                             if ok:
                                 DeleteRelease(gh_out["repo"], token, rel["id"])
                         raise
 
 
-def ProcessEntry(e, mos, repo_dir, deps_dir, binary_libs_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file):
+def ProcessEntry(e, args):
     for loc in e.get("locations", []) + [e.get("location")]:
         if loc:
-            ProcessLoc(e, loc, mos, repo_dir, deps_dir, binary_libs_dir, libs_dir, tmp_dir, no_libs_update, gh_release_tag, gh_token_file)
+            ProcessLoc(e, loc, args)
 
 
 if __name__ == "__main__":
@@ -318,6 +321,7 @@ if __name__ == "__main__":
     parser.add_argument("--tmp-dir", type=str, default=os.path.join(os.getenv("TMPDIR", "/tmp"), "mos_prebuild"))
     parser.add_argument("--deps-dir", type=str)
     parser.add_argument("--binary-libs-dir", type=str)
+    parser.add_argument("--lib", type=str, action="append")
     parser.add_argument("--libs-dir", type=str)
     parser.add_argument("--repo-dir", type=str)
     parser.add_argument("--no-libs-update", action="store_true")
@@ -333,6 +337,5 @@ if __name__ == "__main__":
         cfg = yaml.load(f)
 
     for e in cfg:
-        ProcessEntry(e, args.mos, args.repo_dir, args.deps_dir, args.binary_libs_dir, args.libs_dir, args.tmp_dir,
-                args.no_libs_update, args.gh_release_tag, args.gh_token_file)
+        ProcessEntry(e, args)
     logging.info("All done")
