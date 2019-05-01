@@ -2,12 +2,13 @@ package frame
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"time"
 
+	"github.com/cesanta/errors"
 	"github.com/mongoose-os/mos/common/limitedwriter"
-	"github.com/mongoose-os/mos/common/ourjson"
 )
 
 // Frame is a basic data structure that contains request or response.
@@ -30,16 +31,16 @@ type Frame struct {
 	ID int64 `json:"id,omitempty"`
 
 	// Request
-	Method string             `json:"method,omitempty"`
-	Params ourjson.RawMessage `json:"params,omitempty"`
+	Method string          `json:"method,omitempty"`
+	Params json.RawMessage `json:"params,omitempty"`
 	// Timestamp (as number of seconds since Epoch) of when the command result is no longer relevant.
 	Deadline int64 `json:"deadline,omitempty"`
 	// Number of seconds after reception of the command after when the command result is no longer relevant.
 	Timeout int64 `json:"timeout,omitempty"`
 
 	// Response
-	Result ourjson.RawMessage `json:"result,omitempty"`
-	Error  *Error             `json:"error,omitempty"`
+	Result json.RawMessage `json:"result,omitempty"`
+	Error  *Error          `json:"error,omitempty"`
 
 	Trace *Trace `json:"trace,omitempty"`
 
@@ -51,7 +52,7 @@ type Frame struct {
 	// Send no response to this frame
 	NoResponse bool `json:"nr,omitempty"`
 
-	DeprecatedArgs ourjson.RawMessage `json:"args,omitempty"`
+	DeprecatedArgs json.RawMessage `json:"args,omitempty"`
 }
 
 type Error struct {
@@ -60,9 +61,9 @@ type Error struct {
 }
 
 type Command struct {
-	Cmd  string             `json:"cmd"`
-	ID   int64              `json:"id,omitempty"`
-	Args ourjson.RawMessage `json:"args,omitempty"`
+	Cmd  string          `json:"cmd"`
+	ID   int64           `json:"id,omitempty"`
+	Args json.RawMessage `json:"args,omitempty"`
 
 	Auth *FrameAuth `json:"auth,omitempty"`
 
@@ -101,7 +102,7 @@ type Response struct {
 	StatusMsg string `json:"status_msg,omitempty"`
 
 	// Application defined response payload
-	Response ourjson.RawMessage `json:"resp,omitempty"`
+	Response json.RawMessage `json:"resp,omitempty"`
 }
 
 // Auto-generated uids should be "large but not ginormous".
@@ -214,7 +215,7 @@ func NewResponseFrame(src string, dst string, key string, resp *Response) *Frame
 }
 
 func NewCommandFromFrame(f *Frame) *Command {
-	var p ourjson.RawMessage
+	var p json.RawMessage
 	if f.Params != nil {
 		p = f.Params
 	} else {
@@ -240,5 +241,9 @@ func NewResponseFromFrame(f *Frame) *Response {
 }
 
 func MarshalJSON(f *Frame) ([]byte, error) {
-	return ourjson.MarshalJSONNoHTMLEscape(f)
+	w := bytes.NewBuffer(nil)
+	e := json.NewEncoder(w)
+	e.SetEscapeHTML(false)
+	err := e.Encode(f)
+	return w.Bytes(), errors.Trace(err)
 }
