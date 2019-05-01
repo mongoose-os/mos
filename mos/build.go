@@ -14,7 +14,7 @@ import (
 	"unicode"
 
 	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/common/paths"

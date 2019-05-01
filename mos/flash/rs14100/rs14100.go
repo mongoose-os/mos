@@ -12,7 +12,7 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dap"
 	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dp"

@@ -16,13 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/lptr"
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/cesanta/errors"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/fs"
-	"github.com/cesanta/errors"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )
 
@@ -145,7 +144,7 @@ func GeneratePrivateKey(ctx context.Context, keyType CertType, useATCA bool, dev
 		}
 		ourutil.Reportf("Generating new private key in slot %d", ATCASlot)
 		if err = devConn.Call(ctx, "ATCA.GenKey", &atca.GenKeyArgs{
-			Slot: lptr.Int64(int64(ATCASlot)),
+			Slot: int64(ATCASlot),
 		}, nil); err != nil {
 			return nil, nil, nil, errors.Annotatef(err, "failed to generate private key in slot %d", ATCASlot)
 		}

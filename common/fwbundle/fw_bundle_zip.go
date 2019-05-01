@@ -9,7 +9,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	zip "github.com/mongoose-os/mos/common/ourzip"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"

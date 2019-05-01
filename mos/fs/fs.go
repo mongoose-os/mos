@@ -10,12 +10,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mongoose-os/mos/common/lptr"
-	"github.com/mongoose-os/mos/common/ourutil"
-	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )
 
@@ -85,8 +84,8 @@ func Ls(ctx context.Context, devConn dev.DevConn) error {
 
 type GetArgs struct {
 	Filename *string `json:"filename,omitempty"`
-	Len      *int64  `json:"len,omitempty"`
-	Offset   *int64  `json:"offset,omitempty"`
+	Len      int64   `json:"len"`
+	Offset   int64   `json:"offset"`
 }
 
 type GetResult struct {
@@ -108,8 +107,8 @@ func GetFile(ctx context.Context, devConn dev.DevConn, name string) (string, err
 		var chunk GetResult
 		if err := devConn.Call(ctx2, "FS.Get", &GetArgs{
 			Filename: &name,
-			Offset:   lptr.Int64(offset),
-			Len:      lptr.Int64(int64(*flags.ChunkSize)),
+			Offset:   offset,
+			Len:      int64(*flags.ChunkSize),
 		}, &chunk); err != nil {
 			attempts -= 1
 			if attempts > 0 {
