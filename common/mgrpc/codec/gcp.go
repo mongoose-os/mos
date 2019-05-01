@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/mgrpc/frame"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
 	"cloud.google.com/go/pubsub"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"

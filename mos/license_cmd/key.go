@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/common/paths"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"

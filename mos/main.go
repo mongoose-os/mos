@@ -15,7 +15,7 @@ import (
 
 	"context"
 
-	"github.com/mongoose-os/mos/common/go/pflagenv"
+	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/mos/aws"
 	"github.com/mongoose-os/mos/mos/azure"
 	"github.com/mongoose-os/mos/mos/clone"

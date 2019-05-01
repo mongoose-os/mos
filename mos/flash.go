@@ -11,8 +11,8 @@ import (
 
 	"context"
 
-	"github.com/mongoose-os/mos/common/go/fwbundle"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/devutil"
 	"github.com/mongoose-os/mos/mos/flags"

@@ -9,9 +9,9 @@ all: build
 
 generate: version/version.go
 	@which go-bindata > /dev/null || \
-	  go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
+	  go install github.com/mongoose-os/mos/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@which go-bindata-assetfs > /dev/null || \
-	  go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+	  go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate ./...
 
 version/version.go version/version.json:
@@ -26,7 +26,7 @@ version/version.go version/version.json:
 	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > pkg.version; \
 	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > pkg.build_id; \
 	} || true
-	../common/tools/fw_meta.py gen_build_info \
+	../tools/fw_meta.py gen_build_info \
 		--version=`[ -f pkg.version ] && cat pkg.version` \
 		--id=`[ -f pkg.build_id ] && cat pkg.build_id` \
 		--tag_as_version=true \
@@ -48,7 +48,7 @@ linux: generate
 	  docker.io/mgos/gobuild32 \
 	    -tags 'netgo' \
 	    -o /out/downloads/mos/linux/mos -tags no_libudev --ldflags '-extldflags "-static"' \
-	    cesanta.com/mos
+	    github.com/mongoose-os/mos/mos
 
 mac: generate
 	brew install coreutils libftdi libusb-compat pkg-config
@@ -62,7 +62,7 @@ win: generate
 	  --user $(shell id -u):$(shell id -g) \
 	docker.io/mgos/gobuild-mingw \
 	  bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc \
-	           go build -v -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
+	           go build -v -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" github.com/mongoose-os/mos/mos'
 
 # Set up GOPATH on the side and build there. Because Go is awesome.
 downloads: clean-version version/version.go
@@ -70,10 +70,10 @@ downloads: clean-version version/version.go
 	  { echo Can only build downloads on a Mac, this is `uname -s`; \
 	   exit 1; }
 	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src
-	rsync -a $(CURDIR)/../ $(TMP_GOPATH)/src/cesanta.com/
+	rsync -a $(CURDIR)/../ $(TMP_GOPATH)/src/github.com/mongoose-os/mos/
 	cd $(TMP_GOPATH)/src/cesanta.com && GOPATH=$(TMP_GOPATH) govendor sync -v
-	rsync -a --delete $(TMP_GOPATH)/src/cesanta.com/vendor/ $(CURDIR)/../vendor/
-	cd $(TMP_GOPATH)/src/cesanta.com/mos && \
+	rsync -a --delete $(TMP_GOPATH)/src/github.com/mongoose-os/mos/vendor/ $(CURDIR)/../vendor/
+	cd $(TMP_GOPATH)/src/github.com/mongoose-os/mos/mos && \
 	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
 
 all-downloads: mac linux win

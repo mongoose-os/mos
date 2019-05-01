@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/limitedwriter"
-	"github.com/mongoose-os/mos/common/go/ourjson"
+	"github.com/mongoose-os/mos/common/limitedwriter"
+	"github.com/mongoose-os/mos/common/ourjson"
 )
 
 // Frame is a basic data structure that contains request or response.

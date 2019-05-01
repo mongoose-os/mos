@@ -18,9 +18,9 @@ import (
 
 	"context"
 
-	"github.com/mongoose-os/mos/common/go/multierror"
-	"github.com/mongoose-os/mos/common/go/ourio"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/multierror"
+	"github.com/mongoose-os/mos/common/ourio"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/interpreter"

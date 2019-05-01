@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/mgrpc/codec"
+	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/watson"

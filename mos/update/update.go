@@ -17,9 +17,9 @@ import (
 
 	"context"
 
-	"github.com/mongoose-os/mos/common/go/ourgit"
-	"github.com/mongoose-os/mos/common/go/ourio"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourgit"
+	"github.com/mongoose-os/mos/common/ourio"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/common/paths"

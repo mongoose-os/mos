@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/cesanta/errors"

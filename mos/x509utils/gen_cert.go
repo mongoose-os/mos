@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/lptr"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/lptr"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"

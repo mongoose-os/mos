@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/fwbundle"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/mongoose-os/mos/mos/flash/esp"

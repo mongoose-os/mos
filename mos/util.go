@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourutil"
 )
 
 func reportf(f string, args ...interface{}) {

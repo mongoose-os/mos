@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/mgrpc/frame"
-	"github.com/mongoose-os/mos/common/go/ourjson"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
+	"github.com/mongoose-os/mos/common/ourjson"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
