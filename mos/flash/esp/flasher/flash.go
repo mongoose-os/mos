@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/common/go/fwbundle"
-	moscommon "cesanta.com/mos/common"
-	"cesanta.com/mos/flash/common"
-	"cesanta.com/mos/flash/esp"
-	"cesanta.com/mos/flash/esp32"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
+	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/flash/esp"
+	"github.com/mongoose-os/mos/mos/flash/esp32"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"cesanta.com/common/go/ourgit"
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/flags"
-	"cesanta.com/mos/mosgit"
+	"github.com/mongoose-os/mos/common/go/ourgit"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/mosgit"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"

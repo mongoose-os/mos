@@ -7,7 +7,7 @@ import (
 	"flag"
 	"runtime"
 
-	"cesanta.com/common/go/ourgit"
+	"github.com/mongoose-os/mos/common/go/ourgit"
 	"github.com/golang/glog"
 )
 

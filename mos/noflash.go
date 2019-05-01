@@ -5,7 +5,7 @@ package main
 import (
 	"context"
 
-	"cesanta.com/mos/dev"
+	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/cesanta/errors"
 )
 

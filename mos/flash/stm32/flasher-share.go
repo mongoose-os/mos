@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/common/go/fwbundle"
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/flash/common"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

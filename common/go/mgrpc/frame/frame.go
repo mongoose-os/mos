@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"time"
 
-	"cesanta.com/common/go/limitedwriter"
-	"cesanta.com/common/go/ourjson"
+	"github.com/mongoose-os/mos/common/go/limitedwriter"
+	"github.com/mongoose-os/mos/common/go/ourjson"
 )
 
 // Frame is a basic data structure that contains request or response.

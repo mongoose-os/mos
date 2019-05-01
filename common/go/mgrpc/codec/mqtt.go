@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"cesanta.com/common/go/mgrpc/frame"
+	"github.com/mongoose-os/mos/common/go/mgrpc/frame"
 
 	"github.com/cesanta/errors"
 	mqtt "github.com/eclipse/paho.mqtt.golang"

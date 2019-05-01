@@ -7,8 +7,8 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 
-	"cesanta.com/mos/flash/common"
-	"cesanta.com/mos/flash/common/cmsis-dap/dp"
+	"github.com/mongoose-os/mos/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dp"
 )
 
 type MemAPReg uint8

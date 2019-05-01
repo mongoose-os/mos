@@ -3,8 +3,8 @@ package devutil
 import (
 	"github.com/cesanta/errors"
 
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/flags"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/flags"
 )
 
 var defaultPort string

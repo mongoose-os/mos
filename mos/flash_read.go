@@ -9,11 +9,11 @@ import (
 
 	"context"
 
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/devutil"
-	"cesanta.com/mos/flags"
-	"cesanta.com/mos/flash/esp"
-	espFlasher "cesanta.com/mos/flash/esp/flasher"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/devutil"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/flash/esp"
+	espFlasher "github.com/mongoose-os/mos/mos/flash/esp/flasher"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

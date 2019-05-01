@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"cesanta.com/mos/common/paths"
+	"github.com/mongoose-os/mos/mos/common/paths"
 
 	"github.com/cesanta/errors"
 )

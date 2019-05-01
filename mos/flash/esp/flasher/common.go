@@ -1,8 +1,8 @@
 package flasher
 
 import (
-	"cesanta.com/mos/flash/esp"
-	"cesanta.com/mos/flash/esp/rom_client"
+	"github.com/mongoose-os/mos/mos/flash/esp"
+	"github.com/mongoose-os/mos/mos/flash/esp/rom_client"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

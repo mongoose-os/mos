@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flags"
-	"cesanta.com/mos/version"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/version"
 
-	"cesanta.com/common/go/fwbundle"
-	"cesanta.com/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/go/ourutil"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

@@ -9,7 +9,7 @@ import (
 
 	"github.com/cesanta/errors"
 
-	"cesanta.com/common/go/mgrpc/frame"
+	"github.com/mongoose-os/mos/common/go/mgrpc/frame"
 )
 
 // Codec represents a transport for clubby frames.

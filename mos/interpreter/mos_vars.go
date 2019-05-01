@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"cesanta.com/mos/build"
-	"cesanta.com/mos/datamap"
+	"github.com/mongoose-os/mos/mos/build"
+	"github.com/mongoose-os/mos/mos/datamap"
 
-	"cesanta.com/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/go/ourutil"
 	"github.com/cesanta/errors"
 )
 

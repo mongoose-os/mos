@@ -3,7 +3,7 @@
 package cc3220
 
 import (
-	"cesanta.com/mos/flash/cc32xx"
+	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/cesanta/errors"
 )
 

@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flags"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

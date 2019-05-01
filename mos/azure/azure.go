@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"strings"
 
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/atca"
-	"cesanta.com/mos/config"
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/x509utils"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/atca"
+	"github.com/mongoose-os/mos/mos/config"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/x509utils"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"cesanta.com/common/go/mgrpc/frame"
+	"github.com/mongoose-os/mos/common/go/mgrpc/frame"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

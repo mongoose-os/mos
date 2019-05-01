@@ -8,12 +8,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/config"
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/devutil"
-	"cesanta.com/mos/flags"
-	"cesanta.com/mos/version"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/config"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/devutil"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

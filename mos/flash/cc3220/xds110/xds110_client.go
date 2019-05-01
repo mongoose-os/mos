@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	"github.com/google/gousb"

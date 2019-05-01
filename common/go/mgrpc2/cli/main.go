@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"cesanta.com/common/go/mgrpc2"
+	"github.com/mongoose-os/mos/common/go/mgrpc2"
 )
 
 func handleStdin(framec chan mgrpc2.Frame) {

@@ -7,7 +7,7 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 
-	"cesanta.com/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/flash/common"
 )
 
 type CortexDebug interface {

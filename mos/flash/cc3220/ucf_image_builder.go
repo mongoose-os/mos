@@ -13,9 +13,9 @@ import (
 	"runtime"
 	"sort"
 
-	"cesanta.com/common/go/fwbundle"
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/flash/cc32xx"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
