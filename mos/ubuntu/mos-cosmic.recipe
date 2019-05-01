@@ -1,6 +1,6 @@
 # git-build-recipe format 0.4 deb-version {latest-tag}+{git-commit}~cosmic0
 
-# Build from local repo (volume-mount a clone of https://github.com/cesanta/mos-tool.git to /src):
+# Build from local repo (volume-mount a clone of https://github.com/mongoose-os/mos.git to /src):
 /src 1.11_CHANGE_ME
-merge deb-release https://github.com/cesanta/mos-tool.git deb-release
-run export GOPATH=$PWD && cd cesanta.com/mos && govendor sync -v
+merge deb-release https://github.com/mongoose-os/mos.git deb-release
+run export GOPATH=$PWD/go && cd $PWD/go/src/github.com/mongoose-os/mos && govendor sync -v
