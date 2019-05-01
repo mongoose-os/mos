@@ -16,7 +16,9 @@ OUTDIR ?= $(CURDIR)
 all: build
 
 deps:
-	cd $(GOPATH)/src/$(PKG) && govendor sync -v
+	go get github.com/kardianos/govendor
+	go install github.com/kardianos/govendor
+	cd $(GOPATH)/src/$(PKG) && $(GOBINPATH)/govendor sync -v
 
 generate: version/version.go
 	@[ -f $(GOBINPATH)/go-bindata ] || \
