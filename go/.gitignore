@@ -1,0 +1,5 @@
+.cache/
+pkg/
+bin/
+src/*
+!src/github.com/mongoose-os/mos
