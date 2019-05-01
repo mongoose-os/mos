@@ -8,7 +8,7 @@ all: docker-build
 docker-build:
 	$(CURDIR)/../golang/dogobuild \
 	  docker.io/mgos/fwbuild-instance \
-	  cesanta.com/fwbuild/instance \
+	  github.com/mongoose-os/mos/fwbuild/instance \
 	  Dockerfile \
 	  docker.io/mgos/gobuild
 

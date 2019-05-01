@@ -11,7 +11,7 @@ generate:
 docker-build: generate
 	$(CURDIR)/../golang/dogobuild \
 	  docker.io/mgos/fwbuild-manager \
-	  cesanta.com/fwbuild/manager \
+	  github.com/mongoose-os/mos/fwbuild/manager \
 	  Dockerfile \
 	  docker.io/mgos/gobuild
 
