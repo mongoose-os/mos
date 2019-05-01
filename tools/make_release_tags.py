@@ -215,7 +215,7 @@ if not repos:
     # Get libs and apps repos
     repos = get_repo_names("mongoose-os-libs") + get_repo_names("mongoose-os-apps")
     # Add a few more
-    repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-libs", "cesanta/mos-tool"])
+    repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-libs", "mongoose-os/mos"])
 
 pool = multiprocessing.Pool(processes=args.parallelism)
 tasks = []
