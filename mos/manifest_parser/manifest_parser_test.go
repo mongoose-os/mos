@@ -12,10 +12,10 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
+	"github.com/cesanta/errors"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/interpreter"
-	"github.com/cesanta/errors"
 )
 
 const (
@@ -59,10 +59,6 @@ func init() {
 }
 
 func TestParser(t *testing.T) {
-	//if err := singleManifestTest(t, "test_manifests/testset_02_conds_switch_without_arch_manifests/test_01_app_doesnt_override"); err != nil {
-	//t.Fatal(errors.ErrorStack(err))
-	//}
-
 	ok := handleTestSet(t, testManifestsDir)
 
 	if !ok {
