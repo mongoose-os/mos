@@ -26,12 +26,6 @@ fi
 
 set -x -e
 
-# Make sure the script is called from the mos-tool repo
-ORIGIN="$(git --work-tree $(dirname 0) remote get-url origin)"
-if ! [[ "${ORIGIN}" =~ mos-tool(.git)?$ ]]; then
-  echo "You should run this script from mos-tool repository, not from ${ORIGIN}"; exit 1;
-fi
-
 IMAGE=docker.io/mgos/ubuntu-golang:${DISTR}
 
 mkdir -p $HOME/tmp
@@ -47,5 +41,4 @@ docker run -i -t --rm \
         git-build-recipe --allow-fallback-to-native --package ${PACKAGE} --distribution ${DISTR} \
             ${RECIPE} /tmp/work && \
         cd /tmp/work/${PACKAGE} && \
-        debuild --no-tgz-check -us -uc -S"
-
+        debuild --no-tgz-check -us -uc -b"
