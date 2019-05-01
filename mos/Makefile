@@ -1,18 +1,29 @@
-.PHONY: all all-downloads build clean clean-version deploy deploy-fwbuild deploy-mos-binary downloads generate install linux mac win
+.PHONY: all all-downloads build clean clean-version deploy deploy-fwbuild deploy-mos-binary deps downloads generate install linux mac win
+
+REPO := $(realpath ..)
+export GOPATH := $(REPO)/go
+export GOCACHE := $(REPO)/go/.cache
+GOBINPATH := $(GOPATH)/bin
+SHELL = bash
+
+PKG := github.com/mongoose-os/mos/mos
+PKGDIR := $(GOPATH)/src/$(PKG)
 
 TAG ?= latest
 
 OUTDIR ?= $(CURDIR)
-TMP_GOPATH ?= ~/tmp/mos_gopath
 
 all: build
 
+deps:
+	cd $(GOPATH)/src/$(PKG) && govendor sync -v
+
 generate: version/version.go
-	@which go-bindata > /dev/null || \
+	@[ -f $(GOBINPATH)/go-bindata ] || \
 	  go install github.com/mongoose-os/mos/vendor/github.com/jteeuwen/go-bindata/go-bindata
-	@which go-bindata-assetfs > /dev/null || \
+	@[ -f $(GOBINPATH)/go-bindata-assetfs ] || \
 	  go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-	@go generate ./...
+	@cd $(PKGDIR) && go generate ./...
 
 version/version.go version/version.json:
 	@# If we are building a Debian package, use its version.
@@ -36,47 +47,40 @@ version/version.go version/version.json:
 	@echo
 
 build: generate
-	go build -v -i
+	go build -v $(PKG)
 
 install: generate
-	go install
+	go install -v $(PKG)
 
 linux: generate
 	docker run -i --rm \
-	  -v $${GOPATH%%:*}/src:/go/src \
+	  -v $(GOPATH)/src/github.com/mongoose-os/mos:/go/src/github.com/mongoose-os/mos \
 	  -v $(OUTDIR):/out \
+	  --user $(shell id -u):$(shell id -g) \
 	  docker.io/mgos/gobuild32 \
 	    -tags 'netgo' \
 	    -o /out/downloads/mos/linux/mos -tags no_libudev --ldflags '-extldflags "-static"' \
-	    github.com/mongoose-os/mos/mos
+	    $(PKG)
 
 mac: generate
 	brew install coreutils libftdi libusb-compat pkg-config
-	go build -o $(OUTDIR)/downloads/mos/mac/mos
+	go build -o $(OUTDIR)/downloads/mos/mac/mos $(PKG)
 
 
 win: generate
 	docker run -i --rm \
-	  -v $${GOPATH%%:*}:/go \
+	  -v $(GOPATH)/src/github.com/mongoose-os/mos:/go/src/github.com/mongoose-os/mos \
 	  -v $(OUTDIR):/out \
 	  --user $(shell id -u):$(shell id -g) \
 	docker.io/mgos/gobuild-mingw \
 	  bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc \
-	           go build -v -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" github.com/mongoose-os/mos/mos'
+	           go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" $(PKG)'
 
-# Set up GOPATH on the side and build there. Because Go is awesome.
-downloads: clean-version version/version.go
-	@test "`uname -s`" == "Darwin" || \
-	  { echo Can only build downloads on a Mac, this is `uname -s`; \
-	   exit 1; }
-	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src/github.com/mongoose-os/mos/
-	rsync -a $(CURDIR)/../ $(TMP_GOPATH)/src/github.com/mongoose-os/mos/
-	cd $(TMP_GOPATH)/src/github.com/mongoose-os/mos/mos && GOPATH=$(TMP_GOPATH) govendor sync -v
-	rsync -a --delete $(TMP_GOPATH)/src/github.com/mongoose-os/mos/vendor/ $(CURDIR)/../vendor/
-	cd $(TMP_GOPATH)/src/github.com/mongoose-os/mos/mos && \
-	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
+os-check:
+	#@[ "`uname -s`" == "Darwin" ] || \
+	#  { echo === Can only build downloads on a Mac, this is `uname -s`; exit 1; }
 
-all-downloads: linux mac win
+downloads: os-check deps clean-version generate linux mac win
 	cp version/version.json $(OUTDIR)/downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary

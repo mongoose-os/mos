@@ -175,7 +175,7 @@ if __name__ == "__main__":
             "tools/update_hb.py",
             "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
             "--formula=%s" % formula,
-            "--blob-url=https://github.com/cesanta/mos-tool/archive/%s.tar.gz" % head_commit,
+            "--blob-url=https://github.com/mongoose-os/mos/archive/%s.tar.gz" % head_commit,
             "--version=%s" % v["build_version"],
             "--commit", "--push",
         ]

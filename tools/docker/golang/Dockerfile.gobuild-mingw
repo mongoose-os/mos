@@ -11,3 +11,6 @@ RUN mkdir /opt/libusb-win && cd /opt/libusb-win && \
     p7zip -d libusb-*.7z && \
     cp MinGW32/static/libusb-1.0.a /usr/i686-w64-mingw32/lib && \
     rm -rf /opt/libusb-win
+
+RUN mkdir -p -m 0777 /.cache
+RUN chmod 0777 /go
