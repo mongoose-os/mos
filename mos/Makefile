@@ -4,7 +4,8 @@ REPO := $(realpath ..)
 export GOPATH := $(REPO)/go
 export GOCACHE := $(REPO)/go/.cache
 GOBINPATH := $(GOPATH)/bin
-SHELL = bash
+export PATH := $(GOBINPATH):$(PATH)
+SHELL := bash
 
 PKG := github.com/mongoose-os/mos/mos
 PKGDIR := $(GOPATH)/src/$(PKG)
