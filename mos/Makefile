@@ -69,14 +69,14 @@ downloads: clean-version version/version.go
 	@test "`uname -s`" == "Darwin" || \
 	  { echo Can only build downloads on a Mac, this is `uname -s`; \
 	   exit 1; }
-	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src
+	rm -rf $(TMP_GOPATH) && mkdir -p $(TMP_GOPATH)/src/github.com/mongoose-os/mos/
 	rsync -a $(CURDIR)/../ $(TMP_GOPATH)/src/github.com/mongoose-os/mos/
-	cd $(TMP_GOPATH)/src/cesanta.com && GOPATH=$(TMP_GOPATH) govendor sync -v
+	cd $(TMP_GOPATH)/src/github.com/mongoose-os/mos/mos && GOPATH=$(TMP_GOPATH) govendor sync -v
 	rsync -a --delete $(TMP_GOPATH)/src/github.com/mongoose-os/mos/vendor/ $(CURDIR)/../vendor/
 	cd $(TMP_GOPATH)/src/github.com/mongoose-os/mos/mos && \
 	  GOPATH=$(TMP_GOPATH) OUTDIR=$(CURDIR) $(MAKE) all-downloads
 
-all-downloads: mac linux win
+all-downloads: linux mac win
 	cp version/version.json $(OUTDIR)/downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
