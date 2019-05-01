@@ -11,13 +11,13 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 
-	"cesanta.com/common/go/fwbundle"
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/flash/common"
-	"cesanta.com/mos/flash/common/cmsis-dap/dap"
-	"cesanta.com/mos/flash/common/cmsis-dap/dp"
-	"cesanta.com/mos/flash/common/cmsis-dap/memap"
-	"cesanta.com/mos/flash/common/cortex"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dap"
+	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dp"
+	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/memap"
+	"github.com/mongoose-os/mos/mos/flash/common/cortex"
 )
 
 const (

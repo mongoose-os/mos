@@ -3,8 +3,8 @@ package flasher
 import (
 	"time"
 
-	"cesanta.com/mos/flash/common"
-	"cesanta.com/mos/flash/esp"
+	"github.com/mongoose-os/mos/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/cesanta/errors"
 )
 

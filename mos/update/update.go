@@ -17,22 +17,22 @@ import (
 
 	"context"
 
-	"cesanta.com/common/go/ourgit"
-	"cesanta.com/common/go/ourio"
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/build"
-	moscommon "cesanta.com/mos/common"
-	"cesanta.com/mos/common/paths"
-	"cesanta.com/mos/common/state"
-	"cesanta.com/mos/mosgit"
-	"cesanta.com/mos/version"
+	"github.com/mongoose-os/mos/common/go/ourgit"
+	"github.com/mongoose-os/mos/common/go/ourio"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/build"
+	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/mos/common/paths"
+	"github.com/mongoose-os/mos/mos/common/state"
+	"github.com/mongoose-os/mos/mos/mosgit"
+	"github.com/mongoose-os/mos/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	"github.com/kardianos/osext"
 	goversion "github.com/mcuadros/go-version"
 	flag "github.com/spf13/pflag"
 
-	"cesanta.com/mos/dev"
+	"github.com/mongoose-os/mos/mos/dev"
 )
 
 const (

@@ -7,9 +7,9 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"cesanta.com/common/go/multierror"
-	"cesanta.com/mos/update"
-	"cesanta.com/mos/version"
+	"github.com/mongoose-os/mos/common/go/multierror"
+	"github.com/mongoose-os/mos/mos/update"
+	"github.com/mongoose-os/mos/mos/version"
 
 	"github.com/cesanta/errors"
 	"github.com/fatih/color"

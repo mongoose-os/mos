@@ -10,9 +10,9 @@ import (
 	"io"
 	"math/big"
 
-	"cesanta.com/common/go/lptr"
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/dev"
+	"github.com/mongoose-os/mos/common/go/lptr"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/cesanta/errors"
 )
 

@@ -8,9 +8,9 @@
 package cc3220
 
 import (
-	"cesanta.com/common/go/fwbundle"
-	"cesanta.com/mos/flash/cc32xx"
-	"cesanta.com/mos/flash/common"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
+	"github.com/mongoose-os/mos/mos/flash/cc32xx"
+	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
 )

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/common/go/mgrpc/codec"
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flags"
-	"cesanta.com/mos/watson"
+	"github.com/mongoose-os/mos/common/go/mgrpc/codec"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/watson"
 	"github.com/cesanta/errors"
 )
 

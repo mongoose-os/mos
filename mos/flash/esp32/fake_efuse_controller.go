@@ -1,7 +1,7 @@
 package esp32
 
 import (
-	"cesanta.com/mos/flash/esp"
+	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

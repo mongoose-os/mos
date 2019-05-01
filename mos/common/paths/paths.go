@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"cesanta.com/mos/version"
+	"github.com/mongoose-os/mos/mos/version"
 
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"

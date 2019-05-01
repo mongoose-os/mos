@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/common/go/ourutil"
-	moscommon "cesanta.com/mos/common"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	moscommon "github.com/mongoose-os/mos/mos/common"
 )
 
 type VersionJson struct {

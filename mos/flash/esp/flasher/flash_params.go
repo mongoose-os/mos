@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"cesanta.com/mos/flash/esp"
-	"cesanta.com/mos/flash/esp32"
-	"cesanta.com/mos/flash/esp8266"
+	"github.com/mongoose-os/mos/mos/flash/esp"
+	"github.com/mongoose-os/mos/mos/flash/esp32"
+	"github.com/mongoose-os/mos/mos/flash/esp8266"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

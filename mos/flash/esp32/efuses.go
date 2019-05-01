@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"math/bits"
 
-	"cesanta.com/mos/flash/esp"
+	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
-	moscommon "cesanta.com/mos/common"
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flash/esp32"
+	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/flash/esp32"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

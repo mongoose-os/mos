@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"cesanta.com/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/go/ourutil"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

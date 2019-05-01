@@ -6,7 +6,7 @@
 package cc32xx
 
 import (
-	"cesanta.com/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
 )
 
 const (

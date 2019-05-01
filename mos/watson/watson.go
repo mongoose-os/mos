@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"strings"
 
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/config"
-	"cesanta.com/mos/dev"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/config"
+	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"

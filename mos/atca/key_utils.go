@@ -9,8 +9,8 @@ import (
 
 	"github.com/cesanta/errors"
 
-	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/dev"
+	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/mos/dev"
 )
 
 func GetPubKey(ctx context.Context, slot int, dc dev.DevConn) (*ecdsa.PublicKey, error) {

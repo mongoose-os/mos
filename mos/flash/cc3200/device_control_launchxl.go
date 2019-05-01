@@ -5,7 +5,7 @@ package cc3200
 import (
 	"time"
 
-	"cesanta.com/mos/flash/cc32xx"
+	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/cesanta/errors"
 )
 

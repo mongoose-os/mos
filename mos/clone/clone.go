@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"cesanta.com/mos/build"
-	"cesanta.com/mos/dev"
-	"cesanta.com/mos/version"
+	"github.com/mongoose-os/mos/mos/build"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/version"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

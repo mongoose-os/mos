@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"cesanta.com/mos/config"
-	"cesanta.com/mos/dev"
+	"github.com/mongoose-os/mos/mos/config"
+	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

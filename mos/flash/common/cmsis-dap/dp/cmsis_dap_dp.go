@@ -7,7 +7,7 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 
-	"cesanta.com/mos/flash/common/cmsis-dap/dap"
+	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dap"
 )
 
 type DPReg uint8

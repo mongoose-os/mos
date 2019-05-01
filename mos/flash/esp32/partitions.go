@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"cesanta.com/common/go/fwbundle"
+	"github.com/mongoose-os/mos/common/go/fwbundle"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
