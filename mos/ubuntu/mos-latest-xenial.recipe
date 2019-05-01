@@ -3,4 +3,3 @@
 # Build from local repo (volume-mount a clone of https://github.com/mongoose-os/mos.git to /src):
 /src master
 merge deb-latest https://github.com/mongoose-os/mos.git deb-latest
-run export GOPATH=$PWD/go && cd $PWD/go/src/github.com/mongoose-os/mos && govendor sync -v
