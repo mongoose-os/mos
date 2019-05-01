@@ -1,4 +1,4 @@
-package limitedwriter
+package frame
 
 import (
 	"io"
@@ -14,7 +14,7 @@ type limitedWriter struct {
 // New returns a new limited writer.
 //
 // A limited writer will return error after writing limit bytes.
-func New(w io.Writer, limit int) io.Writer {
+func NewLimitedWriter(w io.Writer, limit int) io.Writer {
 	return &limitedWriter{w, limit}
 }
 
