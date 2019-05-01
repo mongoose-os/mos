@@ -1,0 +1,19 @@
+author: mongoose-os
+description: My test app
+version: 1.0
+
+sources:
+  - src
+
+conds:
+  - when: defined(build_vars.FOO)
+    apply:
+      conds:
+        - when: build_vars.FOO == "bar"
+          apply:
+            sources:
+              - -src/app_src2.c
+
+no_implicit_init_deps: true
+
+manifest_version: 2018-06-20

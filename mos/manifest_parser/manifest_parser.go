@@ -19,12 +19,12 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/interpreter"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -54,6 +54,8 @@ const (
 
 	coreLibName     = "core"
 	coreLibLocation = "https://github.com/mongoose-os-libs/core"
+
+	supportedPlatforms = "cc3200 cc3220 esp32 esp8266 rs14100 stm32 ubuntu"
 )
 
 var (
@@ -1618,20 +1620,7 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 }
 
 func getAllSupportedPlatforms(mosDir string) ([]string, error) {
-	// New repo layout introduced on 2019/04/29, current release is 2.13.1.
-	pathsOld, _ := filepath.Glob(filepath.Join(mosDir, "fw", "platforms", "*", "sdk.version"))
-	pathsNew, _ := filepath.Glob(filepath.Join(mosDir, "platforms", "*", "sdk.version"))
-	paths := append(pathsOld, pathsNew...)
-
-	ret := []string{}
-
-	for _, p := range paths {
-		p1, _ := filepath.Split(p)
-		_, p2 := filepath.Split(p1[:len(p1)-1])
-		ret = append(ret, p2)
-	}
-
+	ret := strings.Split(supportedPlatforms, " ")
 	sort.Strings(ret)
-
 	return ret, nil
 }
