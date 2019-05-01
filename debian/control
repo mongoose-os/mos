@@ -1,0 +1,19 @@
+Source: mos-latest
+Section: devel
+Priority: optional
+Maintainer: Deomid Ryabkov <rojer@rojer.me>
+Build-Depends: debhelper (>=9), dh-golang, git, golang-go, libftdi-dev, libusb-1.0-0-dev, pkg-config, python3
+Standards-Version: 3.9.7
+Homepage: https://mongoose-os.com/
+Vcs-Git: https://github.com/mongoose-os/mos
+Vcs-Browser: https://github.com/mongoose-os/mos
+
+Package: mos-latest
+# Arch list is the same as golang-go
+Architecture: amd64 arm64 armel armhf i386 ppc64el
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: mos
+Description: Mongoose OS CLI tool
+ This package contains the Mongoose OS CLI tool.
+ This package is for the latest version, which follows the
+ master branch and gets updated often.

@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+
+export DH_GOPKG := github.com/mongoose-os/mos
+
+export GOPATH := $(CURDIR)/go
+
+export GOCACHE = /tmp/go-cache
+
+%:
+	@echo ACT $@ GO=$(GO) GOPATH=$(GOPATH) CWD=$(CURDIR)
+	dh $@ --buildsystem=golang --with=golang
+
+override_dh_auto_build:
+	@# If vendor packages are already populated, skip the sync step.
+	[ -d vendor/github.com ] || make deps
+	make build
+
+override_dh_auto_test:
+	make test
