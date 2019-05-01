@@ -6,7 +6,7 @@
 #
 # Usage:
 #
-#     dogobuild docker.io/mgos/mos cesanta.com/mos Dockerfile [gobuild_image]
+#     dogobuild docker.io/mgos/mos github.com/mongoose-os/mos/mos Dockerfile [gobuild_image]
 #
 # If gobuild_image is not provided, docker.io/mgos/gobuild is used
 #
