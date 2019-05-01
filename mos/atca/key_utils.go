@@ -9,13 +9,12 @@ import (
 
 	"github.com/cesanta/errors"
 
-	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 func GetPubKey(ctx context.Context, slot int, dc dev.DevConn) (*ecdsa.PublicKey, error) {
-	slot64 := int64(slot)
-	req := &GetPubKeyArgs{Slot: &slot64}
+	req := &GetPubKeyArgs{Slot: int64(slot)}
 	var r GetPubKeyResult
 	if err := dc.Call(ctx, "ATCA.GetPubKey", req, &r); err != nil {
 		return nil, errors.Annotatef(err, "GetPubKey")
@@ -39,8 +38,7 @@ func GetPubKey(ctx context.Context, slot int, dc dev.DevConn) (*ecdsa.PublicKey,
 }
 
 func GenKey(ctx context.Context, slot int, dryRun bool, dc dev.DevConn) (*ecdsa.PublicKey, error) {
-	slot64 := int64(slot)
-	req := &GenKeyArgs{Slot: &slot64}
+	req := &GenKeyArgs{Slot: int64(slot)}
 
 	if dryRun {
 		ourutil.Reportf("This is a dry run, would have sent the following request:\n\n"+

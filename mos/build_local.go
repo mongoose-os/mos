@@ -20,7 +20,7 @@ import (
 
 	"github.com/mongoose-os/mos/common/multierror"
 	"github.com/mongoose-os/mos/common/ourio"
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/interpreter"

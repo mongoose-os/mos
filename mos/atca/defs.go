@@ -1,7 +1,7 @@
 package atca
 
 type GenKeyArgs struct {
-	Slot *int64 `json:"slot,omitempty"`
+	Slot int64 `json:"slot"`
 }
 
 type GenKeyResult struct {
@@ -13,7 +13,7 @@ type GetConfigResult struct {
 }
 
 type GetPubKeyArgs struct {
-	Slot *int64 `json:"slot,omitempty"`
+	Slot int64 `json:"slot"`
 }
 
 type GetPubKeyResult struct {
@@ -38,7 +38,7 @@ type SetKeyArgs struct {
 
 type SignArgs struct {
 	Digest *string `json:"digest,omitempty"`
-	Slot   *int64  `json:"slot,omitempty"`
+	Slot   int64   `json:"slot"`
 }
 
 type SignResult struct {

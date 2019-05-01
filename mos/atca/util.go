@@ -10,7 +10,7 @@ import (
 
 	"context"
 
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/cesanta/errors"
 )

@@ -9,7 +9,7 @@ import (
 
 	"github.com/cesanta/errors"
 
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 func WritePEM(derBytes []byte, blockType string, outputFileName string) error {

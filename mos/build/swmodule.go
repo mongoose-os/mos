@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/mongoose-os/mos/common/ourgit"
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/mosgit"
 

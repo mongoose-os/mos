@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"

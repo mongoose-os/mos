@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"

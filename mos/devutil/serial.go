@@ -3,7 +3,7 @@ package devutil
 import (
 	"github.com/cesanta/errors"
 
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flags"
 )
 

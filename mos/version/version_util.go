@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/ourutil"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 )
 

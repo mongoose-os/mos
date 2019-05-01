@@ -10,10 +10,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/mongoose-os/mos/common/lptr"
-	"github.com/mongoose-os/mos/common/ourutil"
-	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/cesanta/errors"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 // Implements crypto.Signer interface using ATCA.
@@ -36,7 +35,7 @@ func (s *Signer) Public() crypto.PublicKey {
 
 	var r GetPubKeyResult
 	if err := s.dc.Call(s.ctx, "ATCA.GetPubKey", &GetPubKeyArgs{
-		Slot: lptr.Int64(int64(s.slot)),
+		Slot: int64(s.slot),
 	}, &r); err != nil {
 		return nil
 	}
@@ -63,7 +62,7 @@ func (s *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 	b64d := base64.StdEncoding.EncodeToString(digest)
 	var r SignResult
 	if err := s.dc.Call(s.ctx, "ATCA.Sign", &SignArgs{
-		Slot:   lptr.Int64(int64(s.slot)),
+		Slot:   int64(s.slot),
 		Digest: &b64d,
 	}, &r); err != nil {
 		return nil, errors.Annotatef(err, "ATCA.Sign")
