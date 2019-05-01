@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/cesanta/errors"
-	"github.com/mongoose-os/mos/common/limitedwriter"
 )
 
 // Frame is a basic data structure that contains request or response.
@@ -121,7 +120,7 @@ const frameSizeStringifyLimit = 2048
 
 func (f *Frame) String() string {
 	buf := bytes.NewBuffer(nil)
-	lim := limitedwriter.New(buf, frameSizeStringifyLimit) // in case the hint is missing or wrong
+	lim := NewLimitedWriter(buf, frameSizeStringifyLimit) // in case the hint is missing or wrong
 	fmt.Fprintf(lim, "%q -> %q v=%d id=%d ", f.Src, f.Dst, f.Version, f.ID)
 	if f.SizeHint < frameSizeStringifyLimit {
 		if f.IsRequest() {
