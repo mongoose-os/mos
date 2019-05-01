@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )

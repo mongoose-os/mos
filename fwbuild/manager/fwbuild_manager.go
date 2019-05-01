@@ -30,7 +30,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/mongoose-os/mos/common/go/docker"
+	"github.com/mongoose-os/mos/common/docker"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
 	"github.com/mongoose-os/mos/fwbuild/manager/middleware"

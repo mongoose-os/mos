@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/url"
 
-	"github.com/mongoose-os/mos/common/go/mgrpc/codec"
+	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/cesanta/errors"
 )
 

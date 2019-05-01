@@ -33,9 +33,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/docker"
-	"github.com/mongoose-os/mos/common/go/ourglob"
-	"github.com/mongoose-os/mos/common/go/ourio"
+	"github.com/mongoose-os/mos/common/docker"
+	"github.com/mongoose-os/mos/common/ourglob"
+	"github.com/mongoose-os/mos/common/ourio"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
 	"github.com/mongoose-os/mos/mos/build"

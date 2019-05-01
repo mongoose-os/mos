@@ -12,8 +12,8 @@ import (
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/version"
 
-	"github.com/mongoose-os/mos/common/go/fwbundle"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )

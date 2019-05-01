@@ -7,7 +7,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/mongoose-os/mos/common/go/limitedwriter"
+	"github.com/mongoose-os/mos/common/limitedwriter"
 	"github.com/cesanta/errors"
 )
 

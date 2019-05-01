@@ -11,7 +11,7 @@ import (
 	"github.com/mongoose-os/mos/mos/build"
 	"github.com/mongoose-os/mos/mos/datamap"
 
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/cesanta/errors"
 )
 

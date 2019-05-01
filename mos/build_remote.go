@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mongoose-os/mos/common/go/ourfilepath"
-	"github.com/mongoose-os/mos/common/go/ourio"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourfilepath"
+	"github.com/mongoose-os/mos/common/ourio"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	"github.com/mongoose-os/mos/mos/build/archive"
 	moscommon "github.com/mongoose-os/mos/mos/common"

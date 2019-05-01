@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongoose-os/mos/common/go/ourgit"
-	"github.com/mongoose-os/mos/common/go/ourutil"
+	"github.com/mongoose-os/mos/common/ourgit"
+	"github.com/mongoose-os/mos/common/ourutil"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/mosgit"
 

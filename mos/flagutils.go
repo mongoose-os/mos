@@ -7,7 +7,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/mongoose-os/mos/common/go/multierror"
+	"github.com/mongoose-os/mos/common/multierror"
 	"github.com/mongoose-os/mos/mos/update"
 	"github.com/mongoose-os/mos/mos/version"
 
