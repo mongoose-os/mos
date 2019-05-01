@@ -6,7 +6,7 @@ all: docker-build
 docker-build:
 	$(CURDIR)/../golang/dogobuild \
 	  docker.io/mgos/mos \
-	  cesanta.com/mos \
+	  github.com/mongoose-os/mos/mos \
 	  Dockerfile \
 	  docker.io/mgos/gobuild \
 	  -v -tags noflash

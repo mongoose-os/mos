@@ -1,4 +1,4 @@
-MOS_TAG=2.12.1
+MOS_TAG=2.13.1
 
 pkgname=mos
 pkgver=${MOS_TAG}
@@ -21,21 +21,20 @@ source=(git+https://github.com/cesanta/mos-tool.git#tag=${MOS_TAG})
 md5sums=('SKIP')
 
 prepare() {
-    cd "$srcdir/mos-tool"
-    mkdir -p "$srcdir/go/src"
-    test -d "$srcdir/go/src/cesanta.com" && rm -rf "$srcdir/go/src/cesanta.com"
-    mv "$srcdir/mos-tool" "$srcdir/go/src/cesanta.com"
+    rm -rf "$srcdir/go/src"
+    mkdir -p "$srcdir/go/src/github.com/mongoose-os"
+    mv "$srcdir/mos" "$srcdir/go/src/github.com/mongoose-os"
 }
 
 build() {
     export GOPATH="$srcdir/go"
     export PATH="$srcdir/go/bin:$PATH"
-    cd "$srcdir/go/src/cesanta.com/mos"
+    cd "$srcdir/go/src/github.com/mongoose-os/mos"
     go get -u github.com/kardianos/govendor
     govendor sync -v
     make build
 }
 
 package() {
-    install -D $srcdir/go/src/cesanta.com/mos/mos $pkgdir/usr/bin/mos
+    install -D "$srcdir/go/src/github.com/mongoose-os/mos/mos/mos" "$pkgdir/usr/bin/mos"
 }

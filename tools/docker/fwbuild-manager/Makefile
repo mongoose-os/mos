@@ -6,7 +6,7 @@ FROM_TAG ?= latest
 all: docker-build
 
 generate:
-	go generate cesanta.com/fwbuild/manager/...
+	go generate github.com/mongoose-os/mos/fwbuild/manager/...
 
 docker-build: generate
 	$(CURDIR)/../golang/dogobuild \

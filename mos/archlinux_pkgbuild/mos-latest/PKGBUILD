@@ -14,19 +14,18 @@ makedepends=(
 )
 conflicts=('mos')
 
-source=(git+https://github.com/cesanta/mos-tool.git#branch=master)
+source=(git+https://github.com/mongoose-os/mos.git#branch=master)
 
 md5sums=('SKIP')
 
 prepare() {
-    cd "$srcdir/mos-tool"
-    mkdir -p "$srcdir/go/src"
-    test -d "$srcdir/go/src/cesanta.com" && rm -rf "$srcdir/go/src/cesanta.com"
-    mv "$srcdir/mos-tool" "$srcdir/go/src/cesanta.com"
+    rm -rf "$srcdir/go/src"
+    mkdir -p "$srcdir/go/src/github.com/mongoose-os"
+    mv "$srcdir/mos" "$srcdir/go/src/github.com/mongoose-os"
 }
 
 pkgver() {
-    cd "$srcdir/go/src/cesanta.com/mos"
+    cd "$srcdir/go/src/github.com/mongoose-os/mos"
     rm -f version/version.json
     make version/version.json > /dev/null 2>&1
     jshon -F version/version.json -e build_version -u
@@ -35,12 +34,12 @@ pkgver() {
 build() {
     export GOPATH="$srcdir/go"
     export PATH="$srcdir/go/bin:$PATH"
-    cd "$srcdir/go/src/cesanta.com/mos"
+    cd "$srcdir/go/src/github.com/mongoose-os/mos"
     go get -u github.com/kardianos/govendor
     govendor sync -v
     make build
 }
 
 package() {
-    install -D $srcdir/go/src/cesanta.com/mos/mos $pkgdir/usr/bin/mos
+    install -D "$srcdir/go/src/github.com/mongoose-os/mos/mos/mos" "$pkgdir/usr/bin/mos"
 }
