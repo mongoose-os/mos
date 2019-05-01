@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"io"
 	"io/ioutil"
 	"net"
@@ -14,10 +14,11 @@ import (
 	"strings"
 	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/mongoose-os/mos/common/mgrpc"
 	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	"github.com/mongoose-os/mos/common/ourjson"
 	"github.com/mongoose-os/mos/mos/debug_core_dump"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/devutil"
@@ -220,11 +221,11 @@ func console(ctx context.Context, devConn dev.DevConn) error {
 		}
 		devConn.(*dev.MosDevConn).RPC.AddHandler("Dash.Console.Event", func(c mgrpc.MgRPC, f *frame.Frame) *frame.Frame {
 			var ev struct {
-				DevId string             `json:"id"`
-				Name  string             `json:"name"`
-				Data  ourjson.RawMessage `json:"data"`
+				DevId string          `json:"id"`
+				Name  string          `json:"name"`
+				Data  json.RawMessage `json:"data"`
 			}
-			f.Params.UnmarshalInto(&ev)
+			json.Unmarshal(f.Params, &ev)
 			var s string
 			if ev.Name == "rpc.out.Log" {
 				var logEv struct {
@@ -233,7 +234,7 @@ func console(ctx context.Context, devConn dev.DevConn) error {
 					Seq       int     `json:"seq"`
 					Data      string  `json:"data"`
 				}
-				ev.Data.UnmarshalInto(&logEv)
+				json.Unmarshal(ev.Data, &logEv)
 				s = fmt.Sprintf("%d %.3f %d|%s", logEv.Seq, logEv.Timestamp, logEv.FD, logEv.Data)
 			} else {
 				b, _ := ev.Data.MarshalJSON()

@@ -15,10 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	"github.com/mongoose-os/mos/common/ourjson"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
 )
 
 // Note: As of today (2018-04-16), there is no official Go SDK for Azure IoT Devices API,
@@ -133,14 +132,14 @@ func (c *azureDMCodec) getSASToken(ttl time.Duration) (string, error) {
 }
 
 type azureDMReq struct {
-	MethodName       string              `json:"methodName"`
-	TimeoutInSeconds int64               `json:"timeoutInSeconds"`
-	Payload          *ourjson.RawMessage `json:"payload"`
+	MethodName       string           `json:"methodName"`
+	TimeoutInSeconds int64            `json:"timeoutInSeconds"`
+	Payload          *json.RawMessage `json:"payload"`
 }
 
 type azureDMResp struct {
-	Status  int64              `json:"status"`
-	Payload ourjson.RawMessage `json:"payload"`
+	Status  int64           `json:"status"`
+	Payload json.RawMessage `json:"payload"`
 }
 
 func (c *azureDMCodec) Send(ctx context.Context, f *frame.Frame) error {

@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/common/mgrpc"
 	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	"github.com/mongoose-os/mos/common/ourjson"
 	"github.com/mongoose-os/mos/mos/rpccreds"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
@@ -124,7 +123,7 @@ func isJSON(s string) bool {
 	return json.Unmarshal([]byte(s), &js) == nil
 }
 
-func (dc *MosDevConn) CallRaw(ctx context.Context, method string, args interface{}) (ourjson.RawMessage, error) {
+func (dc *MosDevConn) CallRaw(ctx context.Context, method string, args interface{}) (json.RawMessage, error) {
 	argsJSON, ok := args.(string)
 	if !ok {
 		if args != nil {
@@ -144,7 +143,7 @@ func (dc *MosDevConn) CallRaw(ctx context.Context, method string, args interface
 
 	cmd := &frame.Command{Cmd: method}
 	if argsJSON != "" {
-		cmd.Args = ourjson.RawJSON([]byte(argsJSON))
+		cmd.Args.UnmarshalJSON([]byte(argsJSON))
 	}
 
 	resp, err := dc.RPC.Call(ctx, dc.Dest, cmd, rpccreds.GetRPCCreds)
@@ -175,7 +174,7 @@ func (dc *MosDevConn) Call(ctx context.Context, method string, args interface{},
 		return errors.Trace(err)
 	}
 	if resp != nil {
-		return respRaw.UnmarshalInto(resp)
+		return json.Unmarshal(respRaw, resp)
 	}
 	return nil
 }
