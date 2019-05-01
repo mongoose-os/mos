@@ -1,0 +1,8 @@
+conds:
+  - when: mos.platform != "esp8266"
+    apply:
+      error: Unsupported platform
+
+no_implicit_init_deps: true
+
+manifest_version: 2019-04-26

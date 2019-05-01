@@ -1,0 +1,15 @@
+author: mongoose-os
+description: My test app
+version: 1.0
+
+conds:
+  - when: mos.platform == "no_match"
+    apply:
+      libs:
+        - origin: https://github.com/mongoose-os-libs/mylib2
+  - when: mos.platform == "esp8266"
+    apply:
+      libs:
+        - origin: https://github.com/mongoose-os-libs/mylib1
+
+manifest_version: 2018-08-29

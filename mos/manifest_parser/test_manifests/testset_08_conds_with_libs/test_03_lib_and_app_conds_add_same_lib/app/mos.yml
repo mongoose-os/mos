@@ -1,0 +1,16 @@
+author: mongoose-os
+description: My test app
+version: 1.0
+
+# lib2 cond will add lib1, make sure they are deduped.
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/mylib2
+
+conds:
+  - when: mos.platform == "esp8266"
+    apply:
+      libs:
+        - origin: https://github.com/mongoose-os-libs/mylib1
+
+manifest_version: 2018-08-29

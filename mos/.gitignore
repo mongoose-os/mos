@@ -1,0 +1,6 @@
+bindata*.go
+mos
+mos.exe
+downloads/*
+version/version.json
+version/version.go

@@ -1,0 +1,51 @@
+# The following tasks are intended to behave as follows:
+#  - When the server is first set up, we obtain SSL certificates by using standalone
+# verification which requires either port 80 or 443 to be open. So we assume there is
+# no we bserver running yet.
+#  - From then on, for renewals, we move to webroot verification method which requires
+# webserver to be running and serve /.well-known/acme-challenge directory on port 80.
+# Standalone verification will not work if web server is already running and webroot
+# won't work if it isn't.
+#
+# So if you came here because something failed, you may need to juggle a bit: comment
+# out the check for existing certs, stop the webserver and perform verification or,
+# alternatively, change --standalone below to --webroot -w /etc/letsencrypt/www and
+# let it use the exisiting web server.
+#
+- name: Create LetsEncrypt challenges directory
+  tags: certsX
+  file: path=/data/letsencrypt/www/.well-known/acme-challenge state=directory
+
+- name: Test if certs need to be obtained
+  tags: certs
+  shell: '(ls /data/letsencrypt/live/ | wc -l) || echo 0'
+  register: num_certs
+
+- name: Obtain SSL certificates
+  tags: certs
+  when: num_certs.stdout|int == 0
+  docker_container:
+    image: docker.io/mgos/letsencrypt
+    name: letsencrypt
+    volumes:
+      - /data/letsencrypt:/etc/letsencrypt:rw
+    command: |
+      letsencrypt certonly --email {{ email }} --agree-tos --keep-until-expiring \
+      --standalone {{ domains }}
+    pull: yes
+    state: started
+    restart: yes
+    restart_policy: no
+
+- name: SSL certificate renewal timer
+  import_tasks: include/systemd_cron/tasks/main.yml
+  tags: certs
+  vars:
+    name: renew_certs
+    time: '{{ renew_time }}'
+    cmd: |
+      docker run --rm -v /data/letsencrypt:/etc/letsencrypt docker.io/mgos/letsencrypt \
+        letsencrypt renew -v --email {{ email }} --agree-tos \
+        --webroot -w /etc/letsencrypt/www && \
+      pkill -HUP nginx
+

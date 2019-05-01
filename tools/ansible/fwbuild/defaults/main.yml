@@ -1,0 +1,12 @@
+# Tag for "fwbuild-instance" and "cloud-mos" images
+#
+# When deploying a release, it's convenient to override this variable in
+# command line as follows: "-e mos_version_tag=1.5"
+mos_version_tag: latest
+
+# Tag for fwbuild-manager, normally it should always be "latest"
+fwbuild_manager_tag: latest
+
+fwbuild_volumes_dir: /data/fwbuild-volumes
+
+build: no

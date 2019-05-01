@@ -1,0 +1,11 @@
+type: app
+platform: esp8266
+platforms:
+__ALL_PLATFORMS__
+no_implicit_init_deps: true
+build_vars:
+  BOARD: ""
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: 2019-04-26

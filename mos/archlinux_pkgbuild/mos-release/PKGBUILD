@@ -1,0 +1,41 @@
+MOS_TAG=2.12.1
+
+pkgname=mos
+pkgver=${MOS_TAG}
+pkgrel=1
+pkgdesc="Mongoose-OS build tool (release)"
+arch=('i686' 'x86_64')
+license=('Apache')
+url="https://mongoose-os.com/software.html"
+depends=('libftdi-compat' 'libusb')
+makedepends=(
+    'go'
+    'git'
+    'python'
+    'jshon'
+)
+conflicts=('mos-latest')
+
+source=(git+https://github.com/cesanta/mos-tool.git#tag=${MOS_TAG})
+
+md5sums=('SKIP')
+
+prepare() {
+    cd "$srcdir/mos-tool"
+    mkdir -p "$srcdir/go/src"
+    test -d "$srcdir/go/src/cesanta.com" && rm -rf "$srcdir/go/src/cesanta.com"
+    mv "$srcdir/mos-tool" "$srcdir/go/src/cesanta.com"
+}
+
+build() {
+    export GOPATH="$srcdir/go"
+    export PATH="$srcdir/go/bin:$PATH"
+    cd "$srcdir/go/src/cesanta.com/mos"
+    go get -u github.com/kardianos/govendor
+    govendor sync -v
+    make build
+}
+
+package() {
+    install -D $srcdir/go/src/cesanta.com/mos/mos $pkgdir/usr/bin/mos
+}

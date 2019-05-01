@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+# The gobuild tool builds a Go main package and
+# puts it in a docker image. The Go package must live
+# in the the GOPATH.
+#
+# Usage:
+#
+#     dogobuild docker.io/mgos/mos cesanta.com/mos Dockerfile [gobuild_image]
+#
+# If gobuild_image is not provided, docker.io/mgos/gobuild is used
+#
+# NOTE: only the first component of the GOPATH is considered.
+#
+
+set -e
+
+IMAGE=${1}
+PKG=${2}
+DOCKERFILE=${3}
+GOBUILD_IMAGE=${4}
+
+if [ -z "${IMAGE}" -o -z "${PKG}" -o -z "${DOCKERFILE}" ]; then
+    echo "usage: $0 <image> <pkg> <dockerfile> [gobuild_image] [gobuild_args...]"
+    exit 1
+fi
+
+shift 3
+
+if [ -z "${GOBUILD_IMAGE}" ]; then
+  GOBUILD_IMAGE="docker.io/mgos/gobuild"
+else
+  shift 1
+fi
+
+GOBUILD_ARGS="$@"
+
+echo Building $IMAGE $PKG gopath: ${GOPATH%%:*}
+
+# boot2docker exports only user's home dir
+# so we cannot put it in /tmp
+TMPDIR=$(mktemp -d $PWD/dogobuild.XXXXXXXXXX)
+function cleanup {
+    cd /tmp
+    rm -rf "${TMPDIR}"
+}
+trap cleanup EXIT
+
+cp ${DOCKERFILE} "${TMPDIR}/"
+
+set -x
+
+docker pull ${GOBUILD_IMAGE}
+docker run -i --rm \
+       -v "${TMPDIR}:/out" \
+       -v $(realpath ../../..):/go/src/cesanta.com \
+       -v /tmp/gobuild-cache:/go/pkg \
+       --entrypoint /bin/bash \
+       ${GOBUILD_IMAGE} \
+       -c "cd /go/src/cesanta.com && govendor sync -v && make -C mos generate"
+docker run -i --rm \
+       -v "${TMPDIR}:/out" \
+       -v $(realpath ../../..):/go/src/cesanta.com \
+       -v /tmp/gobuild-cache:/go/pkg \
+       ${GOBUILD_IMAGE} \
+       -v -o /out/`basename "${PKG}"` ${GOBUILD_ARGS} ${PKG}
+
+# The dockerfile has to be under the current directory
+cd "${TMPDIR}"
+docker build -t ${IMAGE} -f $(basename ${DOCKERFILE}) .

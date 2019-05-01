@@ -1,0 +1,11 @@
+manifest_version: 2018-06-20
+
+build_vars:
+  BOARD: ""
+
+conds:
+  - when: mos.platform == "esp32"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""

@@ -1,0 +1,38 @@
+- import_tasks: fwbuild_instance.yml
+  static: yes
+  vars:
+    cur_mos_version_tag: "{{ mos_version_tag }}"
+
+# When deploying for some release tag (say, "1.5"), also deploy for the
+# tag "release". (the tag "latest" should be deployed separately, to be
+# symmetric with the mos deployment logic)
+- import_tasks: fwbuild_instance.yml
+  static: yes
+  when: mos_version_tag != "latest"
+  vars:
+    cur_mos_version_tag: release
+
+- name: SSL certs
+  import_tasks: include/letsencrypt/tasks/main.yml
+  static: yes
+  tags: certs
+  vars:
+    email: webmaster@cesanta.com
+    domains: |
+      -d mongoose.cloud \
+      -d www.mongoose.cloud
+    renew_time: 'Mon *-*-* 01:23:45'
+
+- import_tasks: fwbuild_manager.yml
+  tags: fwbuild-manager
+
+- name: setup rm_fwbuild_volumes timer
+  import_tasks: include/systemd_cron/tasks/main.yml
+  static: yes
+  vars:
+    name: rm_fwbuild_volumes
+    time: hourly
+    cmd: |
+      /bin/bash -c 'find {{ fwbuild_volumes_dir }} -name "build_ctx_*" \
+        -type d -mtime +3 | xargs rm -rf'
+

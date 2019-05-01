@@ -1,0 +1,13 @@
+version: '2'
+services:
+  fwbuild-manager:
+    image: docker.io/mgos/fwbuild-manager
+    volumes:
+      - /var/tmp/fwbuild-volumes:/var/tmp/fwbuild-volumes
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    command: >-
+      --logtostderr --v=2
+      --volumes-dir=/var/tmp/fwbuild-volumes
+      --port=8000

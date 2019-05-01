@@ -1,0 +1,20 @@
+type: app
+version: "1.0"
+platform: esp8266
+platforms:
+__ALL_PLATFORMS__
+author: mongoose-os
+description: My app
+sources:
+- __APP_ROOT__/app/build/gen/mgos_deps_init.c
+build_vars:
+  BOARD: ""
+  MGOS_HAVE_CORE: "1"
+cdefs:
+  MGOS_HAVE_CORE: "1"
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: 2019-04-26
+init_deps:
+- core

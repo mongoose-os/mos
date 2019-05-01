@@ -1,0 +1,7 @@
+# See fwbuild/README.md
+
+- hosts: fwbuild
+  gather_facts: no
+
+  roles:
+    - role: fwbuild

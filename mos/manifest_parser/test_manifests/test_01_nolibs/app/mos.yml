@@ -1,0 +1,13 @@
+author: mongoose-os
+description: My nolibs app
+version: 1.0
+
+sources:
+  - src
+
+filesystem:
+  - fs
+
+no_implicit_init_deps: true
+
+manifest_version: 2018-06-20
