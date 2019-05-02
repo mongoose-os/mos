@@ -163,17 +163,21 @@ def cmd_gen_build_info(args):
         git_revparse_out = ""
         git_log_head_out = ""
 
+    head_hash = git_log_head_out.split()[0][:7]
+    head_ts = int(git_log_head_out.split()[1])
+
     version = None
     if args.version:
         version = args.version
     else:
         version = None
         # If we are precisely at a specific tag, repo is clean - use it as version.
-        if args.tag_as_version and git_describe_out and "-" not in git_describe_out:
+        if (args.tag_as_version and git_describe_out and "-" not in git_describe_out
+            and head_hash not in git_describe_out):
             version = git_describe_out
         # Otherwise, if it's a clean git repo, use last commit's timestamp.
         elif git_log_head_out and "dirty" not in git_describe_out:
-            vts = datetime.datetime.utcfromtimestamp(int(git_log_head_out.split()[1]))
+            vts = datetime.datetime.utcfromtimestamp(head_ts)
         # If all else fails, use current timestamp
         else:
             vts = ts
@@ -196,7 +200,6 @@ def cmd_gen_build_info(args):
             else:
                 dirty = False
             # Most recent tag + offset
-            head_hash = git_log_head_out.split()[0][:7]
             if not git_describe_out.startswith(head_hash):
                 # We have tag(s).
                 parts.append(git_describe_out)
