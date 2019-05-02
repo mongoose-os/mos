@@ -43,53 +43,37 @@ $ brew install mos
 
 ## Building manually
 
-Minimal required Go version is 1.8.
+You will need:
+ * Git
+ * Go version 1.10 or later
+ * GNU Make
+ * Python 3
+ * libftdi + headers
+ * libusb 1.0 + headers
+ * Docker - optional, only for building Windows binaries on Mac or Linux.
 
-Go and other required tools can be installed on Ubuntu 16.10 as follows:
+Commands to install all the build dependencies:
+ * Ubuntu Linux: `sudo apt-get install build-essential git golang-go python3 libftdi-dev libusb-1.0-0-dev pkg-config`
+ * Mac OS X (via [Homebrew](https://brew.sh/)): `brew install coreutils libftdi libusb-compat pkg-config`
+ * Windows 10: `TODO`
 
-```bash
-sudo apt install golang-go build-essential python python-git libftdi-dev
-```
-
-Make sure you have `GOPATH` set, and `PATH` should contain `$GOPATH/bin`.
-It can be done by adding this to your `~/.bashrc`:
-
-```bash
-export GOPATH="$HOME/go"
-export PATH="$PATH:$GOPATH/bin"
-```
-
-Install govendor:
-
-```bash
-go get github.com/kardianos/govendor
-```
-
-Now clone the `mos-tool` repository into the proper location and `cd` to it
-
-```bash
-git clone https://github.com/cesanta/mos-tool $GOPATH/src/cesanta.com
-cd $GOPATH/src/cesanta.com
-```
-
-Fetch all vendored packages and save them under the `vendor` dir:
+Clone the repo (note: doesn't have to be in `GOPATH`):
 
 ```
-$ govendor sync -v
+$ git clone https://github.com/mongoose-os/mos
+$ cd mos
 ```
 
-Now, `mos` tool can be built:
+Fetch dependencies (only needed for the first build):
 
 ```
-make -C mos install
+$ make deps
 ```
 
-It will produce the binary `$GOPATH/bin/mos`.
+Build the binary:
 
-## Changelog
+```
+$ make
+```
 
-See [release notes for this repo](https://github.com/cesanta/mos-tool/releases).
-
-Up to version 1.25, mos tool was located under the
-[mongoose-os](https://github.com/cesanta/mongoose-os) repo, so its changelog
-can be found in [mongoose-os release notes](https://github.com/cesanta/mongoose-os/releases).
+It will produce `mos/mos` (or mos/mos.exe` on Windows.
