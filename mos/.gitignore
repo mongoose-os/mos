@@ -1,4 +1,3 @@
-bindata*.go
 mos
 mos.exe
 downloads/*
