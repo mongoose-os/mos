@@ -3,3 +3,4 @@
 # Build from local repo (volume-mount a clone of https://github.com/mongoose-os/mos.git to /src):
 /src 1.11_CHANGE_ME
 merge deb-release https://github.com/mongoose-os/mos.git deb-release
+run rsync -a /src/vendor/ vendor/
