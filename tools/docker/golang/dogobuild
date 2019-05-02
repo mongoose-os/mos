@@ -57,7 +57,7 @@ docker run -i --rm \
        -v /tmp/gobuild-cache:/go/pkg \
        --entrypoint /bin/bash \
        ${GOBUILD_IMAGE} \
-       -c "cd /go/src/github.com/mongoose-os/mos && govendor sync -v && make -C mos generate"
+       -c "cd /go/src/github.com/mongoose-os/mos && govendor sync -v"
 docker run -i --rm \
        -v "${TMPDIR}:/out" \
        -v $(realpath ../../..):/go/src/github.com/mongoose-os/mos \
