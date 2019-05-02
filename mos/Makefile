@@ -1,4 +1,4 @@
-.PHONY: all all-downloads build clean clean-version deploy deploy-fwbuild deploy-mos-binary deps downloads generate install linux mac win
+.PHONY: all all-downloads build clean clean-version deploy deploy-fwbuild deploy-mos-binary deps downloads generate install linux mac win version
 
 REPO := $(realpath ..)
 export GOPATH := $(REPO)/go
@@ -21,14 +21,14 @@ deps:
 	go install github.com/kardianos/govendor
 	cd $(GOPATH)/src/$(PKG) && $(GOBINPATH)/govendor sync -v
 
-generate: version/version.go
+generate:
 	@[ -f $(GOBINPATH)/go-bindata ] || \
 	  go install github.com/mongoose-os/mos/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@[ -f $(GOBINPATH)/go-bindata-assetfs ] || \
 	  go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@cd $(PKGDIR) && go generate ./...
 
-version/version.go version/version.json:
+version/version.go:
 	@# If we are building a Debian package, use its version.
 	@# Debian package versions look like this:
 	@#   1.12+92e435b~xenial0 (mos) or
@@ -49,13 +49,15 @@ version/version.go version/version.json:
 	@cat version/version.json
 	@echo
 
-build: generate
+version: version/version.go
+
+build: version
 	go build -v $(PKG)
 
-install: generate
+install: version
 	go install -v $(PKG)
 
-linux: generate
+linux: version
 	docker run -i --rm \
 	  -v $(GOPATH)/src/github.com/mongoose-os/mos:/go/src/github.com/mongoose-os/mos \
 	  -v $(OUTDIR):/out \
@@ -65,12 +67,12 @@ linux: generate
 	    -o /out/downloads/mos/linux/mos -tags no_libudev --ldflags '-extldflags "-static"' \
 	    $(PKG)
 
-mac: generate
+mac: version
 	brew install coreutils libftdi libusb-compat pkg-config
 	go build -o $(OUTDIR)/downloads/mos/mac/mos $(PKG)
 
 
-win: generate
+win: version
 	docker run -i --rm \
 	  -v $(GOPATH)/src/github.com/mongoose-os/mos:/go/src/github.com/mongoose-os/mos \
 	  -v $(OUTDIR):/out \
@@ -83,7 +85,7 @@ os-check:
 	@[ "`uname -s`" == "Darwin" ] || \
 	  { echo === Can only build downloads on a Mac, this is `uname -s`; exit 1; }
 
-downloads: os-check deps clean-version generate linux mac win
+downloads: os-check deps clean-version linux mac win
 	cp version/version.json $(OUTDIR)/downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
