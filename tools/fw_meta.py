@@ -158,13 +158,14 @@ def cmd_gen_build_info(args):
         git_log_head_out = subprocess.check_output(
                 ["git", "-C", repo_path, "log", "-n", "1", "HEAD", "--format=%H %ct"],
                 universal_newlines=True).strip()
+        head_hash = git_log_head_out.split()[0][:7]
+        head_ts = int(git_log_head_out.split()[1])
     except Exception as e:
         git_describe_out = ""
         git_revparse_out = ""
         git_log_head_out = ""
-
-    head_hash = git_log_head_out.split()[0][:7]
-    head_ts = int(git_log_head_out.split()[1])
+        head_hash = ""
+        head_ts = ""
 
     version = None
     if args.version:
