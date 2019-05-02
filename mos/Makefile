@@ -80,8 +80,8 @@ win: generate
 	           go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" $(PKG)'
 
 os-check:
-	#@[ "`uname -s`" == "Darwin" ] || \
-	#  { echo === Can only build downloads on a Mac, this is `uname -s`; exit 1; }
+	@[ "`uname -s`" == "Darwin" ] || \
+	  { echo === Can only build downloads on a Mac, this is `uname -s`; exit 1; }
 
 downloads: os-check deps clean-version generate linux mac win
 	cp version/version.json $(OUTDIR)/downloads/mos/
