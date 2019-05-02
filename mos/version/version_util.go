@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
 	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 type VersionJson struct {
@@ -30,7 +30,7 @@ var (
 		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
 	)
 
-	ubuntuDistrNames = []string{"xenial", "bionic", "cosmic"}
+	ubuntuDistrNames = []string{"xenial", "bionic", "cosmic", "disco"}
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
