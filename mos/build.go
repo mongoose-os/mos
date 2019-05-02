@@ -13,8 +13,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/common/paths"
@@ -23,10 +24,9 @@ import (
 	"github.com/mongoose-os/mos/mos/interpreter"
 	"github.com/mongoose-os/mos/mos/manifest_parser"
 	"github.com/mongoose-os/mos/mos/mosgit"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/update"
 	"github.com/mongoose-os/mos/mos/version"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -165,7 +165,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	serverVersionCh := make(chan *version.VersionJson, 1)
 	if true || !*local {
 		go func() {
-			v, err := update.GetServerMosVersion(string(update.GetUpdateChannel()))
+			v, err := update.GetServerMosVersion(string(update.GetUpdateChannel()), bParams.Platform, bParams.BuildVars["BOARD"])
 			if err != nil {
 				// Ignore error, it's not really important
 				return

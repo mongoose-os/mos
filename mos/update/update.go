@@ -17,19 +17,19 @@ import (
 
 	"context"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
+	"github.com/kardianos/osext"
+	goversion "github.com/mcuadros/go-version"
 	"github.com/mongoose-os/mos/common/ourgit"
 	"github.com/mongoose-os/mos/common/ourio"
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/common/paths"
 	"github.com/mongoose-os/mos/mos/common/state"
 	"github.com/mongoose-os/mos/mos/mosgit"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/version"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
-	"github.com/kardianos/osext"
-	goversion "github.com/mcuadros/go-version"
 	flag "github.com/spf13/pflag"
 
 	"github.com/mongoose-os/mos/mos/dev"
@@ -65,11 +65,15 @@ func getMosURL(p, mosVersion string) string {
 
 // mosVersion can be either exact mos version like "1.6", or update channel
 // like "latest" or "release".
-func GetServerMosVersion(mosVersion string) (*version.VersionJson, error) {
+func GetServerMosVersion(mosVersion string, extraInfo ...string) (*version.VersionJson, error) {
 	client := &http.Client{}
 	versionUrl := getMosURL("version.json", mosVersion)
 	req, err := http.NewRequest("GET", versionUrl, nil)
-	req.Header.Add("User-Agent", version.GetUserAgent())
+	if extraInfo != nil {
+		req.Header.Add("User-Agent", fmt.Sprintf("%s; %s", version.GetUserAgent(), strings.Join(extraInfo, "; ")))
+	} else {
+		req.Header.Add("User-Agent", version.GetUserAgent())
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
