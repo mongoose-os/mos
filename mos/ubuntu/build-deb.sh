@@ -33,9 +33,12 @@ docker run -i -t --rm \
     -v $SRC:/src \
     -v ${RECIPE}:/recipe \
     -v $HOME/tmp/out-${DISTR}:/tmp/work \
+    -e HOME=/tmp \
+    --user $(id -u):$(id -g) \
     ${IMAGE} \
     /bin/bash -l -c "\
         cd /src && \
+        git config --global user.name dummy && git config --global user.email dummy && \
         git-build-recipe --allow-fallback-to-native --package ${PACKAGE} --distribution ${DISTR} \
             /recipe /tmp/work && \
         cd /tmp/work/${PACKAGE} && \
