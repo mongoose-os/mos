@@ -45,6 +45,7 @@ config_schema:
   - title: Myapp settings
 build_vars:
   BOARD: ""
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
@@ -52,6 +53,7 @@ build_vars:
   MGOS_HAVE_MYLIB4: "1"
   MYLIB4_SWITCH_FOO: "1"
 cdefs:
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"

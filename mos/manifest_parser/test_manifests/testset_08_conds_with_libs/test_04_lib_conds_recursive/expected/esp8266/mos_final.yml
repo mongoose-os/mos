@@ -20,11 +20,13 @@ config_schema:
   - title: mylib3 settings
 build_vars:
   BOARD: ""
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
 cdefs:
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"

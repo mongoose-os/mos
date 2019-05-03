@@ -12,6 +12,9 @@ sources:
 no_implicit_init_deps: true
 build_vars:
   BOARD: ""
+  MGOS: "1"
+cdefs:
+  MGOS: "1"
 libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"

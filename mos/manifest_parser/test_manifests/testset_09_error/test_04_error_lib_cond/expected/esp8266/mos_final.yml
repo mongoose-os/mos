@@ -9,8 +9,10 @@ sources:
 - __APP_ROOT__/app/build/gen/mgos_deps_init.c
 build_vars:
   BOARD: ""
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
 cdefs:
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
 libs_version: "0.01"
 modules_version: "0.01"

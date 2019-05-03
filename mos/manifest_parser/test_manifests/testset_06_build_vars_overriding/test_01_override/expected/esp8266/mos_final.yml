@@ -41,12 +41,14 @@ build_vars:
   LIB4_VAR1: lib4_var1 lib3_var1
   LIB4_VAR2: lib4_var2 lib3_var2 app
   LIB4_VAR3: lib4_var3 app
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
   MGOS_HAVE_MYLIB4: "1"
 cdefs:
+  MGOS: "1"
   MGOS_HAVE_CORE: "1"
   MGOS_HAVE_MYLIB1: "1"
   MGOS_HAVE_MYLIB2: "1"

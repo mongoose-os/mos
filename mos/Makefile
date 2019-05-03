@@ -104,5 +104,8 @@ uglify:
 clean:
 	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{dmg,mac,linux,win}
 
+test:
+	cd $(GOPATH)/src/$(PKG) && go test ./...
+
 clean-version: clean
 	rm -f version/version.*

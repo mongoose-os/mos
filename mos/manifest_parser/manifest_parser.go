@@ -615,6 +615,9 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		}
 		pc.adjustments.ExtraLibs = nil
 
+		manifest.BuildVars["MGOS"] = "1"
+		manifest.CDefs["MGOS"] = "1"
+
 		for k, v := range pc.adjustments.CDefs {
 			manifest.CDefs[k] = v
 		}
