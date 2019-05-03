@@ -57,7 +57,7 @@ var (
 	keepTempFiles      = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	modules            = flag.StringArray("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
 	libs               = flag.StringArray("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
-	libsUpdateInterval = flag.Duration("libs-update-interval", time.Minute*30, "how often to update already fetched libs")
+	libsUpdateInterval = flag.Duration("libs-update-interval", time.Hour*1, "how often to update already fetched libs")
 
 	buildDockerExtra = flag.StringArray("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringArray("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
