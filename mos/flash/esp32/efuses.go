@@ -25,9 +25,9 @@ import (
 	"math/big"
 	"math/bits"
 
-	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/flash/esp"
 )
 
 type KeyEncodingScheme uint8
@@ -53,6 +53,7 @@ var (
 	MACAddressFuseName        = "WIFI_MAC_Address"
 	KeyEncodingSchemeFuseName = "coding_scheme"
 	FlashCryptCntFuseName     = "flash_crypt_cnt"
+	AbstractDone0FuseName     = "abstract_done_0"
 )
 
 var (
@@ -114,7 +115,7 @@ var (
 		keyCodingSchemeFuseDescriptor,
 		{name: "console_debug_disable", block: 0, fields: []bitField{{6, 2, 2}}, wdBit: 15, rdBit: -1},
 		// 6, 3, 3 - ?
-		{name: "abstract_done_0", block: 0, fields: []bitField{{6, 4, 4}}, wdBit: 12, rdBit: -1},
+		{name: AbstractDone0FuseName, block: 0, fields: []bitField{{6, 4, 4}}, wdBit: 12, rdBit: -1},
 		{name: "abstract_done_1", block: 0, fields: []bitField{{6, 5, 5}}, wdBit: 13, rdBit: -1},
 		{name: "JTAG_disable", block: 0, fields: []bitField{{6, 6, 6}}, wdBit: 14, rdBit: -1},
 		{name: "download_dis_encrypt", block: 0, fields: []bitField{{6, 7, 7}}, wdBit: 15, rdBit: -1},

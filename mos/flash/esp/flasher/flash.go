@@ -25,13 +25,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/common/fwbundle"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/mongoose-os/mos/mos/flash/esp32"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 )
 
 const (
@@ -75,6 +75,7 @@ func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) er
 	common.Reportf("Flash size: %d, params: %s", cfr.flashParams.Size(), cfr.flashParams)
 
 	encryptionEnabled := false
+	secureBootEnabled := false
 	var esp32EncryptionKey []byte
 	var fusesByName map[string]*esp32.Fuse
 	kcs := esp32.KeyEncodingSchemeNone
@@ -87,14 +88,16 @@ func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) er
 			return errors.Annotatef(err, "failed to read eFuses")
 		}
 
-		fcnt, err := fusesByName[esp32.FlashCryptCntFuseName].Value(true /* withDiffs */)
-		if err != nil {
-			return errors.Trace(err)
+		if fcnt, err := fusesByName[esp32.FlashCryptCntFuseName].Value(true /* withDiffs */); err == nil {
+			encryptionEnabled = (bits.OnesCount64(fcnt.Uint64())%2 != 0)
+			kcs = esp32.GetKeyEncodingScheme(fusesByName)
+			common.Reportf("Flash encryption: %s, scheme: %s", enDis(encryptionEnabled), kcs)
 		}
-		encryptionEnabled = (bits.OnesCount64(fcnt.Uint64())%2 != 0)
-		kcs = esp32.GetKeyEncodingScheme(fusesByName)
 
-		common.Reportf("Flash encryption: %s, scheme: %s", enDis(encryptionEnabled), kcs)
+		if abs0, err := fusesByName[esp32.AbstractDone0FuseName].Value(true /* withDiffs */); err == nil {
+			secureBootEnabled = (abs0.Int64() != 0)
+			common.Reportf("Secure boot: %s", enDis(secureBootEnabled))
+		}
 	}
 
 	// Sort images by address
