@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/mos/ourutil"
-	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/common/fwbundle"
+	"github.com/mongoose-os/mos/mos/flash/common"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 var (
@@ -56,9 +56,16 @@ func getSTLinkMountsInDir(dir string) ([]string, error) {
 type FlashOpts struct {
 	ShareName string
 	Timeout   time.Duration
+	KeepFS    bool
 }
 
 func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
+	if opts.KeepFS {
+		// It's not easy: fs is included in the big blob.
+		// We'd need to read the fs first to preserve it.
+		return errors.Errorf("--keep-fs is not supportef for STM32")
+	}
+
 	data, err := fw.GetPartData("app")
 	if err != nil {
 		return errors.Annotatef(err, "invalid manifest")

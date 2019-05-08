@@ -9,16 +9,17 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/cesanta/errors"
+	"github.com/cesanta/go-serial/serial"
 	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/mongoose-os/mos/mos/flash/common"
-	"github.com/cesanta/errors"
-	"github.com/cesanta/go-serial/serial"
 )
 
 type FlashOpts struct {
 	Port           string
 	FormatSLFSSize int
+	KeepFS         bool
 }
 
 const (
@@ -42,6 +43,12 @@ func isKnownPartType(pt string) bool {
 
 func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	var files []*fileInfo
+
+	if opts.KeepFS {
+		// It's not easy: we always format SLFS regardless.
+		// We'd need to read the fs first to preserve it.
+		return errors.Errorf("--keep-fs is not supportef for CC3200")
+	}
 
 	parts := []*fwbundle.FirmwarePart{}
 	for _, p := range fw.Parts {

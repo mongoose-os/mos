@@ -88,6 +88,7 @@ var (
 	GDBServerCmd = flag.String("gdb-server-cmd", "/usr/local/bin/serve_core.py", "")
 
 	KeepTempFiles = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
+	KeepFS        = flag.Bool("keep-fs", false, "When flashing, skip the filesystem parts")
 )
 
 func Platform() string {

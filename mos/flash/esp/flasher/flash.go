@@ -39,7 +39,6 @@ const (
 	flashBlockSize    = 0x10000
 	sysParamsPartType = "sys_params"
 	sysParamsAreaSize = 4 * flashSectorSize
-	fsDirPartTye      = "fs_dir"
 	espImageMagicByte = 0xe9
 )
 
@@ -65,6 +64,10 @@ func enDis(enabled bool) string {
 }
 
 func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) error {
+
+	if opts.KeepFS && opts.EraseChip {
+		return errors.Errorf("--keep-fs and --esp-erase-chip are incompatible")
+	}
 
 	cfr, err := ConnectToFlasherClient(ct, opts)
 	if err != nil {
@@ -103,7 +106,7 @@ func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) er
 	// Sort images by address
 	var images []*image
 	for _, p := range fw.Parts {
-		if p.Type == fsDirPartTye {
+		if p.Type == fwbundle.FSPartType && opts.KeepFS {
 			continue
 		}
 		data, err := fw.GetPartData(p.Name)

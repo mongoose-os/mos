@@ -28,12 +28,12 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dap"
 	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/dp"
 	"github.com/mongoose-os/mos/mos/flash/common/cmsis-dap/memap"
 	"github.com/mongoose-os/mos/mos/flash/common/cortex"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 const (
@@ -97,6 +97,7 @@ type FlashSector struct {
 
 type FlashOpts struct {
 	EraseChip bool
+	KeepFS    bool
 }
 
 func runFlasherFunc(ctx2 context.Context, tgt common.Target, funcAddr uint32, args []uint32, timeout time.Duration) error {
@@ -156,6 +157,9 @@ func isAllFF(data []byte) bool {
 }
 
 func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
+	if opts.KeepFS && opts.EraseChip {
+		return errors.Errorf("--keep-fs and --esp-erase-chip are incompatible")
+	}
 	ctx := context.Background()
 	dapc, err := dap.NewClient(ctx, vid, pid, "", intf, epIn, epOut)
 	if err != nil {
@@ -276,6 +280,9 @@ func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 		erasedChip = true
 	}
 	for _, p := range fw.PartsByAddr() {
+		if p.Type == fwbundle.FSPartType && opts.KeepFS {
+			continue
+		}
 		pData, err := p.GetData()
 		if err != nil {
 			return errors.Annotatef(err, "failed to get part %q data", p.Name)
