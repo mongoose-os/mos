@@ -27,8 +27,9 @@ import (
 
 	"context"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/common/fwbundle"
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/devutil"
 	"github.com/mongoose-os/mos/mos/flags"
@@ -38,9 +39,8 @@ import (
 	espFlasher "github.com/mongoose-os/mos/mos/flash/esp/flasher"
 	"github.com/mongoose-os/mos/mos/flash/rs14100"
 	"github.com/mongoose-os/mos/mos/flash/stm32"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/version"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
@@ -146,7 +146,7 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to load %s", fwname)
 	}
-	if !*keepTempFiles {
+	if !*flags.KeepTempFiles {
 		defer fw.Cleanup()
 	}
 

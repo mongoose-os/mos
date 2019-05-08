@@ -54,7 +54,6 @@ var (
 	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
 	buildParamsFlag    = flag.String("build-params", "", "build params file")
 	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
-	keepTempFiles      = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	modules            = flag.StringArray("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
 	libs               = flag.StringArray("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
 	libsUpdateInterval = flag.Duration("libs-update-interval", time.Hour*1, "how often to update already fetched libs")

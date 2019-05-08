@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/cesanta/errors"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )
 
@@ -86,6 +86,8 @@ var (
 	Subject      = flag.String("subject", "", "Subject for CSR or certificate")
 
 	GDBServerCmd = flag.String("gdb-server-cmd", "/usr/local/bin/serve_core.py", "")
+
+	KeepTempFiles = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 )
 
 func Platform() string {
