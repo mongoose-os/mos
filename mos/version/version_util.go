@@ -42,9 +42,7 @@ const (
 
 var (
 	regexpVersionNumber = regexp.MustCompile(`^\d+\.[0-9.]*$`)
-	regexpBuildIdDistr  = regexp.MustCompile(
-		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
-	)
+	regexpBuildIdDistr  = regexp.MustCompile(`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>[^\d]+)\d+$`)
 
 	ubuntuDistrNames = []string{"xenial", "bionic", "cosmic", "disco"}
 )
@@ -85,19 +83,24 @@ func LooksLikeBrewBuildId(s string) bool {
 // debian build id, returns either "latest" or "release". Otherwise, returns
 // an empty string.
 func GetUbuntuUpdateChannel(buildId string) string {
-	matches := ourutil.FindNamedSubmatches(regexpBuildIdDistr, buildId)
-	if matches != nil {
-		for _, v := range ubuntuDistrNames {
-			if strings.HasPrefix(matches["distr"], v) {
-				if LooksLikeVersionNumber(matches["version"]) {
-					return "release"
-				} else {
-					return "latest"
-				}
+	parts := GetUbuntuBuildIDParts(buildId)
+	if parts == nil {
+		return ""
+	}
+	for _, v := range ubuntuDistrNames {
+		if strings.HasPrefix(parts["distr"], v) {
+			if LooksLikeVersionNumber(parts["version"]) {
+				return "release"
+			} else {
+				return "latest"
 			}
 		}
 	}
 	return ""
+}
+
+func GetUbuntuBuildIDParts(buildId string) map[string]string {
+	return ourutil.FindNamedSubmatches(regexpBuildIdDistr, buildId)
 }
 
 func GetUserAgent() string {

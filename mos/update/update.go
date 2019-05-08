@@ -63,11 +63,6 @@ var (
 		UpdateChannelRelease: "mos",
 		UpdateChannelLatest:  "mos-latest",
 	}
-	ubuntuPackageNames = map[UpdateChannel]string{
-		UpdateChannelRelease: "mos",
-		UpdateChannelLatest:  "mos-latest",
-	}
-	ubuntuRepoName = "ppa:mongoose-os/mos"
 )
 
 // mosVersion can be either exact mos version like "1.6", or update channel
@@ -108,36 +103,6 @@ func GetServerMosVersion(mosVersion string, extraInfo ...string) (*version.Versi
 	return &serverVersion, nil
 }
 
-func doUbuntuUpdate(oldUpdChannel, newUpdChannel UpdateChannel) error {
-	oldPkg := ubuntuPackageNames[oldUpdChannel]
-	newPkg := ubuntuPackageNames[newUpdChannel]
-
-	// Start with an apt-get update.
-	// Do not fail because some unrelated repo may be screwed up
-	// but our PPA might still be ok.
-	ourutil.RunCmd(ourutil.CmdOutOnError, "sudo", "apt-get", "update")
-
-	// Check if mos and mos-latest are among the available packages.
-	output, err := ourutil.GetCommandOutput("apt-cache", "showpkg", newPkg)
-	if err != nil {
-		return errors.Annotatef(err, "faild to get package info")
-	}
-	if !strings.Contains(output, "/lists/") {
-		// No package info in repo lists - we should (re-)add our repo.
-		// This can happen, for example, after release upgrade which disables 3rd-party repos.
-		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "sudo", "apt-add-repository", "-y", "-u", ubuntuRepoName); err != nil {
-			return errors.Trace(err)
-		}
-	}
-
-	if oldPkg != newPkg {
-		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "sudo", "apt-get", "remove", "-y", oldPkg); err != nil {
-			return errors.Trace(err)
-		}
-	}
-	return ourutil.RunCmd(ourutil.CmdOutAlways, "sudo", "apt-get", "install", "-y", newPkg)
-}
-
 func doBrewUpdate(oldUpdChannel, newUpdChannel UpdateChannel) error {
 	oldPkg := brewPackageNames[oldUpdChannel]
 	newPkg := brewPackageNames[newUpdChannel]
@@ -174,7 +139,11 @@ func Update(ctx context.Context, devConn dev.DevConn) error {
 	}
 
 	if version.LooksLikeUbuntuBuildId(version.BuildId) {
-		return doUbuntuUpdate(updChannel, newUpdChannel)
+		if newMosVersion == string(newUpdChannel) {
+			return doUbuntuUpdateRepo(updChannel, newUpdChannel)
+		} else {
+			return doUbuntuUpdateDEB(updChannel, newMosVersion)
+		}
 	} else if version.LooksLikeBrewBuildId(version.BuildId) {
 		return doBrewUpdate(updChannel, newUpdChannel)
 	} else if version.LooksLikeDistrBuildId(version.BuildId) {

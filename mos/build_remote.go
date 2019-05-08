@@ -28,18 +28,19 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/common/ourfilepath"
 	"github.com/mongoose-os/mos/common/ourio"
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/build"
 	"github.com/mongoose-os/mos/mos/build/archive"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/common/paths"
+	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/interpreter"
 	"github.com/mongoose-os/mos/mos/manifest_parser"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/version"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -62,7 +63,7 @@ func buildRemote(bParams *buildParams) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	if !*keepTempFiles {
+	if !*flags.KeepTempFiles {
 		defer os.RemoveAll(appStagingDir)
 	}
 	if *verbose {
