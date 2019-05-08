@@ -38,6 +38,7 @@ type FlashOpts struct {
 	BootFirmware           bool
 	ESP32EncryptionKeyFile string
 	ESP32FlashCryptConf    uint32
+	KeepFS                 bool
 }
 
 type RegReaderWriter interface {

@@ -8,17 +8,18 @@
 package cc3220
 
 import (
+	"github.com/cesanta/errors"
+	"github.com/cesanta/go-serial/serial"
 	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/mongoose-os/mos/mos/flash/common"
-	"github.com/cesanta/errors"
-	"github.com/cesanta/go-serial/serial"
 )
 
 type FlashOpts struct {
 	Port           string
 	FormatSLFSSize int
 	BPIBinary      string
+	KeepFS         bool
 }
 
 const (
@@ -28,6 +29,12 @@ const (
 )
 
 func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
+	if opts.KeepFS {
+		// It's not easy: we create an image that overwrites entire internal flash.
+		// We'd need to read the fs first to preserve it.
+		return errors.Errorf("--keep-fs is not supportef for CC3220")
+	}
+
 	if opts.BPIBinary == "" {
 		bpib, err := findBPIBinary()
 		if err != nil {

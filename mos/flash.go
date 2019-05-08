@@ -172,15 +172,19 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 	switch strings.ToLower(fw.Platform) {
 	case "cc3200":
 		cc3200FlashOpts.Port = port
+		cc3200FlashOpts.KeepFS = *flags.KeepFS
 		err = cc3200.Flash(fw, &cc3200FlashOpts)
 	case "cc3220":
 		cc3220FlashOpts.Port = port
+		cc3220FlashOpts.KeepFS = *flags.KeepFS
 		err = cc3220.Flash(fw, &cc3220FlashOpts)
 	case "esp32":
 		espFlashOpts.ControlPort = port
+		espFlashOpts.KeepFS = *flags.KeepFS
 		err = espFlasher.Flash(esp.ChipESP32, fw, &espFlashOpts)
 	case "esp8266":
 		espFlashOpts.ControlPort = port
+		espFlashOpts.KeepFS = *flags.KeepFS
 		err = espFlasher.Flash(esp.ChipESP8266, fw, &espFlashOpts)
 	case "stm32":
 		// Ideally we'd like to find mounted directory corresponding to the selected port.
@@ -203,8 +207,10 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 			}
 		}
 		stm32FlashOpts.ShareName = port
+		stm32FlashOpts.KeepFS = *flags.KeepFS
 		err = stm32.Flash(fw, &stm32FlashOpts)
 	case "rs14100":
+		rs14100FlashOpts.KeepFS = *flags.KeepFS
 		err = rs14100.Flash(fw, &rs14100FlashOpts)
 	default:
 		err = errors.Errorf("%s: unsupported platform '%s'", *firmware, fw.Platform)

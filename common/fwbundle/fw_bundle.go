@@ -25,9 +25,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/ourutil"
+)
+
+const (
+	FSPartType = "fs"
 )
 
 type FirmwareBundle struct {
