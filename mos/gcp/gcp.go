@@ -28,15 +28,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/fs"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/x509utils"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudiot/v1"
 )
@@ -158,7 +158,7 @@ func GCPIoTSetup(ctx context.Context, devConn dev.DevConn) error {
 	}
 	resp, err := iotAPIClient.Projects.Locations.Registries.Devices.Create(parent, &device).Do()
 	if err != nil {
-		glog.Infof("Error creating device: %s %s", err, resp)
+		glog.Infof("Error creating device: %s %#v", err, resp)
 		ourutil.Reportf("Trying to delete the device...")
 		dev := fmt.Sprintf("%s/devices/%s", parent, devID)
 		_, err = iotAPIClient.Projects.Locations.Registries.Devices.Delete(dev).Do()

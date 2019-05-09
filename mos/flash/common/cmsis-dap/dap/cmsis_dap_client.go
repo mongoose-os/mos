@@ -105,7 +105,7 @@ func (dapc *dapClient) exec(ctx context.Context, args *bytes.Buffer) (*bytes.Buf
 		return nil, errors.Errorf("packet too long (max %d, got %d)", dapc.maxPacketSize, len(args.Bytes()))
 	}
 	if err := dapc.d.Write(args.Bytes()); err != nil {
-		return nil, errors.Annotatef(err, "device write failed", err)
+		return nil, errors.Annotatef(err, "device write failed")
 	}
 	select {
 	case <-ctx.Done():
@@ -254,7 +254,7 @@ func (dapc *dapClient) doTransfer(ctx context.Context, dapIndex uint8, reqs []Tr
 		return st, nil, errors.Errorf("transfer failed (tc %d/%d st 0x%02x)", tc, len(reqs), st)
 	}
 	if int(tc) != len(reqs) {
-		return st, nil, errors.Errorf("not all transfers completed", st)
+		return st, nil, errors.Errorf("not all transfers completed %d", st)
 	}
 	for _, req := range reqs {
 		if req.Op != OpRead {
@@ -315,7 +315,7 @@ func (dapc *dapClient) TransferBlockRead(ctx context.Context, dapIndex uint8, ap
 		return nil, errors.Errorf("transfer failed (tc %d/%d st 0x%02x)", tc, length, st)
 	}
 	if int(tc) != length {
-		return nil, errors.Errorf("not all transfers completed", st)
+		return nil, errors.Errorf("not all transfers completed %d", st)
 	}
 	var res []uint32
 	for i := 0; i < length; i++ {
@@ -358,7 +358,7 @@ func (dapc *dapClient) TransferBlockWrite(ctx context.Context, dapIndex uint8, a
 		return errors.Errorf("transfer failed (tc %d/%d st 0x%02x)", tc, len(data), st)
 	}
 	if int(tc) != len(data) {
-		return errors.Errorf("not all transfers completed", st)
+		return errors.Errorf("not all transfers completed %d", st)
 	}
 	return nil
 }
