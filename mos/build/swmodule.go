@@ -33,9 +33,9 @@ import (
 	"time"
 
 	"github.com/mongoose-os/mos/common/ourgit"
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/mosgit"
+	"github.com/mongoose-os/mos/mos/ourutil"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -659,11 +659,11 @@ func prepareLocalCopyGitLocked(
 		return errors.Trace(err)
 	}
 
-	glog.V(2).Infof("hash: %q", curHash)
+	glog.V(2).Infof("%s: Hash: %q", name, curHash)
 
 	// Check if it's equal to the desired one
 	if ourgit.HashesEqual(curHash, version) {
-		glog.V(2).Infof("hashes are equal %q, %q", curHash, version)
+		glog.V(2).Infof("%s: hashes are equal %q, %q", name, curHash, version)
 		// Desired mongoose iot version is a fixed SHA, and it's equal to the
 		// current commit: we're all set.
 		return nil
@@ -677,7 +677,7 @@ func prepareLocalCopyGitLocked(
 		return errors.Trace(err)
 	}
 
-	glog.V(2).Infof("branch %q exists=%v", version, branchExists)
+	glog.V(2).Infof("%s: branch %q exists=%v", name, version, branchExists)
 
 	// Check if MongooseOsVersion is a known tag name
 	tagExists, err = gitinst.DoesTagExist(targetDir, version)
@@ -685,11 +685,11 @@ func prepareLocalCopyGitLocked(
 		return errors.Trace(err)
 	}
 
-	glog.V(2).Infof("tag %q exists=%v", version, tagExists)
+	glog.V(2).Infof("%s: tag %q exists=%v", name, version, tagExists)
 
 	// If the desired mongoose-os version isn't a known branch, do git fetch
 	if !branchExists && !tagExists {
-		glog.V(2).Infof("neither branch nor tag exists, fetching..")
+		glog.V(2).Infof("%s: neither branch nor tag exists, fetching...", name)
 		err = gitinst.Fetch(targetDir, ourgit.FetchOptions{})
 		if err != nil {
 			return errors.Trace(err)
@@ -700,28 +700,28 @@ func prepareLocalCopyGitLocked(
 		if err != nil {
 			return errors.Trace(err)
 		}
-		glog.V(2).Infof("branch %q exists=%v", version, branchExists)
+		glog.V(2).Infof("%s: branch %q exists=%v", name, version, branchExists)
 
 		// Check if version is a known tag name
 		tagExists, err = gitinst.DoesTagExist(targetDir, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		glog.V(2).Infof("tag %q exists=%v", version, tagExists)
+		glog.V(2).Infof("%s: tag %q exists=%v", name, version, tagExists)
 	}
 
 	refType := ourgit.RefTypeHash
 	if branchExists {
-		glog.V(2).Infof("%q is a branch", version)
+		glog.V(2).Infof("%s: %q is a branch", name, version)
 		refType = ourgit.RefTypeBranch
 	} else if tagExists {
-		glog.V(2).Infof("%q is a tag", version)
+		glog.V(2).Infof("%s: %q is a tag", name, version)
 		refType = ourgit.RefTypeTag
 	} else {
 		// Given version is neither a branch nor a tag, let's see if it looks like
 		// a hash
 		if _, err := hex.DecodeString(version); err == nil {
-			glog.V(2).Infof("%q is neither a branch nor a tag, assume it's a hash", version)
+			glog.V(2).Infof("%s: %q is neither a branch nor a tag, assume it's a hash", name, version)
 		} else {
 			return errors.Errorf("given version %q is neither a branch nor a tag", version)
 		}
@@ -734,13 +734,28 @@ func prepareLocalCopyGitLocked(
 		return errors.Trace(err)
 	}
 
+	newHash, err := gitinst.GetCurrentHash(targetDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	glog.V(2).Infof("%s: New hash: %s", name, newHash)
+
 	if branchExists {
-		fInfo, err := os.Stat(targetDir)
-		if err != nil {
-			return errors.Trace(err)
+
+		// Pull the branch if we just switched to it (hash is different) or hasn't been pulled for pullInterval.
+		wantPull := newHash != curHash
+
+		if !wantPull && pullInterval != 0 {
+			fInfo, err := os.Stat(targetDir)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			if fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
+				wantPull = true
+			}
 		}
 
-		if pullInterval != 0 && fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
+		if wantPull {
 			freportf(logWriter, "%s: Pulling...", name)
 			err = gitinst.Pull(targetDir)
 			if err != nil {
