@@ -116,6 +116,14 @@ func ParseHexBundle(hexData []byte) (*HexBundle, error) {
 			var addr uint16
 			binary.Read(buf, binary.BigEndian, &addr)
 			curBase = uint32(addr) << 4
+		case 3:
+			if recLen != 4 {
+				return nil, errors.Errorf("line %d: start segment address", lineNo)
+			}
+			var cs, ip uint16
+			binary.Read(buf, binary.BigEndian, &cs)
+			binary.Read(buf, binary.BigEndian, &ip)
+			hb.Start = (uint32(cs) << 4) | uint32(ip)
 		case 4:
 			if recLen != 2 {
 				return nil, errors.Errorf("line %d: invalid extended linear address", lineNo)
