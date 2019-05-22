@@ -31,6 +31,8 @@ import (
 
 	"context"
 
+	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/mos/aws"
 	"github.com/mongoose-os/mos/mos/azure"
@@ -46,12 +48,11 @@ import (
 	"github.com/mongoose-os/mos/mos/fs"
 	"github.com/mongoose-os/mos/mos/gcp"
 	license "github.com/mongoose-os/mos/mos/license_cmd"
+	"github.com/mongoose-os/mos/mos/mdash"
 	"github.com/mongoose-os/mos/mos/ota"
 	"github.com/mongoose-os/mos/mos/update"
 	"github.com/mongoose-os/mos/mos/version"
 	"github.com/mongoose-os/mos/mos/watson"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
@@ -137,6 +138,7 @@ func init() {
 		{"azure-iot-setup", azure.AzureIoTSetup, `Provision the device for Azure IoT Hub`, nil, []string{"atca-slot", "azure-auth-file", "port", "use-atca"}, Yes, false},
 		{"gcp-iot-setup", gcp.GCPIoTSetup, `Provision the device for Google IoT Core`, nil, []string{"atca-slot", "gcp-region", "port", "use-atca", "registry"}, Yes, false},
 		{"watson-iot-setup", watson.WatsonIoTSetup, `Provision the device for IBM Watson IoT Platform`, nil, []string{}, Yes, false},
+		{"mdash-setup", mdash.MdashSetup, `Provision the device for mDash`, nil, []string{"port"}, Yes, false},
 		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, No, false},
 		{"license", license.License, `License device`, nil, nil, Maybe, false},
 		{"license-save-key", license.SaveKey, `Save license server key`, nil, nil, No, false},
