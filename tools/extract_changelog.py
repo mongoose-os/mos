@@ -126,7 +126,7 @@ if not repos:
     # Get libs and apps repos
     repos = get_repo_names("mongoose-os-libs") + get_repo_names("mongoose-os-apps")
     # Add a few more
-    repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-tool"])
+    repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "mongoose-os/mos"])
     repos.sort()
 
     print("Repos: %s" % " ".join(repos), file=sys.stderr)
