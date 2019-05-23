@@ -56,8 +56,9 @@ type firmwarePart struct {
 	// Deprecated, not being used since 2018/12/03.
 	CC3200FileSignature string `json:"sign,omitempty"`
 
-	// Other user-specified properties are preserved here.
-	properties   map[string]interface{}
+	// Other user-specified attributes are preserved here.
+	attrs map[string]interface{}
+
 	data         []byte
 	dataProvider DataProvider
 }
@@ -69,7 +70,7 @@ func PartFromString(ps string) (*FirmwarePart, error) {
 	if len(np) < 2 {
 		return nil, errors.Errorf("invalid part spec '%s', must be 'name:prop=value,...'", ps)
 	}
-	// Create properties JSON and re-parse it.
+	// Create attrs JSON and re-parse it.
 	m := make(map[string]interface{})
 	for _, prop := range strings.Split(np[1], ",") {
 		if len(prop) == 0 {
@@ -184,10 +185,10 @@ func (p *FirmwarePart) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(p.properties) == 0 {
+	if len(p.attrs) == 0 {
 		return b, nil
 	}
-	eb, err := json.Marshal(p.properties)
+	eb, err := json.Marshal(p.attrs)
 	if err != nil {
 		return nil, err
 	}
@@ -218,13 +219,13 @@ func (p *FirmwarePart) UnmarshalJSON(b []byte) error {
 	// Re-parse as a generic map.
 	var mp map[string]interface{}
 	json.Unmarshal(b, &mp)
-	// Find keys that are not fields in the struct and add them as properties.
+	// Find keys that are not fields in the struct and add them as attrs.
 	for k, v := range mp {
 		if !isJSONField(p, k) {
-			if p.properties == nil {
-				p.properties = make(map[string]interface{})
+			if p.attrs == nil {
+				p.attrs = make(map[string]interface{})
 			}
-			p.properties[k] = v
+			p.attrs[k] = v
 		}
 	}
 	return nil

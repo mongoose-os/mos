@@ -22,15 +22,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/version"
 
+	"github.com/cesanta/errors"
 	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/mos/ourutil"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 
@@ -111,6 +113,26 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 				fwb.AddPart(p)
 			}
 		}
+	}
+	attrs, err := moscommon.ParseParamValues(*flags.Attr)
+	if err != nil {
+		return errors.Annotatef(err, "failed to parse --attr")
+	}
+	for attr, valueStr := range attrs {
+		var value interface{}
+		switch valueStr {
+		case "true":
+			value = true
+		case "false":
+			value = false
+		default:
+			if i, err := strconv.ParseInt(valueStr, 0, 64); err == nil {
+				value = i
+			} else {
+				value = valueStr
+			}
+		}
+		fwb.SetAttr(attr, value)
 	}
 	ourutil.Reportf("Writing %s", *flags.Output)
 	return fwbundle.WriteZipFirmwareBundle(fwb, *flags.Output, *flags.Compress)

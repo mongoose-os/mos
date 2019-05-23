@@ -5,6 +5,8 @@ package moscommon
 
 import (
 	"strings"
+
+	"github.com/cesanta/errors"
 )
 
 const (
@@ -28,4 +30,18 @@ func ExpandPlaceholders(s, ps, ss string) string {
 		res = string(c) + res
 	}
 	return res
+}
+
+func ParseParamValues(args []string) (map[string]string, error) {
+	ret := map[string]string{}
+	for _, a := range args {
+		// Split arg into two substring by "=" (so, param name name cannot contain
+		// "=", but value can)
+		subs := strings.SplitN(a, "=", 2)
+		if len(subs) < 2 {
+			return nil, errors.Errorf("missing value for %q", a)
+		}
+		ret[subs[0]] = subs[1]
+	}
+	return ret, nil
 }

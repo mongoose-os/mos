@@ -40,7 +40,7 @@ type FirmwareBundle struct {
 	tempDir string
 }
 
-type FirmwareManifest struct {
+type firmwareManifest struct {
 	Name           string                   `json:"name,omitempty"`
 	Platform       string                   `json:"platform,omitempty"`
 	Description    string                   `json:"description,omitempty"`
@@ -48,7 +48,12 @@ type FirmwareManifest struct {
 	BuildID        string                   `json:"build_id,omitempty"`
 	BuildTimestamp *time.Time               `json:"build_timestamp,omitempty"`
 	Parts          map[string]*FirmwarePart `json:"parts"`
+
+	// Extra attributes.
+	attrs map[string]interface{}
 }
+
+type FirmwareManifest firmwareManifest
 
 func NewBundle() *FirmwareBundle {
 	return &FirmwareBundle{}
@@ -145,4 +150,50 @@ func (fw *FirmwareBundle) Cleanup() {
 		glog.Infof("Cleaning up %q", fw.tempDir)
 		os.RemoveAll(fw.tempDir)
 	}
+}
+
+func (fwb *FirmwareBundle) SetAttr(attr string, value interface{}) {
+	if fwb.FirmwareManifest.attrs == nil {
+		fwb.FirmwareManifest.attrs = make(map[string]interface{})
+	}
+	fwb.FirmwareManifest.attrs[attr] = value
+}
+
+func (fwm FirmwareManifest) MarshalJSON() ([]byte, error) {
+	b, err := json.Marshal(firmwareManifest(fwm))
+	if err != nil {
+		return nil, err
+	}
+	if len(fwm.attrs) == 0 {
+		return b, nil
+	}
+	eb, err := json.Marshal(fwm.attrs)
+	if err != nil {
+		return nil, err
+	}
+	eb[0] = ','
+	rb := append(b[:len(b)-1], eb...)
+	return rb, nil
+}
+
+func (fwm FirmwareManifest) UnmarshalJSON(b []byte) error {
+	// Start by filling in the struct fields.
+	var fwm1 firmwareManifest
+	if err := json.Unmarshal(b, &fwm1); err != nil {
+		return err
+	}
+	*(&fwm) = FirmwareManifest(fwm1)
+	// Re-parse as a generic map.
+	var mp map[string]interface{}
+	json.Unmarshal(b, &mp)
+	// Find keys that are not fields in the struct and add them as attrs.
+	for k, v := range mp {
+		if !isJSONField(fwm, k) {
+			if fwm.attrs == nil {
+				fwm.attrs = make(map[string]interface{})
+			}
+			fwm.attrs[k] = v
+		}
+	}
+	return nil
 }

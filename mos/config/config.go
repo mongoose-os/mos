@@ -20,14 +20,14 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
-	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )
 
@@ -86,7 +86,7 @@ func SetWithArgs(
 		return errors.Trace(err)
 	}
 
-	paramValues, err := parseParamValues(args)
+	paramValues, err := moscommon.ParseParamValues(args)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -166,20 +166,6 @@ func SetAndSaveLevel(ctx context.Context, devConn dev.DevConn, devConf *dev.DevC
 
 func SetAndSave(ctx context.Context, devConn dev.DevConn, devConf *dev.DevConf) error {
 	return SetAndSaveLevel(ctx, devConn, devConf, *flags.Level)
-}
-
-func parseParamValues(args []string) (map[string]string, error) {
-	ret := map[string]string{}
-	for _, a := range args {
-		// Split arg into two substring by "=" (so, param name name cannot contain
-		// "=", but value can)
-		subs := strings.SplitN(a, "=", 2)
-		if len(subs) < 2 {
-			return nil, errors.Errorf("missing value for %q", a)
-		}
-		ret[subs[0]] = subs[1]
-	}
-	return ret, nil
 }
 
 func ApplyDiff(devConf *dev.DevConf, newConf map[string]string) error {
