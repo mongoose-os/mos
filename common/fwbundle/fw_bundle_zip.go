@@ -25,10 +25,10 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
-	zip "github.com/mongoose-os/mos/common/ourzip"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	zip "github.com/mongoose-os/mos/common/ourzip"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 const (

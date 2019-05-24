@@ -159,8 +159,8 @@ func (fwb *FirmwareBundle) SetAttr(attr string, value interface{}) {
 	fwb.FirmwareManifest.attrs[attr] = value
 }
 
-func (fwm FirmwareManifest) MarshalJSON() ([]byte, error) {
-	b, err := json.Marshal(firmwareManifest(fwm))
+func (fwm *FirmwareManifest) MarshalJSON() ([]byte, error) {
+	b, err := json.Marshal(firmwareManifest(*fwm))
 	if err != nil {
 		return nil, err
 	}
@@ -176,13 +176,13 @@ func (fwm FirmwareManifest) MarshalJSON() ([]byte, error) {
 	return rb, nil
 }
 
-func (fwm FirmwareManifest) UnmarshalJSON(b []byte) error {
+func (fwm *FirmwareManifest) UnmarshalJSON(b []byte) error {
 	// Start by filling in the struct fields.
 	var fwm1 firmwareManifest
 	if err := json.Unmarshal(b, &fwm1); err != nil {
 		return err
 	}
-	*(&fwm) = FirmwareManifest(fwm1)
+	*fwm = FirmwareManifest(fwm1)
 	// Re-parse as a generic map.
 	var mp map[string]interface{}
 	json.Unmarshal(b, &mp)
