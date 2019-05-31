@@ -30,12 +30,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
-	"github.com/mongoose-os/mos/mos/atca"
-	"github.com/mongoose-os/mos/mos/config"
-	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/mongoose-os/mos/mos/fs"
-	"github.com/mongoose-os/mos/mos/x509utils"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/defaults"
@@ -45,6 +39,12 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/go-ini/ini"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/atca"
+	"github.com/mongoose-os/mos/mos/config"
+	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/fs"
+	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/mongoose-os/mos/mos/x509utils"
 	flag "github.com/spf13/pflag"
 )
 
@@ -65,6 +65,7 @@ var (
 	IsUI          = false // XXX: Hack!
 	awsCertFile   = ""
 	awsKeyFile    = ""
+	awsProfile    = ""
 )
 
 func init() {
@@ -77,6 +78,7 @@ func init() {
 			"By default uses device ID. Set to '-' to not attach certificate to any thing.")
 	flag.StringVar(&awsCertFile, "aws-cert-file", "", "Certificate/public key file")
 	flag.StringVar(&awsKeyFile, "aws-key-file", "", "Private key file")
+	flag.StringVar(&awsProfile, "aws-profile", "", "AWS profile to use")
 
 	// Make sure we have our certs compiled in.
 	MustAsset(rsaCACert)
@@ -90,7 +92,7 @@ func getSvc(region, keyID, key string) (*iot.IoT, error) {
 	cfg := defaults.Get().Config
 
 	if region == "" {
-		output, err := ourutil.GetCommandOutput("aws", "configure", "get", "region")
+		output, err := ourutil.GetCommandOutput("aws", "--profile", awsProfile, "configure", "get", "region")
 		if err != nil {
 			if cfg.Region == nil || *cfg.Region == "" {
 				ourutil.Reportf("Failed to get default AWS region, please specify --aws-region")
@@ -129,7 +131,7 @@ func GetCredentials(keyID, key string) (*credentials.Credentials, error) {
 	creds := credentials.NewEnvCredentials()
 	_, err := creds.Get()
 	if err != nil {
-		creds = credentials.NewSharedCredentials("", "")
+		creds = credentials.NewSharedCredentials("", awsProfile)
 		_, err = creds.Get()
 	}
 	return creds, err
