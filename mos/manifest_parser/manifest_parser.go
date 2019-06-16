@@ -41,6 +41,7 @@ import (
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/interpreter"
 	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/mongoose-os/mos/mos/version"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -127,6 +128,7 @@ func ReadManifestFinal(
 	logWriter io.Writer, interp *interpreter.MosInterpreter,
 	cbs *ReadManifestCallbacks,
 	requireArch, preferPrebuiltLibs bool,
+	binaryLibsUpdateInterval time.Duration,
 ) (*build.FWAppManifest, *RMFOut, error) {
 	interp = interp.Copy()
 
@@ -299,14 +301,25 @@ func ReadManifestFinal(
 				variants = append(variants, manifest.Platform)
 				for _, variant := range variants {
 					bl := moscommon.GetBinaryLibFilePath(buildDirAbs, lcur.Lib.Name, variant, libVersion)
-					if _, err := os.Stat(bl); err == nil {
-						bl, err := filepath.Abs(bl)
-						if err != nil {
-							return nil, nil, errors.Trace(err)
+					fi, err := os.Stat(bl)
+					if err == nil {
+						// Local file exists, check it.
+						// We want to re-fetch "latest" libs regularly (same way as repos get pulled).
+						if variant != version.LatestVersionName || binaryLibsUpdateInterval == 0 ||
+							fi.ModTime().Add(binaryLibsUpdateInterval).After(time.Now()) {
+							if fi.Size() == 0 {
+								// It's a tombstone, meaning this variant does not exist. Skip it.
+								glog.V(1).Infof("%s is a tombstone, skipping", bl)
+								continue
+							}
+							bl, err := filepath.Abs(bl)
+							if err != nil {
+								return nil, nil, errors.Trace(err)
+							}
+							ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
+							binaryLib = bl
+							break
 						}
-						ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
-						binaryLib = bl
-						break
 					}
 					// Try fetching
 					fetchErr := lcur.Lib.FetchPrebuiltBinary(variant, libVersion, bl)
@@ -315,13 +328,17 @@ func ReadManifestFinal(
 						binaryLib = bl
 					} else {
 						fetchErrs = append(fetchErrs, fetchErr)
+						if os.IsNotExist(errors.Cause(fetchErr)) {
+							// This variant does not exist, create a tombstone to avoid fetching in the future.
+							glog.V(1).Infof("%s: creating a tombstone", bl)
+							ioutil.WriteFile(bl, nil, 0664)
+						}
 					}
 					if binaryLib != "" {
 						break
 					}
 				}
 			}
-
 			if binaryLib != "" {
 				// We should use binary lib instead of sources
 				manifest.LibsHandled[k].Sources = []string{}

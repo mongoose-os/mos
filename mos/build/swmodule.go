@@ -308,7 +308,7 @@ func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
 			}
 		}
 		if assetURL == "" {
-			return nil, errors.Errorf("%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
+			return nil, errors.Annotatef(os.ErrNotExist, "%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
 		}
 	} else {
 		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
@@ -358,7 +358,7 @@ func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) err
 		var data []byte
 		for i := 1; i <= 3; i++ {
 			data, err = fetchGitHubAsset(m.Location, pp[0], pp[1], version, assetName)
-			if err == nil {
+			if err == nil || os.IsNotExist(errors.Cause(err)) {
 				break
 			}
 			// Sometimes asset downloads fail. GitHub doesn't like us, or rate limiting or whatever.
