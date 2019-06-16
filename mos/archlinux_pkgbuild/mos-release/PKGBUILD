@@ -1,4 +1,4 @@
-MOS_TAG=2.13.1
+MOS_TAG=2.14.0
 
 pkgname=mos
 pkgver=${MOS_TAG}
