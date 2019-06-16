@@ -16,7 +16,7 @@ makedepends=(
 )
 conflicts=('mos-latest')
 
-source=(git+https://github.com/cesanta/mos-tool.git#tag=${MOS_TAG})
+source=(git+https://github.com/mongoose-os/mos#tag=${MOS_TAG})
 
 md5sums=('SKIP')
 

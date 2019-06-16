@@ -23,8 +23,8 @@ command should be `sudo apt-get install mos-latest`
 Use PKGBUILD:
 
 ```bash
-$ git clone https://github.com/cesanta/mos-tool
-$ cd mos-tool/mos/archlinux_pkgbuild/mos-release
+$ git clone https://github.com/mongoose-os/mos
+$ cd mos/mos/archlinux_pkgbuild/mos-release/
 $ makepkg
 $ pacman -U ./mos-*.tar.xz
 ```
