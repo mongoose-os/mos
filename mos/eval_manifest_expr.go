@@ -25,11 +25,11 @@ import (
 
 	"context"
 
+	"github.com/cesanta/errors"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/interpreter"
 	"github.com/mongoose-os/mos/mos/manifest_parser"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 
@@ -94,7 +94,8 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 			Platform:  bParams.Platform,
 			BuildVars: buildVarsCli,
 		}, logWriter, interp,
-		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, false, *preferPrebuiltLibs,
+		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider},
+		false /* requireArch */, *preferPrebuiltLibs, 0, /* binaryLibsUpdateInterval */
 	)
 	if err != nil {
 		return errors.Trace(err)

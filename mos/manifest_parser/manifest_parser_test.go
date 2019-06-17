@@ -160,7 +160,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 				Platform:  platform,
 				BuildVars: descr.BuildVars,
 			}, logWriter, interp,
-			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{}}, true, descr.PreferBinaryLibs,
+			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{}}, true, descr.PreferBinaryLibs, 0,
 		)
 
 		expectedErrorFilename := filepath.Join(appPath, expectedDir, platform, errorTextFile)
