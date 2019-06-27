@@ -4,6 +4,7 @@
 package moscommon
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/cesanta/errors"
@@ -44,4 +45,32 @@ func ParseParamValues(args []string) (map[string]string, error) {
 		ret[subs[0]] = subs[1]
 	}
 	return ret, nil
+}
+
+func ParseParamValuesTyped(args []string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	params, err := ParseParamValues(args)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	for p, valueStr := range params {
+		var value interface{}
+		switch valueStr {
+		case "true":
+			value = true
+		case "false":
+			value = false
+		default:
+			if i, err := strconv.ParseInt(valueStr, 0, 64); err == nil {
+				value = i
+			} else {
+				value = valueStr
+			}
+		}
+		if res == nil {
+			res = make(map[string]interface{})
+		}
+		res[p] = value
+	}
+	return res, nil
 }

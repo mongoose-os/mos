@@ -90,7 +90,8 @@ var (
 	KeepTempFiles = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	KeepFS        = flag.Bool("keep-fs", false, "When flashing, skip the filesystem parts")
 
-	Attr = flag.StringArray("attr", []string{}, "manifest attribute, can be used multiple times")
+	Attr      = flag.StringArray("attr", nil, "manifest attribute, can be used multiple times")
+	ExtraAttr = flag.StringArray("extra-attr", nil, "manifest extra attribute info to be added to ZIP")
 )
 
 func Platform() string {

@@ -19,6 +19,7 @@ package fwbundle
 import (
 	"bytes"
 	"compress/flate"
+	"encoding/binary"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -33,6 +34,13 @@ import (
 
 const (
 	ManifestFileName = "manifest.json"
+
+	// The ZIP AppNOte 6.3.6 says:
+	//   Header IDs of 0 thru 31 are reserved for use by PKWARE.
+	//   The remaining IDs can be used by third party vendors for
+	//   proprietary usage.
+	// 0x293a looks like a smiley face when written in LE (0x3a 0x29), so... hey, why not? :)
+	zipExtraDataID = uint16(0x293a)
 )
 
 func ReadZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
@@ -85,7 +93,7 @@ func ReadZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	return fwb, nil
 }
 
-func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool) error {
+func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool, extraAttrs map[string]interface{}) error {
 	zw := zip.NewWriter(buf)
 	// When compressing, use best compression.
 	zw.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
@@ -110,9 +118,20 @@ func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool
 	if err != nil {
 		return errors.Annotatef(err, "error marshaling manifest")
 	}
+	extraData := bytes.NewBuffer(nil)
+	if len(extraAttrs) > 0 {
+		extraAttrData, err := json.Marshal(extraAttrs)
+		if err != nil {
+			return errors.Annotatef(err, "error marshaling extra attrs")
+		}
+		binary.Write(extraData, binary.LittleEndian, zipExtraDataID)
+		binary.Write(extraData, binary.LittleEndian, uint16(len(extraAttrData)))
+		extraData.Write(extraAttrData)
+	}
 	glog.V(1).Infof("Manifest:\n%s", string(manifestData))
 	zfh := &zip.FileHeader{
-		Name: ManifestFileName,
+		Name:  ManifestFileName,
+		Extra: extraData.Bytes(),
 	}
 	if compress {
 		zfh.Method = zip.Deflate
@@ -146,9 +165,9 @@ func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool
 	return nil
 }
 
-func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool) error {
+func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool, extraAttrs map[string]interface{}) error {
 	buf := new(bytes.Buffer)
-	if err := WriteZipFirmwareBytes(fwb, buf, compress); err != nil {
+	if err := WriteZipFirmwareBytes(fwb, buf, compress, extraAttrs); err != nil {
 		return err
 	}
 	return ioutil.WriteFile(fname, buf.Bytes(), 0644)
