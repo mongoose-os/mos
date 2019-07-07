@@ -26,10 +26,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cesanta/errors"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flash/esp32"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 
@@ -109,18 +109,21 @@ func esp32GenKey(ctx context.Context, devConn dev.DevConn) error {
 		for _, e := range []struct {
 			name  string
 			value int64
+			wd    bool
 		}{
-			{"flash_crypt_cnt", 1},
-			{"flash_crypt_cnt.WD", 1}, // write-protect the counter so encryption cannot be disabled.
-			{"JTAG_disable", 1},
-			{"download_dis_encrypt", 1},
-			{"download_dis_decrypt", 1},
-			{"download_dis_cache", 1},
-			{"flash_crypt_config", 0xf},
+			{"flash_crypt_cnt", 1, true}, // write-protect the counter so encryption cannot be disabled.
+			{"JTAG_disable", 1, false},
+			{"download_dis_encrypt", 1, false},
+			{"download_dis_decrypt", 1, false},
+			{"download_dis_cache", 1, false},
+			{"flash_crypt_config", 0xf, false},
 		} {
 			f := fusesByName[e.name]
 			if err = f.SetValue(big.NewInt(e.value)); err != nil {
 				return errors.Annotatef(err, "unable to set %s = %d", e.name, e.value)
+			}
+			if e.wd {
+				f.SetWriteDisable()
 			}
 			toPrint = append(toPrint, f)
 		}
