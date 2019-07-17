@@ -32,10 +32,10 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/mongoose-os/mos/common/mgrpc/codec"
-	"github.com/mongoose-os/mos/common/mgrpc/frame"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/common/mgrpc/codec"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
 )
 
 const (
@@ -261,6 +261,8 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 				c, err := r.tcpConnect(tcpAddress, r.opts)
 				return c, errors.Trace(err)
 			})
+	case tUDP:
+		r.codec = codec.UDP(r.opts.connectAddress)
 	case tSerial:
 		if r.opts.enableReconnect {
 			r.codec = codec.NewReconnectWrapperCodec(

@@ -23,8 +23,8 @@ import (
 	"io/ioutil"
 	"net/url"
 
-	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/cesanta/errors"
+	"github.com/mongoose-os/mos/common/mgrpc/codec"
 )
 
 type connectOptions struct {
@@ -121,6 +121,8 @@ func connectTo(connectURL string) ConnectOption {
 		t, a = tGCP, url.String()
 	case url.Scheme == codec.WatsonURLScheme:
 		t, a = tWatson, url.String()
+	case url.Scheme == codec.UDPURLScheme:
+		t, a = tUDP, url.Host
 	default:
 		return badConnectOption(errors.Errorf("invalid ConnectTo protocol %q", url.Scheme))
 	}

@@ -51,6 +51,7 @@ type Options struct {
 	GCP     GCPCodecOptions
 	MQTT    MQTTCodecOptions
 	Serial  SerialCodecOptions
+	UDP     UDPCodecOptions
 	Watson  WatsonCodecOptions
 }
 

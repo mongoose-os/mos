@@ -36,4 +36,5 @@ const (
 	tAzureDM
 	tGCP
 	tWatson
+	tUDP
 )
