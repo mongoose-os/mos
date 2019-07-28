@@ -77,6 +77,7 @@ type FWAppManifest struct {
 	Modules        []SWModule         `yaml:"modules,omitempty" json:"modules"`
 	Libs           []SWModule         `yaml:"libs,omitempty" json:"libs"`
 	InitAfter      []string           `yaml:"init_after,omitempty" json:"init_after"`
+	InitBefore     []string           `yaml:"init_before,omitempty" json:"init_before"`
 	NoImplInitDeps bool               `yaml:"no_implicit_init_deps,omitempty" json:"no_implicit_init_deps"`
 	ConfigSchema   []ConfigSchemaItem `yaml:"config_schema,omitempty" json:"config_schema"`
 	BuildVars      map[string]string  `yaml:"build_vars,omitempty" json:"build_vars"`

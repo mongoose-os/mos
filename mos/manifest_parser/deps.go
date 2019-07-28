@@ -42,11 +42,23 @@ func (d *Deps) AddNode(node string) {
 }
 
 func (d *Deps) AddDep(node string, dep string) {
+	for _, d := range d.m[node] {
+		if d == dep {
+			return
+		}
+	}
 	d.m[node] = append(d.m[node], dep)
 }
 
 func (d *Deps) AddDeps(node string, deps []string) {
-	d.m[node] = append(d.m[node], deps...)
+	for _, dep := range deps {
+		d.AddDep(node, dep)
+	}
+}
+
+func (d *Deps) RemoveNode(node string) {
+	delete(d.m, node)
+	delete(d.exists, node)
 }
 
 func (d *Deps) AddNodeWithDeps(node string, deps []string) {

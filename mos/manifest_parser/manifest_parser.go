@@ -59,8 +59,9 @@ const (
 	// - 2018-08-29: added support for adding libs under conds
 	// - 2018-09-24: added special handling of the "boards" lib
 	// - 2019-04-26: added warning and error
+	// - 2019-07-28: added init_before
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2019-04-26"
+	maxManifestVersion = "2019-07-28"
 
 	depsApp = "app"
 
@@ -508,27 +509,44 @@ func readManifestWithLibs(
 
 		// Expand initDeps (which may contain globs) against actual list of libs.
 		initDepsResolved := NewDeps()
+		expandGlob := func(dep string) (res []string) {
+			for _, d := range depsTopo {
+				if m, _ := path.Match(dep, d); m {
+					res = append(res, d)
+				}
+			}
+			return
+		}
+		// Expand globs in keys (intorduced by init_before)
 		for _, node := range initDeps.GetNodes() {
 			if node == depsApp {
 				continue
 			}
-			nodeDeps := initDeps.GetDeps(node)
-			var nodeDepsResolved []string
-			nodeDepsResolvedMap := map[string]bool{}
-			for _, nodeDep := range nodeDeps {
-				for _, dep := range depsTopo {
-					if m, _ := path.Match(nodeDep, dep); m {
-						if !nodeDepsResolvedMap[dep] {
-							nodeDepsResolved = append(nodeDepsResolved, dep)
-							nodeDepsResolvedMap[dep] = true
-						}
-					}
-				}
+			expanded := expandGlob(node)
+			if len(expanded) == 1 && expanded[0] == node {
+				// nothing changed
+				continue
 			}
+			glog.V(1).Infof("%s expanded to %s", node, expanded)
+			nodeDeps := initDeps.GetDeps(node)
+			for _, en := range expanded {
+				initDeps.AddDeps(en, nodeDeps)
+			}
+		}
+		// Expand globs in values (introduced by init_after)
+		for _, node := range initDeps.GetNodes() {
+			// Node itself may not exist, e.g. if it was a dep added by init_before, check it.
+			if node == depsApp || !deps.NodeExists(node) {
+				continue
+			}
+			nodeDeps := initDeps.GetDeps(node)
+			for _, dep := range nodeDeps {
+				initDepsResolved.AddNodeWithDeps(node, expandGlob(dep))
+			}
+			nodeDepsResolved := initDepsResolved.GetDeps(node)
 			sort.Strings(nodeDepsResolved)
-			lhp[node].InitDeps = nodeDepsResolved
-			initDepsResolved.AddNodeWithDeps(node, nodeDepsResolved)
 			glog.V(1).Infof("%s init deps: %s", node, nodeDepsResolved)
+			lhp[node].InitDeps = nodeDepsResolved
 		}
 
 		initDepsTopo, cycle := initDepsResolved.Topological(true)
@@ -788,6 +806,9 @@ func prepareLib(
 	if !libManifest.NoImplInitDeps && name != coreLibName {
 		// Implicit dep on "core"
 		pc.initDeps.AddDep(name, coreLibName)
+	}
+	for _, dep := range libManifest.InitBefore {
+		pc.initDeps.AddNodeWithDeps(dep, []string{name})
 	}
 	pc.mtx.Unlock()
 
@@ -1326,6 +1347,7 @@ func extendManifest(
 	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
 	if opts.extendInitDeps {
 		mMain.InitAfter = append(m1.InitAfter, m2.InitAfter...)
+		mMain.InitBefore = append(m1.InitAfter, m2.InitBefore...)
 	}
 
 	// m2.BuildVars and m2.CDefs can contain expressions which should be expanded

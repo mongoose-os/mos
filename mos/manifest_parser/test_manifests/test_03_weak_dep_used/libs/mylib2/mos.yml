@@ -14,6 +14,11 @@ config_schema:
   - ["mylib2", "o", {title: "mylib2 settings"}]
 
 init_after:
-  - mylib4*
+  - dummy1   # Ignored
+  - mylib4*  # Globs are expanded
+
+init_before:
+  - dummy2
+  - mylib1*
 
 manifest_version: 2017-09-29

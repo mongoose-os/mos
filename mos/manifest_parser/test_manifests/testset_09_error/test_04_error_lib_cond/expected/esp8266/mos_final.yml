@@ -18,5 +18,3 @@ libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: "2019-04-26"
-init_deps:
-- core
