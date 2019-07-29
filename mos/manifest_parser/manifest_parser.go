@@ -1347,7 +1347,7 @@ func extendManifest(
 	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
 	if opts.extendInitDeps {
 		mMain.InitAfter = append(m1.InitAfter, m2.InitAfter...)
-		mMain.InitBefore = append(m1.InitAfter, m2.InitBefore...)
+		mMain.InitBefore = append(m1.InitBefore, m2.InitBefore...)
 	}
 
 	// m2.BuildVars and m2.CDefs can contain expressions which should be expanded
