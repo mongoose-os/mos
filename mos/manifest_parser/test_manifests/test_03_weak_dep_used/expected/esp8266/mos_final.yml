@@ -56,6 +56,7 @@ modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: "2017-09-29"
 init_deps:
+- core
 - mylib4
 - mylib2
 - mylib1

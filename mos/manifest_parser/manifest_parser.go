@@ -508,48 +508,49 @@ func readManifestWithLibs(
 		}
 
 		// Expand initDeps (which may contain globs) against actual list of libs.
-		initDepsResolved := NewDeps()
-		expandGlob := func(dep string) (res []string) {
+		initDepsExpanded := NewDeps()
+		expandGlob := func(dep string, res *[]string) {
+		deps:
 			for _, d := range depsTopo {
 				if m, _ := path.Match(dep, d); m {
-					res = append(res, d)
+					for _, rd := range *res {
+						if d == rd {
+							continue deps
+						}
+					}
+					*res = append(*res, d)
 				}
 			}
 			return
 		}
-		// Expand globs in keys (intorduced by init_before)
 		for _, node := range initDeps.GetNodes() {
 			if node == depsApp {
 				continue
 			}
-			expanded := expandGlob(node)
-			if len(expanded) == 1 && expanded[0] == node {
-				// nothing changed
-				continue
+			// Expand globs in keys (intorduced by init_before)
+			var nodeExpanded []string
+			expandGlob(node, &nodeExpanded)
+			if !(len(nodeExpanded) == 1 && nodeExpanded[0] == node) {
+				glog.V(1).Infof("%s expanded to %s", node, nodeExpanded)
 			}
-			glog.V(1).Infof("%s expanded to %s", node, expanded)
 			nodeDeps := initDeps.GetDeps(node)
-			for _, en := range expanded {
-				initDeps.AddDeps(en, nodeDeps)
+			// Expand globs in values (introduced by init_after)
+			var nodeDepsExpanded []string
+			for _, nd := range nodeDeps {
+				expandGlob(nd, &nodeDepsExpanded)
+			}
+			for _, ne := range nodeExpanded {
+				initDepsExpanded.AddNodeWithDeps(ne, nodeDepsExpanded)
 			}
 		}
-		// Expand globs in values (introduced by init_after)
-		for _, node := range initDeps.GetNodes() {
-			// Node itself may not exist, e.g. if it was a dep added by init_before, check it.
-			if node == depsApp || !deps.NodeExists(node) {
-				continue
-			}
-			nodeDeps := initDeps.GetDeps(node)
-			for _, dep := range nodeDeps {
-				initDepsResolved.AddNodeWithDeps(node, expandGlob(dep))
-			}
-			nodeDepsResolved := initDepsResolved.GetDeps(node)
-			sort.Strings(nodeDepsResolved)
-			glog.V(1).Infof("%s init deps: %s", node, nodeDepsResolved)
-			lhp[node].InitDeps = nodeDepsResolved
+		for _, node := range initDepsExpanded.GetNodes() {
+			nodeDepsExpanded := initDepsExpanded.GetDeps(node)
+			sort.Strings(nodeDepsExpanded)
+			glog.V(1).Infof("%s init deps: %s", node, nodeDepsExpanded)
+			lhp[node].InitDeps = nodeDepsExpanded
 		}
 
-		initDepsTopo, cycle := initDepsResolved.Topological(true)
+		initDepsTopo, cycle := initDepsExpanded.Topological(true)
 		if cycle != nil {
 			return nil, time.Time{}, errors.Errorf(
 				"init dependency cycle: %v", strings.Join(cycle, " -> "),
