@@ -25,9 +25,9 @@ prepare() {
 }
 
 pkgver() {
-    cd "$srcdir/go/src/github.com/mongoose-os/mos"
+    cd "$srcdir/go/src/github.com/mongoose-os/mos/mos"
     rm -f version/version.json
-    make version/version.json > /dev/null 2>&1
+    make version/version.go > /dev/null 2>&1
     jshon -F version/version.json -e build_version -u
 }
 
