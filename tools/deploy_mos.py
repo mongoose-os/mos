@@ -118,7 +118,7 @@ if __name__ == "__main__":
     try:
         os.stat(GPG_KEY_PATH)
     except Exception:
-        print("Package signing key (%s) does not exist. Go fetch it.")
+        print("Package signing key (%s) does not exist. Go fetch it.", GPG_KEY_PATH)
         exit(1)
 
     # make sure we can run docker (and if not, fail early)
