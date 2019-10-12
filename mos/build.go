@@ -49,7 +49,6 @@ import (
 
 // mos build specific advanced flags
 var (
-	buildImageFlag     = flag.String("build-image", "", "Override the Docker image used for build.")
 	cleanBuildFlag     = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
 	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
 	buildParamsFlag    = flag.String("build-params", "", "build params file")
@@ -58,13 +57,11 @@ var (
 	libs               = flag.StringArray("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
 	libsUpdateInterval = flag.Duration("libs-update-interval", time.Hour*1, "how often to update already fetched libs")
 
-	buildDockerExtra = flag.StringArray("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
-	buildCmdExtra    = flag.StringArray("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
-	cflagsExtra      = flag.StringArray("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
-	cxxflagsExtra    = flag.StringArray("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
-	libsExtraFlag    = flag.StringArray("lib-extra", []string{}, "Extra libs to add to the app being built. Value should be a YAML string. Can be used multiple times.")
-	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
-	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
+	buildCmdExtra = flag.StringArray("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
+	cflagsExtra   = flag.StringArray("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
+	cxxflagsExtra = flag.StringArray("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
+	libsExtraFlag = flag.StringArray("lib-extra", []string{}, "Extra libs to add to the app being built. Value should be a YAML string. Can be used multiple times.")
+	saveBuildStat = flag.Bool("save-build-stat", true, "save build statistics")
 
 	noPlatformCheckFlag = flag.Bool("no-platform-check", false, "override platform support check")
 

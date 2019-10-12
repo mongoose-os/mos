@@ -92,6 +92,12 @@ var (
 
 	Attr      = flag.StringArray("attr", nil, "manifest attribute, can be used multiple times")
 	ExtraAttr = flag.StringArray("extra-attr", nil, "manifest extra attribute info to be added to ZIP")
+
+	// Local build flags.
+	BuildDockerExtra = flag.StringArray("build-docker-extra", []string{},
+		"extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
+	BuildImage       = flag.String("build-image", "", "Override the Docker image used for build.")
+	BuildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 )
 
 func Platform() string {

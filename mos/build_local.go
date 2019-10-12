@@ -40,6 +40,7 @@ import (
 	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/interpreter"
 	"github.com/mongoose-os/mos/mos/manifest_parser"
 	"github.com/mongoose-os/mos/mos/mosgit"
@@ -391,13 +392,11 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 		}
 
 		// Add extra docker args
-		if buildDockerExtra != nil {
-			dockerRunArgs = append(dockerRunArgs, (*buildDockerExtra)...)
-		}
+		dockerRunArgs = append(dockerRunArgs, (*flags.BuildDockerExtra)...)
 
 		sdkVersionFile := moscommon.GetSdkVersionFile(fp.MosDirEffective, manifest.Platform)
 
-		buildImage := *buildImageFlag
+		buildImage := *flags.BuildImage
 
 		if buildImage == "" {
 			// Get build image name and tag from the repo.
@@ -494,7 +493,7 @@ func isInDockerToolbox() bool {
 }
 
 func getMakeArgs(dir, makeFilePath, target, buildDirAbs string, manifest *build.FWAppManifest, makeVarsFileSupported bool) ([]string, error) {
-	j := *buildParalellism
+	j := *flags.BuildParalellism
 	if j == 0 {
 		j = runtime.NumCPU()
 	}
