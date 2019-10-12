@@ -94,8 +94,17 @@ var (
 	ExtraAttr = flag.StringArray("extra-attr", nil, "manifest extra attribute info to be added to ZIP")
 
 	// Local build flags.
-	BuildDockerExtra = flag.StringArray("build-docker-extra", []string{},
-		"extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
+	BuildDockerExtra = flag.StringArray(
+		"build-docker-extra", []string{},
+		"extra docker flags, added before image name. Can be used multiple times: "+
+			"e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.",
+	)
+	BuildDockerNoMounts = flag.Bool(
+		"build-docker-no-mounts", false,
+		"if set, then mos will not add bind mounts to the docker invocation. "+
+			"For build to work, volumes will need to be provided externally via --build-docker-extra, "+
+			"e.g. --build-docker-extra=--volumes-from=outer",
+	)
 	BuildImage       = flag.String("build-image", "", "Override the Docker image used for build.")
 	BuildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 )

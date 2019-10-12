@@ -84,9 +84,6 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 }
 
 func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err error) {
-	dockerAppPath := "/app"
-	dockerMgosPath := "/mongoose-os"
-
 	gitinst := mosgit.NewOurGit()
 
 	buildDir := moscommon.GetBuildDir(projectDir)
@@ -300,74 +297,90 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 		makeVarsFileSupported = bytes.Contains(data, []byte("MGOS_VARS_FILE"))
 	}
 
+	appSubdir := ""
+
 	// Invoke actual build (docker or make) {{{
 	if os.Getenv("MGOS_SDK_REVISION") == "" && os.Getenv("MIOT_SDK_REVISION") == "" {
 		// We're outside of the docker container, so invoke docker
+
+		var dockerAppPath, dockerMgosPath string
 
 		dockerRunArgs := []string{"--rm", "-i"}
 
 		gitToplevelDir, _ := gitinst.GetToplevelDir(appPath)
 
-		appMountPath := ""
-		appSubdir := ""
-		if gitToplevelDir == "" {
-			// We're outside of any git repository: will just mount the application
-			// path
-			appMountPath = appPath
-			appSubdir = ""
+		if *flags.BuildDockerNoMounts {
+			// User wants no mounts, just use paths directly.
+			dockerAppPath = appPath
+			dockerMgosPath = fp.MosDirEffective
+			if len(*flags.BuildDockerExtra) == 0 {
+				glog.Warning("--build-docker-no-mounts specified but no --build-docker-extra " +
+					"arguments given, build will most likely fail.")
+			}
 		} else {
-			// We're inside some git repo: will mount the root of this repo, and
-			// remember the app's subdir inside it.
-			appMountPath = gitToplevelDir
-			appSubdir = appPath[len(gitToplevelDir):]
+			// Generate mountpoint args {{{
+			mp := mountPoints{}
+
+			dockerAppPath = "/app"
+			dockerMgosPath = "/mongoose-os"
+
+			appMountPath := ""
+			if gitToplevelDir == "" {
+				// We're outside of any git repository: will just mount the application
+				// path
+				appMountPath = appPath
+				appSubdir = ""
+			} else {
+				// We're inside some git repo: will mount the root of this repo, and
+				// remember the app's subdir inside it.
+				appMountPath = gitToplevelDir
+				appSubdir = appPath[len(gitToplevelDir):]
+			}
+
+			// Note about mounts: we mount repo to a stable path (/app) as well as the
+			// original path outside the container, whatever it may be, so that absolute
+			// path references continue to work (e.g. Git submodules are known to use
+			// abs. paths).
+			mp.addMountPoint(appMountPath, dockerAppPath)
+			mp.addMountPoint(fp.MosDirEffective, dockerMgosPath)
+			mp.addMountPoint(fp.MosDirEffective, ourutil.GetPathForDocker(fp.MosDirEffective))
+
+			manifest.BuildVars["MGOS_PATH"] = ourutil.GetPathForDocker(fp.MosDirEffective)
+
+			// Mount build dir
+			mp.addMountPoint(buildDirAbs, ourutil.GetPathForDocker(buildDirAbs))
+
+			// Mount all dirs with source files
+			for _, d := range appSourceDirs {
+				mp.addMountPoint(d, ourutil.GetPathForDocker(d))
+			}
+
+			// Mount all include paths
+			for _, d := range appIncludes {
+				mp.addMountPoint(d, ourutil.GetPathForDocker(d))
+			}
+
+			// Mount all dirs with filesystem files
+			for _, d := range appFSDirs {
+				mp.addMountPoint(d, ourutil.GetPathForDocker(d))
+			}
+
+			// Mount all dirs with binary libs
+			for _, d := range appBinLibDirs {
+				mp.addMountPoint(d, ourutil.GetPathForDocker(d))
+			}
+
+			// If generated config schema file is present, mount its dir as well
+			if curConfSchemaFName != "" {
+				d := filepath.Dir(curConfSchemaFName)
+				mp.addMountPoint(d, ourutil.GetPathForDocker(d))
+			}
+
+			for containerPath, hostPath := range mp {
+				dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
+			}
+			// }}}
 		}
-
-		// Generate mountpoint args {{{
-		mp := mountPoints{}
-
-		// Note about mounts: we mount repo to a stable path (/app) as well as the
-		// original path outside the container, whatever it may be, so that absolute
-		// path references continue to work (e.g. Git submodules are known to use
-		// abs. paths).
-		mp.addMountPoint(appMountPath, dockerAppPath)
-		mp.addMountPoint(fp.MosDirEffective, dockerMgosPath)
-		mp.addMountPoint(fp.MosDirEffective, ourutil.GetPathForDocker(fp.MosDirEffective))
-
-		manifest.BuildVars["MGOS_PATH"] = ourutil.GetPathForDocker(fp.MosDirEffective)
-
-		// Mount build dir
-		mp.addMountPoint(buildDirAbs, ourutil.GetPathForDocker(buildDirAbs))
-
-		// Mount all dirs with source files
-		for _, d := range appSourceDirs {
-			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
-		}
-
-		// Mount all include paths
-		for _, d := range appIncludes {
-			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
-		}
-
-		// Mount all dirs with filesystem files
-		for _, d := range appFSDirs {
-			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
-		}
-
-		// Mount all dirs with binary libs
-		for _, d := range appBinLibDirs {
-			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
-		}
-
-		// If generated config schema file is present, mount its dir as well
-		if curConfSchemaFName != "" {
-			d := filepath.Dir(curConfSchemaFName)
-			mp.addMountPoint(d, ourutil.GetPathForDocker(d))
-		}
-
-		for containerPath, hostPath := range mp {
-			dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
-		}
-		// }}}
 
 		// On Windows and Mac, run container as root since volume sharing on those
 		// OSes doesn't play nice with unprivileged user.
@@ -407,6 +420,8 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 
 			buildImage = strings.TrimSpace(string(sdkVersionBytes))
 		}
+
+		manifest.BuildVars["MGOS_PATH"] = dockerMgosPath
 
 		dockerRunArgs = append(dockerRunArgs, buildImage)
 
