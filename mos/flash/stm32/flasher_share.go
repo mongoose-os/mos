@@ -53,13 +53,7 @@ func getSTLinkMountsInDir(dir string) ([]string, error) {
 	return res, nil
 }
 
-type FlashOpts struct {
-	ShareName string
-	Timeout   time.Duration
-	KeepFS    bool
-}
-
-func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
+func flashShare(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
 	if opts.KeepFS {
 		// It's not easy: fs is included in the big blob.
 		// We'd need to read the fs first to preserve it.

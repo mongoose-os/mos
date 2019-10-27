@@ -10,9 +10,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"golang.org/x/sys/windows"
 )
 
@@ -65,7 +65,7 @@ func getDriveInfo(drive string) (string, string, uint32, error) {
 	return syscall.UTF16ToString(volName), syscall.UTF16ToString(fsName), volSerial, nil
 }
 
-func GetSTLinkMountForPort(port string) (string, error) {
+func GetSTLinkMountForPort(port string) (string, string, error) {
 	// TODO(rojer)
-	return "", errors.NotImplementedf("GetSTLinkMountForPort")
+	return "", "", errors.NotImplementedf("GetSTLinkMountForPort")
 }

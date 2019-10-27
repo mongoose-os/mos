@@ -243,7 +243,6 @@ func shellGit(localDir string, subcmd string, args ...string) (string, error) {
 
 // HaveShellGit checks if "git" command is available.
 func HaveShellGit() bool {
-	// What we need is os/exec.LookupPath("git"), but Go 1.10 doesn't have it yet.
-	_, err := shellGit("", "version")
+	_, err := exec.LookPath("git")
 	return err == nil
 }

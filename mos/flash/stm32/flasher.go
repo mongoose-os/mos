@@ -17,14 +17,26 @@
 package stm32
 
 import (
-	"github.com/cesanta/errors"
+	"time"
+
+	"github.com/mongoose-os/mos/common/fwbundle"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
-func GetSTLinkMountForPort(port string) (string, string, error) {
-	// TODO(rojer)
-	return "", "", errors.NotImplementedf("GetSTLinkMountForPort")
+type FlashOpts struct {
+	STFlashPath string
+	ShareName   string
+	Serial      string
+	Timeout     time.Duration
+	KeepFS      bool
 }
 
-func GetSTLinkMounts() ([]string, error) {
-	return getSTLinkMountsInDir("/Volumes")
+func Flash(fw *fwbundle.FirmwareBundle, opts *FlashOpts) error {
+	if checkSTFlashPath(opts.STFlashPath) != "" {
+		return flashSTFlash(fw, opts)
+	}
+	if opts.STFlashPath != "" {
+		ourutil.Reportf("st-flash utility not found, falling back to copy-based flashing...")
+	}
+	return flashShare(fw, opts)
 }

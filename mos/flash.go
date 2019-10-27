@@ -94,6 +94,9 @@ func init() {
 	flag.BoolVar(&rs14100FlashOpts.EraseChip, "rs-erase-chip", false, "Erase chip when flashing")
 
 	// STM32
+	flag.StringVar(&stm32FlashOpts.STFlashPath, "stm32-stflash-path", "st-flash",
+		"Path to the st-flash utility (from the https://github.com/texane/stlink package). "+
+			"If set to empty, will not attempt to use ST-Flash.")
 	if runtime.GOOS == "windows" {
 		// STM32 Windows driver _sometimes_ removes .bin file quite unhurriedly,
 		// and flasher prints an error even if flashing itself was successfull
@@ -190,8 +193,9 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 		// Ideally we'd like to find mounted directory corresponding to the selected port.
 		// But for now, we'll just find mountpoints that sort of look like STLink...
 		port = *flags.Port
+		serial := stm32FlashOpts.Serial
 		if port == "auto" || (strings.HasPrefix(port, "/dev/") || strings.HasPrefix(port, "COM")) {
-			port, err = stm32.GetSTLinkMountForPort(port)
+			port2, serial2, err := stm32.GetSTLinkMountForPort(port)
 			if err != nil {
 				glog.Infof("Did not find port corresponding to %s: %s", *flags.Port, err)
 				mm, err := stm32.GetSTLinkMounts()
@@ -203,9 +207,12 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 				}
 				port = mm[0]
 			} else {
+				port = port2
+				serial = serial2
 				glog.Infof("%s -> %s", *flags.Port, port)
 			}
 		}
+		stm32FlashOpts.Serial = serial
 		stm32FlashOpts.ShareName = port
 		stm32FlashOpts.KeepFS = *flags.KeepFS
 		err = stm32.Flash(fw, &stm32FlashOpts)
