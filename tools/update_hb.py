@@ -119,14 +119,20 @@ if __name__ == "__main__":
                         in_bottle = True
             else:
                 if len(parts) > 1 and parts[0] == "sha256":
-                    # Remove, we will re-generate the section.
+                    # If it's a bottle for a version that we don't have
+                    # but it matches the package version, keep it.
+                    m = re.match(r'\s*sha256\s+"(\S+)"\s*=>\s*:(\S+)\s*#\s*(\S+)', l)
+                    if m:
+                        sha, mov, v = m.groups()
+                        if mov not in bottles and v == args.version:
+                            bottles[mov] = (None, None, sha)
                     copy = False
                 elif len(parts) == 1 and parts[0] == "end":
                     in_bottle = False
                     for mac_os_version in sorted(bottles.keys()):
                         bottle_fname, bottle_base_name, sha256 = bottles[mac_os_version]
-                        new_lines.append('    sha256 "%s" => :%s' % (sha256, mac_os_version))
-                        if args.bottle_upload_dest:
+                        new_lines.append('    sha256 "%s" => :%s # %s' % (sha256, mac_os_version, args.version))
+                        if bottle_fname and args.bottle_upload_dest:
                             upload_dst = "%s/%s" % (args.bottle_upload_dest, bottle_base_name)
                             print("Uploading %s to %s..." % (bottle_fname, upload_dst))
                             subprocess.check_call(["scp", bottle_fname, upload_dst])
