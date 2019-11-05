@@ -65,10 +65,13 @@ if __name__ == "__main__":
         bottle_base_name = os.path.basename(bottle_fname)
         # For some reason bottle name contains double dash, e.g.:
         #   mos--2.10.0.mojave.bottle.tar.gz
+        #   mos-latest--201910271210.catalina.bottle.1.tar.gz
         # HB does not expect it when downloading, so adjust remote file name.
+        # The ".1." in the name is not expected either.
         if "--" in bottle_base_name:
             new_bottle_base_name = bottle_base_name.replace("--", "-")
             bottle_base_name = new_bottle_base_name
+        bottle_base_name = bottle_base_name.replace(".bottle.1.", ".bottle.")
         bottle_fname = os.path.abspath(bottle_fname)
         with open(bottle_fname, "rb") as bf:
             sha256 = hashlib.sha256(bf.read()).hexdigest()

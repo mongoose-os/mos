@@ -98,11 +98,45 @@ def UploaderComm(line, tty):
         sys.stdout.write("\n[sent y]\n")
 
 
+def UpdateHomebrew(args):
+    repo = git.Repo(".")
+    head_commit = repo.head.commit
+    formula = ("mos" if args.release_tag != "" else "mos-latest")
+    v = json.load(open(os.path.expanduser("mos/version/version.json"), "r"))
+    hb_cmd = [
+        "tools/update_hb.py",
+        "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
+        "--formula=%s" % formula,
+        "--blob-url=https://github.com/mongoose-os/mos/archive/%s.tar.gz" % head_commit,
+        "--version=%s" % v["build_version"],
+        "--commit", "--push",
+    ]
+    if args.resume <= 20 and not args.bottle_only:
+        print("(20) Updating Homebrew...")
+        RunSubprocess(hb_cmd)
+    if args.resume <= 30:
+        print("(30) Building a bottle...")
+        # We've just updated the formula.
+        RunSubprocess(["brew", "update"])
+        RunSubprocess(["brew", "uninstall", "-f", "mos", "mos-latest"])
+        RunSubprocess(["brew", "install", "--build-bottle", formula])
+        out = RunSubprocess(["brew", "bottle", formula]).decode("utf-8")
+        ll = [l for l in out.splitlines() if not l.startswith("==")]
+        bottle_fname = ll[0]
+        hb_cmd.extend([
+            "--bottle=%s" % bottle_fname,
+            "--bottle-upload-dest=root@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
+        ])
+        RunSubprocess(hb_cmd)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--release-tag", default="", help="Release tag, like 1.12")
     parser.add_argument("--resume", type=int,  default=0, help="Resume from certain point")
+    parser.add_argument("--update-hb", action="store_true",  default=False, help="Only update Homebrew recipe")
+    parser.add_argument("--bottle-only", action="store_true",  default=False, help="Only build Homebrew bottle")
 
     args = parser.parse_args()
 
@@ -112,8 +146,15 @@ if __name__ == "__main__":
         os.stat(BUILD_DEB_PATH)
         os.stat(UPLOAD_DEB_PATH)
     except Exception:
-        print("This tool must be run from a mos-tool repo")
+        print("This tool must be run from a mos repo")
         exit(1)
+
+    if args.update_hb:
+        if platform != "mac":
+            print("Homebrew bottles can only be built on a Mac")
+            exit(1)
+        UpdateHomebrew(args)
+        exit(0)
 
     try:
         os.stat(GPG_KEY_PATH)
@@ -165,46 +206,18 @@ if __name__ == "__main__":
 
     if platform == "mac":
         if args.resume <= 10:
-            print("Deploying binaries...")
+            print("(10) Deploying binaries...")
             RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
-        repo = git.Repo(".")
-        head_commit = repo.head.commit
-        formula = ("mos" if args.release_tag != "" else "mos-latest")
-        v = json.load(open(os.path.expanduser("mos/version/version.json"), "r"))
-        hb_cmd = [
-            "tools/update_hb.py",
-            "--hb-repo=git@github.com:cesanta/homebrew-mos.git",
-            "--formula=%s" % formula,
-            "--blob-url=https://github.com/mongoose-os/mos/archive/%s.tar.gz" % head_commit,
-            "--version=%s" % v["build_version"],
-            "--commit", "--push",
-        ]
-        if args.resume <= 20:
-            print("Updating Homebrew...")
-            RunSubprocess(hb_cmd)
-        if args.resume <= 30:
-            print("Building a bottle...")
-            # We've just updated the formula.
-            RunSubprocess(["brew", "update"])
-            RunSubprocess(["brew", "uninstall", "-f", "mos", "mos-latest"])
-            RunSubprocess(["brew", "install", "--build-bottle", formula])
-            out = RunSubprocess(["brew", "bottle", formula]).decode("utf-8")
-            ll = [l for l in out.splitlines() if not l.startswith("==")]
-            bottle_fname = ll[0]
-            hb_cmd.extend([
-                "--bottle=%s" % bottle_fname,
-                "--bottle-upload-dest=root@mongoose-os.com:/data/downloads/homebrew/bottles-%s/" % formula
-            ])
-            RunSubprocess(hb_cmd)
+        UpdateHomebrew(args)
 
     if args.resume <= 40:
+        print("(40) Deploying fwbuild...")
         RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
 
     if args.resume <= 50:
+        print("(50) Building Ubuntu packages...")
         for i, distr in enumerate(UBUNTU_VERSIONS):
             RunSubprocess(["/bin/bash", BUILD_DEB_PATH, deb_package, distr, args.release_tag])
-
-    if args.resume <= 60:
         for i, distr in enumerate(UBUNTU_VERSIONS):
             RunSubprocess(["/bin/bash", UPLOAD_DEB_PATH, deb_package, distr], communicator=UploaderComm)
 
