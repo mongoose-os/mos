@@ -131,7 +131,9 @@ type KeyType string
 
 const (
 	KeyTypeECC    KeyType = "ECC"
-	KeyTypeNonECC         = "NonECC"
+	KeyTypeAES            = "AES"
+	KeyTypeOther          = "Other"
+	KeyTypeNonECC         = "NonECC" // For backward compatibility only.
 )
 
 func parseSlotConfig(num int, scv uint16, kc *KeyConfig) SlotConfig {
@@ -175,9 +177,6 @@ func parseKeyConfig(num int, kcv uint16) (*KeyConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if num > 7 && (kc.KeyType == KeyTypeECC || kc.Private) {
-		return nil, errors.Errorf("only slots 0-7 can be used for ECC keys (slot: %d)", num)
-	}
 	kc.Lockable = (kcv&0x20 != 0)
 	kc.ReqRandom = (kcv&0x40 != 0)
 	kc.ReqAuth = (kcv&0x80 != 0)
@@ -190,8 +189,10 @@ func parseKeyConfig(num int, kcv uint16) (*KeyConfig, error) {
 func parseKeyType(b uint8) (KeyType, error) {
 	if b == 4 {
 		return KeyTypeECC, nil
+	} else if b == 6 {
+		return KeyTypeAES, nil
 	} else if b == 7 {
-		return KeyTypeNonECC, nil
+		return KeyTypeOther, nil
 	} else {
 		return "", errors.Errorf("unknown key type %d", b)
 	}
@@ -329,6 +330,10 @@ func writeKeyConfig(cb *bytes.Buffer, si SlotInfo) error {
 	switch kc.KeyType {
 	case KeyTypeECC:
 		kcv |= (uint16(4) << 2)
+	case KeyTypeAES:
+		kcv |= (uint16(6) << 2)
+	case KeyTypeOther:
+		fallthrough
 	case KeyTypeNonECC:
 		kcv |= (uint16(7) << 2)
 	default:
