@@ -45,11 +45,12 @@ type SetConfigArgs struct {
 }
 
 type SetKeyArgs struct {
-	Ecc    *bool   `json:"ecc,omitempty"`
-	Key    *string `json:"key,omitempty"`
-	Slot   *int64  `json:"slot,omitempty"`
-	Wkey   *string `json:"wkey,omitempty"`
-	Wkslot *int64  `json:"wkslot,omitempty"`
+	Ecc    bool   `json:"ecc,omitempty"`
+	Key    string `json:"key,omitempty"`
+	Slot   int    `json:"slot"`
+	Block  int    `json:"block,omitempty"`
+	Wkey   string `json:"wkey,omitempty"`
+	Wkslot int    `json:"wkslot,omitempty"`
 }
 
 type SignArgs struct {

@@ -32,11 +32,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cesanta/errors"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/x509utils"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -245,37 +245,47 @@ func atcaSetECCPrivateKey(slot int64, cfg *atca.Config, data []byte) (*atca.SetK
 	}
 
 	b64k := base64.StdEncoding.EncodeToString(keyData)
-	isECC := true
-	req := &atca.SetKeyArgs{Key: &b64k, Ecc: &isECC}
+	return &atca.SetKeyArgs{Key: b64k, Ecc: true}, nil
+}
 
-	if cfg.LockValue == atca.LockModeLocked {
-		if cfg.SlotInfo[slot].SlotConfig.WriteConfig&0x4 == 0 {
-			return nil, errors.Errorf(
+func atcaSetWriteKey(slot int64, cfg *atca.Config, req *atca.SetKeyArgs) error {
+	if cfg.LockValue != atca.LockModeLocked {
+		// Don't need to encrypt while data zone is unlocked.
+		return nil
+	}
+	si := cfg.SlotInfo[slot]
+	if si.KeyConfig.KeyType == atca.KeyTypeECC {
+		if si.SlotConfig.WriteConfig&0x4 == 0 {
+			return errors.Errorf(
 				"data zone is locked and encrypted writes on slot %d "+
 					"are not enabled, key cannot be set", slot)
 		}
-		wks := int64(cfg.SlotInfo[slot].SlotConfig.WriteKey)
-		if *flags.WriteKey == "" {
-			return nil, errors.Errorf(
-				"data zone is locked, --write-key for slot %d "+
-					"is required to modify slot %d", wks, slot)
+	} else {
+		if si.SlotConfig.WriteConfig&0x4 == 0 {
+			// Encryption not required.
+			return nil
 		}
-		reportf("Data zone is locked, "+
-			"will perform encrypted write using slot %d using %s", wks, *flags.WriteKey)
-		wKeyData, err := ioutil.ReadFile(*flags.WriteKey)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		wKey := atca.ReadHex(wKeyData)
-		if len(wKey) != atca.KeySize {
-			return nil, errors.Errorf("%s: expected %d bytes, got %d", *flags.WriteKey, atca.KeySize, len(wKey))
-		}
-		b64wk := base64.StdEncoding.EncodeToString(wKey)
-		req.Wkslot = &wks
-		req.Wkey = &b64wk
 	}
+	wks := si.SlotConfig.WriteKey
+	if *flags.WriteKey == "" {
+		return errors.Errorf(
+			"data zone is locked, --write-key for slot %d "+
+				"is required to modify slot %d", wks, slot)
+	}
+	reportf("Data zone is locked, "+
+		"will perform encrypted write using slot %d using %s", wks, *flags.WriteKey)
+	wKeyData, err := ioutil.ReadFile(*flags.WriteKey)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	wKey := atca.ReadHex(wKeyData)
+	if len(wKey) != atca.KeySize {
+		return errors.Errorf("%s: expected %d bytes, got %d", *flags.WriteKey, atca.KeySize, len(wKey))
+	}
+	req.Wkslot = int(wks)
+	req.Wkey = base64.StdEncoding.EncodeToString(wKey)
 
-	return req, nil
+	return nil
 }
 
 func atcaSetKey(ctx context.Context, dc dev.DevConn) error {
@@ -307,26 +317,28 @@ func atcaSetKey(ctx context.Context, dc dev.DevConn) error {
 	var req *atca.SetKeyArgs
 
 	si := cfg.SlotInfo[slot]
-	if slot < 8 && si.KeyConfig.Private && si.KeyConfig.KeyType == atca.KeyTypeECC {
+	if si.KeyConfig.Private && si.KeyConfig.KeyType == atca.KeyTypeECC {
 		reportf("Slot %d is a ECC private key slot", slot)
 		req, err = atcaSetECCPrivateKey(slot, cfg, data)
 	} else {
-		reportf("Slot %d is a non-ECC private key slot", slot)
+		reportf("Slot %d is a non-ECC key slot", slot)
 		keyData := atca.ReadHex(data)
-		if len(keyData) != atca.KeySize {
-			return errors.Errorf("%s: expected %d bytes, got %d", fn, atca.KeySize, len(keyData))
+		if len(keyData)%32 != 0 {
+			return errors.Errorf("%s: expected a multiple of %d bytes, got %d", fn, 32, len(keyData))
 		}
 		b64k := base64.StdEncoding.EncodeToString(keyData)
-		isECC := false
-		req = &atca.SetKeyArgs{Key: &b64k, Ecc: &isECC}
+		req = &atca.SetKeyArgs{Key: b64k, Ecc: false}
+	}
+	if err == nil {
+		err = atcaSetWriteKey(slot, cfg, req)
 	}
 
 	if err != nil {
 		return errors.Annotatef(err, fn)
 	}
 
-	keyData, _ := base64.StdEncoding.DecodeString(*req.Key)
-	req.Slot = &slot
+	keyData, _ := base64.StdEncoding.DecodeString(req.Key)
+	req.Slot = int(slot)
 
 	if *dryRun {
 		reportf("This is a dry run, would have set the following key on slot %d:\n\n%s\n"+
@@ -336,8 +348,14 @@ func atcaSetKey(ctx context.Context, dc dev.DevConn) error {
 		return nil
 	}
 
-	if err = dc.Call(ctx, "ATCA.SetKey", req, nil); err != nil {
-		return errors.Annotatef(err, "SetKey")
+	for off := 0; off < len(keyData); off += 32 {
+		block := off / 32
+		reportf("Writing block %d...", block)
+		req.Block = block
+		req.Key = base64.StdEncoding.EncodeToString(keyData[off : off+32])
+		if err = dc.Call(ctx, "ATCA.SetKey", req, nil); err != nil {
+			return errors.Annotatef(err, "SetKey")
+		}
 	}
 
 	reportf("SetKey successful.")
@@ -507,7 +525,7 @@ func genCert(ctx context.Context, certTemplateFile string, subject string, valid
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth,
 			},
-			IsCA: false,
+			IsCA:                  false,
 			BasicConstraintsValid: true,
 		}
 	}
