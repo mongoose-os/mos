@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -378,18 +379,57 @@ func atcaGenKey(ctx context.Context, dc dev.DevConn) error {
 		outputFileName = args[2]
 	}
 
-	if _, _, err := atca.Connect(ctx, dc); err != nil {
+	_, cfg, err := atca.Connect(ctx, dc)
+	if err != nil {
 		return errors.Annotatef(err, "Connect")
 	}
-	pubKeyData, err := atca.GenKey(ctx, int(slot), *dryRun, dc)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	if pubKeyData == nil { // dry run
-		return nil
-	}
 
-	return x509utils.WritePubKey(pubKeyData, outputFileName)
+	si := cfg.SlotInfo[slot]
+	if si.KeyConfig.Private && si.KeyConfig.KeyType == atca.KeyTypeECC {
+		reportf("Slot %d is a ECC private key slot", slot)
+		pubKeyData, err := atca.GenKey(ctx, int(slot), *dryRun, dc)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		if pubKeyData == nil { // dry run
+			err = nil
+		}
+		err = x509utils.WritePubKey(pubKeyData, outputFileName)
+	} else {
+		reportf("Slot %d is a non-ECC key slot", slot)
+		keyData := make([]byte, 32)
+		if n, err := rand.Reader.Read(keyData); err != nil || n != 32 {
+			return fmt.Errorf("failed to generate random key")
+		}
+		b64k := base64.StdEncoding.EncodeToString(keyData)
+		req := &atca.SetKeyArgs{Slot: int(slot), Block: 0, Key: b64k, Ecc: false}
+		reportf("Generated random 32 byte key")
+		err = atcaSetWriteKey(slot, cfg, req)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		if *dryRun {
+			reportf("This is a dry run, would have set the following key on slot %d:\n\n%s\n"+
+				"SetKey %s\n\n"+
+				"Set --dry-run=false to confirm.",
+				slot, atca.WriteHex(keyData, 16), atca.JSONStr(*req))
+			return nil
+		}
+
+		if err = dc.Call(ctx, "ATCA.SetKey", req, nil); err != nil {
+			return errors.Annotatef(err, "SetKey")
+		}
+		reportf("SetKey successful.")
+		keyDataHex := hex.EncodeToString(keyData)
+		if outputFileName == "" {
+			fmt.Printf("%s\n", keyDataHex)
+			err = nil
+		} else {
+			err = ioutil.WriteFile(outputFileName, []byte(keyDataHex+"\n"), 0600)
+			reportf("Wrote key to %s", outputFileName)
+		}
+	}
+	return err
 }
 
 func genCSR(ctx context.Context, csrTemplateFile string, subject string, slot int, dc dev.DevConn, outputFileName string) ([]byte, error) {
