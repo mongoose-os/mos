@@ -21,8 +21,8 @@ package main
 import (
 	"context"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/cesanta/errors"
 )
 
 func esp32EFuseGet(ctx context.Context, devConn dev.DevConn) error {

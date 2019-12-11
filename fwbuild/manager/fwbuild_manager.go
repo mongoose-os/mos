@@ -30,13 +30,13 @@ import (
 	"os"
 	"path"
 
+	assetfs "github.com/elazarl/go-bindata-assetfs"
+	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/docker"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
 	"github.com/mongoose-os/mos/fwbuild/manager/middleware"
-	"github.com/cesanta/errors"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
-	"github.com/golang/glog"
 	goji "goji.io"
 	"goji.io/pat"
 )

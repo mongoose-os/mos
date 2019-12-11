@@ -29,7 +29,7 @@ import (
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/version"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"

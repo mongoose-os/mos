@@ -7,8 +7,8 @@ import (
 	"flag"
 	"runtime"
 
-	"github.com/mongoose-os/mos/common/ourgit"
 	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/common/ourgit"
 )
 
 var (

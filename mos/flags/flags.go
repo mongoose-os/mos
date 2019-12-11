@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )

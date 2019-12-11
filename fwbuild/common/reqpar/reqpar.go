@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 const (

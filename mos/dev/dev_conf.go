@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 // DevConf represents configuration of a device

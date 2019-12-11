@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 )
 

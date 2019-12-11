@@ -26,7 +26,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/ourutil"
 )

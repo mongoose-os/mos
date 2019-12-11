@@ -19,9 +19,9 @@ package flasher
 import (
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/mongoose-os/mos/mos/flash/esp"
-	"github.com/cesanta/errors"
 )
 
 func ReadFlash(ct esp.ChipType, addr uint32, length int, opts *esp.FlashOpts) ([]byte, error) {

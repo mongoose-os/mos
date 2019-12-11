@@ -29,7 +29,7 @@ package cc3200
 import "C"
 
 import (
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type ftdiLibWrapper struct {

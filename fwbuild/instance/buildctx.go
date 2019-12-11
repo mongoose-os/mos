@@ -25,7 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 // BuildCtxInfo contains metadata about the build context: all source files

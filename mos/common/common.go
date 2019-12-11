@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 const (

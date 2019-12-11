@@ -22,8 +22,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"

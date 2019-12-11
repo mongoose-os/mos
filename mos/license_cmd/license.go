@@ -24,14 +24,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/devutil"
 	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/version"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 )
 
 type licenseRequest struct {

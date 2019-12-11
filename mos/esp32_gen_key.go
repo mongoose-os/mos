@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flash/esp32"

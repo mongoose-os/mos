@@ -24,7 +24,7 @@ import (
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 )
 

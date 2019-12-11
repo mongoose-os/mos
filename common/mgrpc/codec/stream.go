@@ -29,9 +29,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
 )
 
 const (

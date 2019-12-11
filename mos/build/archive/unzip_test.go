@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func TestUnzip(t *testing.T) {

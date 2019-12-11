@@ -23,7 +23,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type CmdOutMode int

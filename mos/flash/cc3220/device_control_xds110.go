@@ -21,10 +21,10 @@ package cc3220
 import (
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/flash/cc3220/xds110"
 	"github.com/mongoose-os/mos/mos/flash/cc32xx"
 	"github.com/mongoose-os/mos/mos/flash/common"
-	"github.com/cesanta/errors"
 )
 
 type xds110DeviceControl struct {

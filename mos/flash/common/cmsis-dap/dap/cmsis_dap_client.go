@@ -28,9 +28,9 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/cesanta/errors"
 	"github.com/cesanta/hid"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 type cmd uint8

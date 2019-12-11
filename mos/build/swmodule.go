@@ -37,8 +37,8 @@ import (
 	"github.com/mongoose-os/mos/mos/mosgit"
 	"github.com/mongoose-os/mos/mos/ourutil"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 type SWModule struct {

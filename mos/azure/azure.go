@@ -25,12 +25,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/x509utils"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 

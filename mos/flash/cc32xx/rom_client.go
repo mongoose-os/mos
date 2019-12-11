@@ -24,10 +24,10 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/flash/common"
-	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/mos/flash/common"
 )
 
 type loaderCmd uint8

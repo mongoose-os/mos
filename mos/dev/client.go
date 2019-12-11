@@ -21,7 +21,7 @@ import (
 	"flag"
 	"time"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type Client struct {

@@ -33,6 +33,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/docker"
 	"github.com/mongoose-os/mos/common/ourglob"
 	"github.com/mongoose-os/mos/common/ourio"
@@ -41,8 +43,6 @@ import (
 	"github.com/mongoose-os/mos/mos/build"
 	"github.com/mongoose-os/mos/mos/build/archive"
 	moscommon "github.com/mongoose-os/mos/mos/common"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
 	flock "github.com/theckman/go-flock"
 	yaml "gopkg.in/yaml.v2"
 )

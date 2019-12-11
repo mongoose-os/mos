@@ -20,9 +20,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/cesanta/errors"
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 // Pull pulls an image

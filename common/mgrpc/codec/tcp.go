@@ -20,7 +20,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type tcpCodec struct {

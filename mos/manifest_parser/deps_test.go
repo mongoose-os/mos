@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func TestDeps(t *testing.T) {

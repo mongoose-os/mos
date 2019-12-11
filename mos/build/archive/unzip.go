@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 // UnzipInto unpacks a zipped stream into a directory skipping skipLevels top level directories

@@ -28,14 +28,14 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/cesanta/go-serial/serial"
+	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/flash/common"
 	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/mongoose-os/mos/mos/flash/esp/rom_client"
 	"github.com/mongoose-os/mos/mos/flash/esp32"
 	"github.com/mongoose-os/mos/mos/flash/esp8266"
-	"github.com/cesanta/errors"
-	"github.com/cesanta/go-serial/serial"
-	"github.com/golang/glog"
 )
 
 const (

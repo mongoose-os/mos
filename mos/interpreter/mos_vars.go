@@ -11,8 +11,8 @@ import (
 	"github.com/mongoose-os/mos/mos/build"
 	"github.com/mongoose-os/mos/mos/datamap"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/ourutil"
-	"github.com/cesanta/errors"
 )
 
 const (

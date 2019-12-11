@@ -32,7 +32,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/atca"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"

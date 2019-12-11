@@ -25,12 +25,12 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/devutil"
 	"github.com/mongoose-os/mos/mos/flash/esp"
 	"github.com/mongoose-os/mos/mos/flash/esp/rom_client"
 	"github.com/mongoose-os/mos/mos/flash/esp32"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 

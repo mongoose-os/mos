@@ -17,7 +17,7 @@
 package stm32
 
 import (
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func GetSTLinkMountForPort(port string) (string, string, error) {

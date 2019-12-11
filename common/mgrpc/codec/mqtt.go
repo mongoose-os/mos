@@ -28,9 +28,9 @@ import (
 
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 
-	"github.com/cesanta/errors"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 type MQTTCodecOptions struct {

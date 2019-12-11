@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 // RemoveFromDir removes everything from the given dir, except items with

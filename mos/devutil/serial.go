@@ -17,10 +17,10 @@
 package devutil
 
 import (
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
 	"github.com/mongoose-os/mos/mos/flags"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 var defaultPort string

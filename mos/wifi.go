@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 const (

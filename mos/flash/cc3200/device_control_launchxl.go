@@ -21,8 +21,8 @@ package cc3200
 import (
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/flash/cc32xx"
-	"github.com/cesanta/errors"
 )
 
 type FTDI interface {

@@ -19,8 +19,8 @@ package common
 import (
 	"io"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 const (

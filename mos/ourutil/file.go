@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func IdentifierFromString(name string) string {

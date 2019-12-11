@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 const (

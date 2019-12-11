@@ -28,7 +28,7 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/build"
 	moscommon "github.com/mongoose-os/mos/mos/common"
 	"github.com/mongoose-os/mos/mos/interpreter"

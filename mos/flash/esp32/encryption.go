@@ -21,7 +21,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 // ESP32EncryptImageData implements the algorithm described here:

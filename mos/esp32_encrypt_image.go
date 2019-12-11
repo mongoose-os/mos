@@ -22,9 +22,9 @@ import (
 	"context"
 	"io/ioutil"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flash/esp32"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 

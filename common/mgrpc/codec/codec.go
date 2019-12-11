@@ -23,7 +23,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 )

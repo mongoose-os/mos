@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 

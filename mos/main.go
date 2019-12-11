@@ -31,8 +31,8 @@ import (
 
 	"context"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/mos/aws"
 	"github.com/mongoose-os/mos/mos/azure"

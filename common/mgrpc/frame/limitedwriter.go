@@ -19,7 +19,7 @@ package frame
 import (
 	"io"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type limitedWriter struct {

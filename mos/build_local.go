@@ -34,8 +34,8 @@ import (
 
 	"context"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/multierror"
 	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/mos/build"

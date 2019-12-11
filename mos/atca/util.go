@@ -26,9 +26,9 @@ import (
 
 	"context"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/cesanta/errors"
+	"github.com/mongoose-os/mos/mos/ourutil"
 )
 
 const (

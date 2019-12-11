@@ -23,7 +23,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 // Frame is a basic data structure that contains request or response.

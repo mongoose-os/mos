@@ -21,7 +21,7 @@ package dap
 import (
 	"context"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func NewClient(ctx context.Context, vid, pid uint16, serial string, intf, epIn, epOut int) (DAPClient, error) {

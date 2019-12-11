@@ -28,11 +28,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/config"
 	"github.com/mongoose-os/mos/mos/dev"
-	"github.com/cesanta/errors"
-	"github.com/golang/glog"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )
 

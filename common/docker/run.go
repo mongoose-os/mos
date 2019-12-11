@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cesanta/errors"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 type ExitError struct {

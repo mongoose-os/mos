@@ -244,12 +244,6 @@
 			"revisionTime": "2018-10-15T21:27:28Z"
 		},
 		{
-			"checksumSHA1": "EnV6KaytV9Mp/GaTtXCC2jRZPfA=",
-			"path": "github.com/cesanta/errors",
-			"revision": "5adec772d663041cbdccdb991c0d9115c00a7c75",
-			"revisionTime": "2016-06-12T17:44:07Z"
-		},
-		{
 			"checksumSHA1": "CscHjPjg+lpS6usVpTaghhthl2c=",
 			"path": "github.com/cesanta/go-serial/serial",
 			"revision": "4dff7aff019e8defadc9af687b28acc6636a785a",
@@ -607,6 +601,12 @@
 			"path": "github.com/jteeuwen/go-bindata/go-bindata",
 			"revision": "6025e8de665b31fa74ab1a66f2cddd8c0abf887e",
 			"revisionTime": "2018-03-05T03:04:58Z"
+		},
+		{
+			"checksumSHA1": "ZNW/6BNt39EIqKYYztz0u4M4sgk=",
+			"path": "github.com/juju/errors",
+			"revision": "d42613fe1ab9e303fc850e7a19fda2e8eeb6516e",
+			"revisionTime": "2019-09-30T11:41:54Z"
 		},
 		{
 			"checksumSHA1": "gEjGS03N1eysvpQ+FCHTxPcbxXc=",

@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 var attributeTypeNames = map[string]asn1.ObjectIdentifier{

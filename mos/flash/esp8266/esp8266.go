@@ -17,8 +17,8 @@
 package esp8266
 
 import (
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/flash/esp"
-	"github.com/cesanta/errors"
 )
 
 var (

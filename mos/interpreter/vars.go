@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 var (

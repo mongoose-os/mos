@@ -33,8 +33,8 @@ import (
 
 	"context"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 	"github.com/kardianos/osext"
 	goversion "github.com/mcuadros/go-version"
 	"github.com/mongoose-os/mos/common/ourgit"

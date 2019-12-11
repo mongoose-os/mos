@@ -25,11 +25,11 @@ import (
 
 	"context"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
 	"github.com/mongoose-os/mos/mos/interpreter"
 	"github.com/mongoose-os/mos/mos/manifest_parser"
-	"github.com/cesanta/errors"
 )
 
 func getMosRepoDir(ctx context.Context, devConn dev.DevConn) error {

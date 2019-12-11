@@ -22,7 +22,7 @@ import (
 
 	"github.com/mongoose-os/mos/mos/common/paths"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type State struct {

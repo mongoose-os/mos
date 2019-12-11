@@ -19,8 +19,8 @@ package esp32
 import (
 	"fmt"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/flash/esp"
-	"github.com/cesanta/errors"
 )
 
 var (

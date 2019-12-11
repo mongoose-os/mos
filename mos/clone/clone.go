@@ -23,10 +23,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/build"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/version"
-	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
 

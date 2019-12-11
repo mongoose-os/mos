@@ -26,9 +26,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
 )
 
 type outboundHttpCodec struct {

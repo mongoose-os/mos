@@ -18,7 +18,7 @@
 
 package cc32xx
 
-import "github.com/cesanta/errors"
+import "github.com/juju/errors"
 
 func GetUSBSerialNumberForPort(port string) (string, error) {
 	// Not supported

@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/flash/common"
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	"github.com/google/gousb"
+	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/mos/flash/common"
 )
 
 const (

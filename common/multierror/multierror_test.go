@@ -19,7 +19,7 @@ package multierror
 import (
 	"testing"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func TestAppend(t *testing.T) {

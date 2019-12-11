@@ -23,10 +23,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/mos/dev"
 	"github.com/mongoose-os/mos/mos/flags"
-	"github.com/cesanta/errors"
+	"github.com/mongoose-os/mos/mos/ourutil"
 	flag "github.com/spf13/pflag"
 )
 

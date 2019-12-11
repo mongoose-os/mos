@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 func TestPartFromString(t *testing.T) {

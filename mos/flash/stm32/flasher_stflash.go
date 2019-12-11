@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/mos/ourutil"
 )

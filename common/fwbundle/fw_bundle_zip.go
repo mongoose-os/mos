@@ -26,8 +26,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 	zip "github.com/mongoose-os/mos/common/ourzip"
 	"github.com/mongoose-os/mos/mos/ourutil"
 )

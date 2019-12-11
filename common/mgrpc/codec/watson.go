@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cesanta/errors"
 	"github.com/golang/glog"
+	"github.com/juju/errors"
 )
 
 // IBM Watson IoT Platform RPC support.

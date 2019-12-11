@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type HexBundle struct {

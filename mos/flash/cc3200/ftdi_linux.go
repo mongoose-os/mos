@@ -30,7 +30,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/cesanta/errors"
+	"github.com/juju/errors"
 )
 
 type ftdiLibWrapper struct {
