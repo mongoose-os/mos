@@ -125,6 +125,7 @@ func (p *FirmwarePart) CalcChecksum() error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	p.Size = uint32(len(data))
 	p.ChecksumSHA1 = computeSHA1(data)
 	p.ChecksumSHA256 = computeSHA256(data)
 	return nil

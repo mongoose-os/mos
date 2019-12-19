@@ -57,10 +57,15 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 		if err != nil {
 			return errors.Annotatef(err, "error reading existing manifest")
 		}
-		fwb.FirmwareManifest = *fm
-	} else {
+	}
+	fwb.FirmwareManifest = *fm
+	if *flags.Name != "" {
 		fm.Name = *flags.Name
+	}
+	if flags.Platform() != "" {
 		fm.Platform = flags.Platform()
+	}
+	if *flags.Description != "" {
 		fm.Description = *flags.Description
 	}
 	if *flags.BuildInfo != "" {
