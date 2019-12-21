@@ -102,7 +102,10 @@ def UpdateHomebrew(args):
     repo = git.Repo(".")
     head_commit = repo.head.commit
     formula = ("mos" if args.release_tag != "" else "mos-latest")
-    v = json.load(open(os.path.expanduser("mos/version/version.json"), "r"))
+    if args.bottle_only:
+        # Re-genearte version, chances are it hasn't been generated since last bottle-only build.
+        RunSubprocess("make", "clean-version", "version")
+    v = json.load(open(os.path.expanduser("version/version.json"), "r"))
     hb_cmd = [
         "tools/update_hb.py",
         "--hb-repo=git@github.com:cesanta/homebrew-mos.git",

@@ -49,7 +49,7 @@ generate-%:
 	  go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	cd $(PKGDIR) && go generate ./...
 
-version/version.go:
+version/version.go version/version.json:
 	@# If we are building a Debian package, use its version.
 	@# Debian package versions look like this:
 	@#   1.12+92e435b~xenial0 (mos) or
