@@ -1,0 +1,8 @@
+downloads/*
+fwbuild-instance
+fwbuild-manager
+mos
+mos.exe
+mos/mos
+version/version.json
+version/version.go

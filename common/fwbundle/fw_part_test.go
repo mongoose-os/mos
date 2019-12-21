@@ -45,8 +45,8 @@ func TestPartFromString(t *testing.T) {
 			p: &FirmwarePart{Name: "app", Addr: 0x100000, Src: "/bar/baz.bin"}},
 		{s: `boot:addr=0x0,src=/boot.bin,update=false`,
 			p: &FirmwarePart{Name: "boot",
-				Src:        "/boot.bin",
-				properties: map[string]interface{}{"update": false},
+				Src:   "/boot.bin",
+				attrs: map[string]interface{}{"update": false},
 			}},
 	}
 	for i, c := range cases {

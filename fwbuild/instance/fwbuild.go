@@ -40,9 +40,9 @@ import (
 	"github.com/mongoose-os/mos/common/ourio"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
-	"github.com/mongoose-os/mos/mos/build"
-	"github.com/mongoose-os/mos/mos/build/archive"
-	moscommon "github.com/mongoose-os/mos/mos/common"
+	"github.com/mongoose-os/mos/cli/build"
+	"github.com/mongoose-os/mos/cli/build/archive"
+	moscommon "github.com/mongoose-os/mos/cli/common"
 	flock "github.com/theckman/go-flock"
 	yaml "gopkg.in/yaml.v2"
 )

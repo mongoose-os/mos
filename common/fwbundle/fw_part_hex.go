@@ -65,7 +65,7 @@ func ParseHexBundle(hexData []byte) (*HexBundle, error) {
 		var recLen uint8
 		binary.Read(buf, binary.BigEndian, &recLen)
 		if len(ld) != 4+int(recLen)+1 {
-			return nil, errors.Errorf("line %d: invalid length", lineNo, len(ld))
+			return nil, errors.Errorf("line %d: invalid length %d", lineNo, len(ld))
 		}
 		checksum := uint8(ld[len(ld)-1])
 		cs := uint8(0)

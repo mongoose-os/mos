@@ -34,8 +34,8 @@ import git  # apt-get install python3-git || pip3 install GitPython
 import github_api
 
 GPG_KEY_PATH = os.path.join(os.environ["HOME"], ".gnupg-cesantabot")
-BUILD_DEB_PATH = os.path.join("mos", "ubuntu", "build-deb.sh")
-UPLOAD_DEB_PATH = os.path.join("mos", "ubuntu", "upload-deb.sh")
+BUILD_DEB_PATH = os.path.join("tools", "ubuntu", "build-deb.sh")
+UPLOAD_DEB_PATH = os.path.join("tools", "ubuntu", "upload-deb.sh")
 UBUNTU_VERSIONS = ["xenial", "bionic", "disco", "eoan"]
 
 deb_package = "mos-latest"
@@ -207,12 +207,12 @@ if __name__ == "__main__":
     if platform == "mac":
         if args.resume <= 10:
             print("(10) Deploying binaries...")
-            RunSubprocess(["make", "-C", "mos", "deploy-mos-binary", "TAG=%s" % tag_effective])
+            RunSubprocess(["make", "deploy-downloads", "TAG=%s" % tag_effective])
         UpdateHomebrew(args)
 
     if args.resume <= 40:
         print("(40) Deploying fwbuild...")
-        RunSubprocess(["make", "-C", "mos", "deploy-fwbuild", "TAG=%s" % tag_effective])
+        RunSubprocess(["make", "deploy-fwbuild", "TAG=%s" % tag_effective])
 
     if args.resume <= 50:
         print("(50) Building Ubuntu packages...")
@@ -225,5 +225,5 @@ if __name__ == "__main__":
         print("""
     ============ WARNING ============
     You're not running on mac, so I couldn't deploy mos binary. You need to do that from mac:
-    $ make -C mos deploy-mos-binary TAG=%s
+    $ make deploy-downloads TAG=%s
     =================================""" % tag_effective)

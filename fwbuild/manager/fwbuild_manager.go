@@ -33,12 +33,13 @@ import (
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
 	"github.com/juju/errors"
+	goji "goji.io"
+	"goji.io/pat"
+
 	"github.com/mongoose-os/mos/common/docker"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
 	"github.com/mongoose-os/mos/fwbuild/manager/middleware"
-	goji "goji.io"
-	"goji.io/pat"
 )
 
 var (
@@ -48,8 +49,8 @@ var (
 
 	port         = flag.String("port", "80", "HTTP port to listen at.")
 	portTLS      = flag.String("port-tls", "443", "HTTPS port to listen at.")
-	certFile     = flag.String("cert-file", "", "")
-	keyFile      = flag.String("key-file", "", "")
+	certFile     = flag.String("cert-file", "", "TLS certificate file")
+	keyFile      = flag.String("key-file", "", "TLS key file")
 	payloadLimit = flag.Int64("payload-size-limit", 5*1024*1024, "Max upload size")
 
 	errBuildFailure = errors.New("build failure")
@@ -127,12 +128,7 @@ func CreateHandler() (http.Handler, error) {
 
 	rAPI := goji.SubMux()
 	rRoot.Handle(pat.New("/api/*"), rAPI)
-	{
-		rAPI.HandleFunc(pat.New("/fwbuild/:version/:action"), handleFwbuildAction)
-
-		// Backward compatibility with the old toy URL
-		rAPI.HandleFunc(pat.New("/test/firmware/build"), handleFwbuildActionOld)
-	}
+	rAPI.HandleFunc(pat.New("/fwbuild/:version/:action"), handleFwbuildAction)
 
 	assetInfo := func(path string) (os.FileInfo, error) {
 		return os.Stat(path)
@@ -271,15 +267,6 @@ func handleFwbuildAction2(w http.ResponseWriter, r *http.Request, version, actio
 func handleFwbuildAction(w http.ResponseWriter, r *http.Request) {
 	version := pat.Param(r, "version")
 	action := pat.Param(r, "action")
-
-	handleFwbuildAction2(w, r, version, action)
-}
-
-// handleFwbuildActionOld is needed for backward compatibility with old
-// toy URL; it assumes the version "latest"
-func handleFwbuildActionOld(w http.ResponseWriter, r *http.Request) {
-	version := "latest"
-	action := "build"
 
 	handleFwbuildAction2(w, r, version, action)
 }

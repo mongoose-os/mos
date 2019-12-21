@@ -40,7 +40,7 @@ func Pull(ctx context.Context, image string) error {
 	comps := strings.Split(image, "/")
 	auth := auths.Configs[comps[0]]
 
-	glog.Infof("Pulling image: image=%q, cmd=%v, volumes=%v user=%q", image)
+	glog.Infof("Pulling image: image=%q", image)
 	err = cli.PullImage(docker.PullImageOptions{
 		Repository: image,
 	}, auth)

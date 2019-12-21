@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/juju/errors"
 	zip "github.com/mongoose-os/mos/common/ourzip"
-	"github.com/mongoose-os/mos/mos/ourutil"
+	"github.com/mongoose-os/mos/cli/ourutil"
 )
 
 const (
