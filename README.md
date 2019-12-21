@@ -76,4 +76,4 @@ Build the binary:
 $ make
 ```
 
-It will produce `mos/mos` (or mos/mos.exe` on Windows.
+It will produce `mos/mos` (or `mos/mos.exe` on Windows).

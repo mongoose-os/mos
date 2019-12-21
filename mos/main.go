@@ -123,6 +123,7 @@ func init() {
 		{"clone", clone.Clone, `Clone a repo`, nil, []string{}, No, false},
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, Maybe, false},
 		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, No, false},
+		{"flash-write", flashWrite, `Write a region of flash`, []string{"platform"}, []string{"port"}, No, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, No, false}, //TODO: needDevConn
 		{"ls", fs.Ls, `List files at the local device's filesystem`, nil, []string{"port"}, Yes, false},
 		{"get", fs.Get, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, Yes, false},
