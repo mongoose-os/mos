@@ -41,6 +41,14 @@ UBUNTU_VERSIONS = ["xenial", "bionic", "disco", "eoan", "focal"]
 deb_package = "mos-latest"
 tag_effective = "latest"
 
+class SubprocessException(Exception):
+    def __init__(self, returncode, stderr):
+        self.returncode = returncode
+        self.stderr = stderr
+
+    def __str__(self):
+        return "code: %d, stderr:\n%s" % (self.returncode, self.stderr)
+
 def RunSubprocess(cmd, communicator=None, quiet=False):
     master_fd, slave_fd = pty.openpty()
 
@@ -82,9 +90,8 @@ def RunSubprocess(cmd, communicator=None, quiet=False):
 
     proc.wait()
     if proc.returncode != 0:
-        print("returncode: %d" % proc.returncode)
-        print("stderr: %s" % proc.stderr.read())
-        raise Exception("non-zero return code")
+        stderr = proc.stderr.read().decode("utf-8")
+        raise SubprocessException(proc.returncode, stderr)
 
     return out
 
@@ -173,6 +180,16 @@ if __name__ == "__main__":
     # Check ssh access to site. If agent is used, this will unlock the key.
     print("Checking SSH access to the site...")
     RunSubprocess(["ssh", "root@mongoose-os.com", "echo", "Ok"])
+
+    # Check ssh access to GitHub. If agent is used, this will unlock the key.
+    print("Checking SSH access to the site...")
+    try:
+        RunSubprocess(["ssh", "git@github.com"])
+    except SubprocessException as e:
+        if "GitHub does not provide shell access" in e.stderr:
+            print("Ok")
+        else:
+            raise
 
     # Request the user for the passphrase
     passphrase = getpass.getpass("Passphrase for the key in %s: " % GPG_KEY_PATH)
