@@ -1,6 +1,6 @@
 all: build-all
 
-pull-all:  docker-pull-ubuntu-golang-xenial docker-pull-ubuntu-golang-bionic docker-pull-ubuntu-golang-disco docker-pull-ubuntu-golang-eoan \
+pull-all:  docker-pull-ubuntu-golang-xenial docker-pull-ubuntu-golang-bionic docker-pull-ubuntu-golang-disco docker-pull-ubuntu-golang-eoan docker-pull-ubuntu-golang-focal \
            docker-pull-gobuild docker-pull-gobuild32 docker-pull-gobuild-mingw
 
 docker-build-ubuntu-golang-%: Dockerfile.ubuntu-golang

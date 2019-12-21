@@ -25,8 +25,7 @@ if ! [ -d "$SRC/vendor/github.com" ]; then
   make deps
 fi
 
-mkdir -p $HOME/tmp
-
+mkdir -p $HOME/tmp/out-${DISTR}
 rm -rf $HOME/tmp/out-${DISTR}/*
 docker pull ${IMAGE}
 docker run -i -t --rm \
