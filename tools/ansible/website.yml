@@ -1,4 +1,0 @@
-- hosts: website
-  gather_facts: no
-  roles:
-    - role: website

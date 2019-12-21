@@ -95,8 +95,10 @@ deploy-fwbuild:
     ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
 
 deploy-mos-binary: downloads
-	cd ../tools/ansible && \
-    ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t mos
+	rsync -a --progress downloads/mos/ root@mongoose-os.com:/data/downloads/mos-$(TAG)/
+ifneq "$(TAG)" "latest"
+	ssh root@mongoose-os.com 'rm -f /data/downloads/mos-release && ln -vsf mos-$(TAG) /data/downloads/mos-release'
+endif
 
 uglify:
 	uglifyjs --compress --mangle -- web_root/js/main.js web_root/js/util.js > /dev/null
