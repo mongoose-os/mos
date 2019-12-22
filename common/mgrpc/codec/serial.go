@@ -43,6 +43,8 @@ const (
 	handshakeInterval time.Duration = 200 * time.Millisecond
 
 	interCharacterTimeout time.Duration = 200 * time.Millisecond
+
+	warnInterval = 25
 )
 
 type SerialCodecOptions struct {
@@ -64,6 +66,7 @@ type serialCodec struct {
 	handsShakenLock sync.Mutex
 	writeLock       sync.Mutex
 	hsCounter       int
+	warnCounter     int
 
 	// Underlying serial port implementation allows concurrent Read/Write, but
 	// calling Close while Read/Write is in progress results in a race. A
@@ -265,6 +268,11 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 		case <-ctx.Done():
 			return 0, ctx.Err()
 		case <-time.After(handshakeInterval):
+			c.warnCounter++
+			if c.warnCounter >= warnInterval {
+				glog.Errorf("No response to handshake. Is %s the right port? Is rpc-uart enabled?", c.portName)
+				c.warnCounter = 0
+			}
 			break
 		}
 	}
@@ -326,6 +334,7 @@ func (c *serialCodec) setHandsShaken(shaken bool) {
 		c.hsCounter = 0
 	}
 	c.handsShaken = shaken
+	c.warnCounter = 0
 }
 
 func (c *serialCodec) SetOptions(opts *Options) error {
