@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := all
+.DEFAULT_GOAL := mos
 .PHONY: all build clean clean-tools clean-version deploy-fwbuild deploy-mos-binary deps downloads fwbuild-instance fwbuild-manager generate install linux mac mos version win
 
 TAG ?= latest
