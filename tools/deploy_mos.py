@@ -109,7 +109,7 @@ def UpdateHomebrew(args):
     repo = git.Repo(".")
     head_commit = repo.head.commit
     formula = ("mos" if args.release_tag != "" else "mos-latest")
-    if args.bottle_only:
+    if args.update_hb:
         # Re-genearte version, chances are it hasn't been generated since last bottle-only build.
         RunSubprocess(["make", "clean-version", "version"])
     v = json.load(open(os.path.expanduser("version/version.json"), "r"))
