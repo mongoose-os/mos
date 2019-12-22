@@ -42,7 +42,7 @@ deps:
 		( go get github.com/kardianos/govendor && go install github.com/kardianos/govendor )
 	cd $(GOPATH)/src/github.com/mongoose-os/mos && $(GOBIN)/govendor sync -v
 
-generate-%:
+generate: deps
 	@[ -f $(GOBIN)/go-bindata ] || \
 	  go install github.com/mongoose-os/mos/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@[ -f $(GOBIN)/go-bindata-assetfs ] || \
@@ -72,18 +72,15 @@ version/version.go version/version.json:
 
 version: version/version.go
 
-gobuild-%:
+build-%: generate version
 	@go version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
 	  go build -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
 
-build-%: deps version generate-% gobuild-%
-	@true
-
 # Debian build rules use this target.
 build: PKG = github.com/mongoose-os/mos/cli
 build: OUT = mos/mos
-build: version gobuild-mos
+build: version build-mos
 
 downloads-linux:
 	docker run -i --rm \
