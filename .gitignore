@@ -4,5 +4,7 @@ fwbuild-manager
 mos
 mos.exe
 mos/mos
+pkg.build_id
+pkg.version
 version/version.json
 version/version.go
