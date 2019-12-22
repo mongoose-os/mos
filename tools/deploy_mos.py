@@ -111,7 +111,7 @@ def UpdateHomebrew(args):
     formula = ("mos" if args.release_tag != "" else "mos-latest")
     if args.bottle_only:
         # Re-genearte version, chances are it hasn't been generated since last bottle-only build.
-        RunSubprocess("make", "clean-version", "version")
+        RunSubprocess(["make", "clean-version", "version"])
     v = json.load(open(os.path.expanduser("version/version.json"), "r"))
     hb_cmd = [
         "tools/update_hb.py",
