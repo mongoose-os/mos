@@ -11,9 +11,8 @@ export GOCACHE = /tmp/go-cache
 	dh $@ --buildsystem=golang --with=golang
 
 override_dh_auto_build:
-	@# If vendor packages are already populated, skip the sync step.
-	[ -d vendor/github.com ] || make deps
-	make build
+	@# Vendor packages must be populated already
+	make mos NODEPS=1
 
 override_dh_auto_test:
 	make test
