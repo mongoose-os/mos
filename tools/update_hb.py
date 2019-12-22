@@ -134,7 +134,7 @@ if __name__ == "__main__":
                         new_lines.append('    sha256 "%s" => :%s # %s' % (sha256, mac_os_version, args.version))
                         if bottle_fname and args.bottle_upload_dest:
                             upload_dst = "%s/%s" % (args.bottle_upload_dest, bottle_base_name)
-                            print("Uploading %s to %s..." % (bottle_fname, upload_dst))
+                            logging.info("Uploading %s to %s...", bottle_fname, upload_dst)
                             subprocess.check_call(["scp", bottle_fname, upload_dst])
         if copy:
             new_lines.append(l)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
                 "-m", "update_hb: %s %s" % (args.formula, args.version),
             ])
         else:
-            print("Nothing changed")
+            logging.info("Nothing changed")
     if args.push:
         logging.info("Pushing...")
         subprocess.check_call(["git", "push", "origin", "master"])
