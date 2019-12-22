@@ -38,9 +38,11 @@ fwbuild-instance: build-fwbuild-instance
 PKGDIR = $(GOPATH)/src/$(PKG)
 
 deps:
+ifndef NODEPS
 	@[ -f $(GOBIN)/govendor ] || \
 		( go get github.com/kardianos/govendor && go install github.com/kardianos/govendor )
 	cd $(GOPATH)/src/github.com/mongoose-os/mos && $(GOBIN)/govendor sync -v
+endif
 
 generate: deps
 	@[ -f $(GOBIN)/go-bindata ] || \
@@ -76,11 +78,6 @@ build-%: generate version
 	@go version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
 	  go build -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
-
-# Debian build rules use this target.
-build: PKG = github.com/mongoose-os/mos/cli
-build: OUT = mos/mos
-build: version build-mos
 
 downloads-linux:
 	docker run -i --rm \

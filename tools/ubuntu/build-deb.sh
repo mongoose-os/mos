@@ -21,9 +21,7 @@ set -x -e
 
 IMAGE=docker.io/mgos/ubuntu-golang:${DISTR}
 
-if ! [ -d "$SRC/vendor/github.com" ]; then
-  make deps
-fi
+make deps
 
 mkdir -p $HOME/tmp/out-${DISTR}
 rm -rf $HOME/tmp/out-${DISTR}/*
