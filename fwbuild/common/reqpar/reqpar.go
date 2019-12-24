@@ -53,6 +53,10 @@ type RequestFile struct {
 func New(r *http.Request, tmpDir string, payloadLimit int64) (ret *RequestParams, err error) {
 	r.ParseMultipartForm(defaultMaxMemory)
 
+	if r.MultipartForm == nil {
+		return nil, errors.New("not a multipart request")
+	}
+
 	par := &RequestParams{
 		Values: map[string][]string{},
 		Files:  map[string][]RequestFile{},

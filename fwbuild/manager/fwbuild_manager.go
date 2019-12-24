@@ -28,7 +28,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
+	"sync"
+	"time"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
@@ -47,13 +50,17 @@ var (
 	mosImage            = flag.String("mos-image", "docker.io/mgos/mos", "Mos tool docker image, without a tag")
 	volumesDir          = flag.String("volumes-dir", "/var/tmp/fwbuild-volumes", "")
 
-	port         = flag.String("port", "80", "HTTP port to listen at.")
-	portTLS      = flag.String("port-tls", "443", "HTTPS port to listen at.")
-	certFile     = flag.String("cert-file", "", "TLS certificate file")
-	keyFile      = flag.String("key-file", "", "TLS key file")
-	payloadLimit = flag.Int64("payload-size-limit", 5*1024*1024, "Max upload size")
+	port              = flag.String("port", "80", "HTTP port to listen at.")
+	portTLS           = flag.String("port-tls", "443", "HTTPS port to listen at.")
+	certFile          = flag.String("cert-file", "", "TLS certificate file")
+	keyFile           = flag.String("key-file", "", "TLS key file")
+	payloadLimit      = flag.Int64("payload-size-limit", 5*1024*1024, "Max upload size")
+	imagePullInterval = flag.Duration("image-pull-interval", 1*time.Hour, "Pull images at this interval")
 
 	errBuildFailure = errors.New("build failure")
+
+	imagePullTimestamp     = map[string]time.Time{}
+	imagePullTimestampLock = sync.Mutex{}
 )
 
 func main() {
@@ -193,24 +200,48 @@ func runBuild(ctx context.Context, version string, reqPar *reqpar.RequestParams)
 	}()
 	// }}}
 
+	imageName := getImageName(version)
+
+	// Pull the image first, if necessary.
+	if *imagePullInterval != 0 {
+		imagePullTimestampLock.Lock()
+		lastPullTimestamp := imagePullTimestamp[imageName]
+		if time.Now().After(lastPullTimestamp.Add(*imagePullInterval)) {
+			imagePullTimestamp[imageName] = time.Now()
+			imagePullTimestampLock.Unlock()
+			// If this is the first time, make it blocking.
+			// In either case, it's best effort so build does not fail.
+			if lastPullTimestamp.IsZero() {
+				docker.Pull(ctx, imageName)
+			} else {
+				go docker.Pull(ctx, imageName)
+			}
+		} else {
+			imagePullTimestampLock.Unlock()
+		}
+	}
+
 	cmdArgs = append(cmdArgs, "--req-params", reqParFile.Name())
 	cmdArgs = append(cmdArgs, "--output-zip", outputFile.Name())
 
 	cmdArgs = append(cmdArgs, "build")
 
-	buildErr := docker.Run(
-		ctx, getImageName(version), os.Stdout,
+	runOpts := []docker.RunOption{
 		// Mgos container should be able to spawn other containers
 		// (read about the "sibling containers" "approach:
 		// https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/)
 		docker.Bind("/var/run/docker.sock", "/var/run/docker.sock", "rw"),
-		// This is no longer necessary post-2.6 but is preserved for backward compatibility.
-		docker.Bind("/usr/bin/docker", "/usr/bin/docker", "ro"),
-
+	}
+	// This is no longer necessary post-2.6 but is preserved for backward compatibility.
+	if dockerBin, err := exec.LookPath("docker"); err == nil {
+		runOpts = append(runOpts, docker.Bind(dockerBin, "/usr/bin/docker", "ro"))
+	}
+	runOpts = append(runOpts,
 		docker.Bind(*volumesDir, *volumesDir, "rw"),
-
 		docker.Cmd(cmdArgs),
 	)
+
+	buildErr := docker.Run(ctx, imageName, os.Stdout, runOpts...)
 
 	// Read zip data from output file
 	data, err := ioutil.ReadAll(outputFile)
@@ -230,7 +261,7 @@ func runBuild(ctx context.Context, version string, reqPar *reqpar.RequestParams)
 }
 
 func handleFwbuildAction(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	version := pat.Param(r, "version")
 	action := pat.Param(r, "action")
 
