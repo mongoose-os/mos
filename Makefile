@@ -79,6 +79,23 @@ build-%: generate version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
 	  go build -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
 
+docker-build-%:
+	docker run -i --rm \
+	  -v $(CURDIR):/src \
+	  --user $(shell id -u):$(shell id -g) \
+	  -e GOBIN=/src/go/bin/$* \
+	  --entrypoint /usr/bin/make \
+	  docker.io/mgos/ubuntu-golang:bionic \
+	    -C /src $* OUT=tools/docker/$*/$*
+	  $(MAKE) -C tools/docker/$* docker-build NOBUILD=1 TAG=$(TAG)
+
+docker-push-%:
+	  $(MAKE) -C tools/docker/$* docker-push TAG=$(TAG)
+
+docker-push-release-%:
+	  $(MAKE) -C tools/docker/$* docker-tag FROM_TAG=$(TAG) TAG=release
+	  $(MAKE) -C tools/docker/$* docker-push TAG=release
+
 downloads-linux:
 	docker run -i --rm \
 	  -v $(CURDIR):/src \
@@ -114,10 +131,6 @@ os-check:
 
 downloads: os-check clean clean-version downloads-linux downloads-mac downloads-win
 	cp version/version.json downloads/mos/
-
-deploy-fwbuild:
-	cd ../tools/ansible && \
-    ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
 
 deploy-downloads: downloads
 	rsync -a --progress downloads/mos/ root@mongoose-os.com:/data/downloads/mos-$(TAG)/

@@ -9,6 +9,6 @@ RUN apt-get update && \
     apt-get -y install docker-ce git libftdi1 libusb-1.0-0 && \
     apt-get clean
 
-ADD mos /usr/bin
+ADD mos /usr/local/bin
 
-ENTRYPOINT ["/usr/bin/mos"]
+ENTRYPOINT ["/usr/local/bin/mos"]

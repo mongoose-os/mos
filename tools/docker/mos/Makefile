@@ -1,15 +1,14 @@
+.DEFAULT_GOAL := docker-build
+.PHONY: docker-build docker-tag docker-push
+
 TAG ?= latest
 FROM_TAG ?= latest
 
-all: docker-build
-
 docker-build:
-	$(CURDIR)/../golang/dogobuild \
-	  docker.io/mgos/mos \
-	  github.com/mongoose-os/mos/mos \
-	  Dockerfile \
-	  docker.io/mgos/gobuild \
-	  -v -tags noflash
+ifndef NOBUILD
+	make -C ../../.. docker-build-mos
+endif
+	docker build -t docker.io/mgos/mos:$(TAG) .
 
 docker-tag:
 	docker tag docker.io/mgos/mos:$(FROM_TAG) docker.io/mgos/mos:$(TAG)

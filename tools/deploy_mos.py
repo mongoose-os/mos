@@ -27,7 +27,8 @@ import shutil
 import subprocess
 import sys
 
-import git  # apt-get install python3-git || pip3 install GitPython
+import git       # apt-get install python3-git || pip3 install GitPython
+import requests  # apt-get install python3-requests || pip3 install requests
 
 # Not used in this script but is used by other scripts.
 # Importing now will catch missing dependencies early.
@@ -231,8 +232,18 @@ if __name__ == "__main__":
         UpdateHomebrew(args)
 
     if args.resume <= 40:
-        print("(40) Deploying fwbuild...")
-        RunSubprocess(["make", "deploy-fwbuild", "TAG=%s" % tag_effective])
+        print("(40) Building Docker images...")
+        RunSubprocess(["make", "docker-build-mos", "docker-build-fwbuild-instance", "TAG=%s" % tag_effective])
+        if args.release_tag != "":
+            RunSubprocess(["make", "docker-push-release-mos", "docker-push-release-fwbuild-instance", "TAG=%s" % tag_effective])
+
+    if args.resume <= 45:
+        print("(45) Pushing Docker images...")
+        RunSubprocess(["make", "docker-push-mos", "docker-push-fwbuild-instance", "TAG=%s" % tag_effective])
+        r = requests.get("https://mongoose.cloud/api/fwbuild/%s/pull" % tag_effective)
+        if r.status_code != 200:
+            print("Error pulling image: %d %s" % (r.status_code, r.text))
+            exit(2)
 
     if args.resume <= 50:
         print("(50) Building Ubuntu packages...")

@@ -1,17 +1,3 @@
-- import_tasks: fwbuild_instance.yml
-  static: yes
-  vars:
-    cur_mos_version_tag: "{{ mos_version_tag }}"
-
-# When deploying for some release tag (say, "1.5"), also deploy for the
-# tag "release". (the tag "latest" should be deployed separately, to be
-# symmetric with the mos deployment logic)
-- import_tasks: fwbuild_instance.yml
-  static: yes
-  when: mos_version_tag != "latest"
-  vars:
-    cur_mos_version_tag: release
-
 - name: SSL certs
   import_tasks: include/letsencrypt/tasks/main.yml
   static: yes
@@ -23,8 +9,38 @@
       -d www.mongoose.cloud
     renew_time: 'Mon *-*-* 01:23:45'
 
-- import_tasks: fwbuild_manager.yml
+- name: Pull fwbuild-manager image:{{ fwbuild_manager_tag }}
+  tags:
+    - fwbuild-manager
+  shell: >-
+    docker pull docker.io/mgos/fwbuild-manager:{{ fwbuild_manager_tag }}
+
+- name: install fwbuild-manager docker job
   tags: fwbuild-manager
+  docker_container:
+    image: docker.io/mgos/fwbuild-manager:{{ fwbuild_manager_tag }}
+    name: fwbuild-manager
+    ports:
+      - 443:443
+      - 80:80
+    expose:
+      - "443"
+      - "80"
+    command: >-
+      --logtostderr --v=2
+      --volumes-dir={{ fwbuild_volumes_dir }}
+      --port=80
+      --port-tls=443
+      --cert-file=/data/letsencrypt/live/mongoose.cloud/fullchain.pem
+      --key-file=/data/letsencrypt/live/mongoose.cloud/privkey.pem
+
+    volumes:
+      - "{{ fwbuild_volumes_dir }}:{{ fwbuild_volumes_dir }}"
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /data/letsencrypt:/data/letsencrypt:ro
+    state: started
+    pull: yes
+    restart_policy: always
 
 - name: setup rm_fwbuild_volumes timer
   import_tasks: include/systemd_cron/tasks/main.yml

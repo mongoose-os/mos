@@ -1,19 +1,14 @@
+.DEFAULT_GOAL := docker-build
 .PHONY: docker-build docker-tag docker-push
 
 TAG ?= latest
 FROM_TAG ?= latest
 
-all: docker-build
-
-generate:
-	go generate github.com/mongoose-os/mos/fwbuild/manager/...
-
-docker-build: generate
-	$(CURDIR)/../golang/dogobuild \
-	  docker.io/mgos/fwbuild-manager \
-	  github.com/mongoose-os/mos/fwbuild/manager \
-	  Dockerfile \
-	  docker.io/mgos/gobuild
+docker-build:
+ifndef NOBUILD
+	make -C ../../.. docker-build-fwbuild-manager
+endif
+	docker build -t docker.io/mgos/fwbuild-manager:$(TAG) .
 
 docker-tag:
 	docker tag docker.io/mgos/fwbuild-manager:$(FROM_TAG) docker.io/mgos/fwbuild-manager:$(TAG)
