@@ -43,6 +43,7 @@ import (
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
 	"github.com/mongoose-os/mos/fwbuild/manager/middleware"
+	"github.com/mongoose-os/mos/version"
 )
 
 var (
@@ -65,6 +66,8 @@ var (
 
 func main() {
 	flag.Parse()
+
+	glog.Infof("fwbuild-manager %s (%s)", version.Version, version.BuildId)
 
 	if err := os.MkdirAll(*volumesDir, 0775); err != nil {
 		glog.Fatal(err)
