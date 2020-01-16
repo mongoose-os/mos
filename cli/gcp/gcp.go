@@ -158,11 +158,11 @@ func GCPIoTSetup(ctx context.Context, devConn dev.DevConn) error {
 	}
 	resp, err := iotAPIClient.Projects.Locations.Registries.Devices.Create(parent, &device).Do()
 	if err != nil {
-		glog.Infof("Error creating device: %s %#v", err, resp)
+		glog.Errorf("Error creating device: %s %#v", err, resp)
 		ourutil.Reportf("Trying to delete the device...")
 		dev := fmt.Sprintf("%s/devices/%s", parent, devID)
-		_, err = iotAPIClient.Projects.Locations.Registries.Devices.Delete(dev).Do()
-		if err != nil {
+		_, err1 := iotAPIClient.Projects.Locations.Registries.Devices.Delete(dev).Do()
+		if err1 != nil {
 			return errors.Annotatef(err, "failed to re-create device")
 		}
 		ourutil.Reportf("Retrying device creation...")
