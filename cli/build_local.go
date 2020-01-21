@@ -36,8 +36,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/common/multierror"
-	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/flags"
@@ -45,6 +43,8 @@ import (
 	"github.com/mongoose-os/mos/cli/manifest_parser"
 	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/multierror"
+	"github.com/mongoose-os/mos/common/ourio"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -134,10 +134,14 @@ func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err err
 		return errors.Trace(err)
 	}
 
+	libsUpdateIntvl := *libsUpdateInterval
+	if *noLibsUpdate {
+		libsUpdateIntvl = 0
+	}
 	manifest, fp, err := manifest_parser.ReadManifestFinal(
 		appDir, &bParams.ManifestAdjustments, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider},
-		true /* requireArch */, *preferPrebuiltLibs, *libsUpdateInterval)
+		true /* requireArch */, *preferPrebuiltLibs, libsUpdateIntvl)
 	if err != nil {
 		return errors.Trace(err)
 	}

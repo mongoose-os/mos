@@ -308,7 +308,7 @@ func ReadManifestFinal(
 					if err == nil {
 						// Local file exists, check it.
 						// We want to re-fetch "latest" libs regularly (same way as repos get pulled).
-						if variant != version.LatestVersionName || binaryLibsUpdateInterval == 0 ||
+						if libVersion != version.LatestVersionName || binaryLibsUpdateInterval == 0 ||
 							fi.ModTime().Add(binaryLibsUpdateInterval).After(time.Now()) {
 							if fi.Size() == 0 {
 								// It's a tombstone, meaning this variant does not exist. Skip it.
