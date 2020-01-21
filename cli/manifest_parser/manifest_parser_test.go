@@ -187,7 +187,6 @@ func singleManifestTest(t *testing.T, appPath string) error {
 		if err != nil {
 			return errors.Trace(err)
 		}
-		manifest.LibsHandled = nil
 
 		data, err := yaml.Marshal(manifest)
 		if err != nil {

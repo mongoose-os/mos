@@ -18,5 +18,11 @@ libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: "2019-04-26"
+libs_handled:
+- lib:
+    origin: https://github.com/mongoose-os-libs/core
+    location: https://github.com/mongoose-os-libs/core
+    name: core
+  path: __APP_ROOT__/libs/core
 init_deps:
 - core

@@ -59,6 +59,50 @@ libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"
 manifest_version: "2017-09-29"
+libs_handled:
+- lib:
+    origin: https://github.com/mongoose-os-libs/core
+    location: https://github.com/mongoose-os-libs/core
+    name: core
+  path: __APP_ROOT__/libs/core
+- lib:
+    origin: https://github.com/mongoose-os-libs/mylib1
+    location: https://github.com/mongoose-os-libs/mylib1
+    name: mylib1
+  path: __APP_ROOT__/libs/mylib1
+  init_deps:
+  - core
+  sources:
+  - __APP_ROOT__/libs/mylib1/src/mylib1_src1.c
+- lib:
+    origin: https://github.com/mongoose-os-libs/mylib2
+    location: https://github.com/mongoose-os-libs/mylib2
+    name: mylib2
+  path: __APP_ROOT__/libs/mylib2
+  init_deps:
+  - core
+  - mylib4
+  sources:
+  - __APP_ROOT__/libs/mylib2/src/mylib2_src1.c
+- lib:
+    origin: https://github.com/mongoose-os-libs/mylib4
+    location: https://github.com/mongoose-os-libs/mylib4
+    name: mylib4
+  path: __APP_ROOT__/libs/mylib4
+  init_deps:
+  - core
+  sources:
+  - __APP_ROOT__/libs/mylib4/src/mylib4_src1.c
+- lib:
+    origin: https://github.com/mongoose-os-libs/mylib3
+    location: https://github.com/mongoose-os-libs/mylib3
+    name: mylib3
+  path: __APP_ROOT__/libs/mylib3
+  init_deps:
+  - core
+  - mylib4
+  sources:
+  - __APP_ROOT__/libs/mylib3/src/mylib3_src1.c
 init_deps:
 - core
 - mylib1
