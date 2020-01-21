@@ -40,6 +40,7 @@ libs_handled:
     origin: https://github.com/mongoose-os-libs/mylib1
     location: https://github.com/mongoose-os-libs/mylib1
     name: mylib1
+    variant: foo
   path: __APP_ROOT__/libs/mylib1
   init_deps:
   - core

@@ -61,8 +61,9 @@ const (
 	// - 2018-09-24: added special handling of the "boards" lib
 	// - 2019-04-26: added warning and error
 	// - 2019-07-28: added init_before
+	// - 2020-01-21: added ability to override lib variants from conds in app manifest
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2019-07-28"
+	maxManifestVersion = "2020-01-21"
 
 	depsApp = "app"
 
@@ -404,7 +405,7 @@ type manifestParseContext struct {
 
 	deps        *Deps
 	initDeps    *Deps
-	libsHandled map[string]build.FWAppManifestLibHandled
+	libsHandled map[string]*build.FWAppManifestLibHandled
 
 	appManifest *build.FWAppManifest
 	interp      *interpreter.MosInterpreter
@@ -430,7 +431,7 @@ func readManifestWithLibs(
 	requireArch bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	interp = interp.Copy()
-	libsHandled := map[string]build.FWAppManifestLibHandled{}
+	libsHandled := map[string]*build.FWAppManifestLibHandled{}
 
 	// Create a deps structure and add a root node: an "app"
 	deps := NewDeps()
@@ -504,7 +505,7 @@ func readManifestWithLibs(
 
 		lhp := map[string]*build.FWAppManifestLibHandled{}
 		for k, v := range libsHandled {
-			vc := v
+			vc := *v
 			lhp[k] = &vc
 		}
 
@@ -635,12 +636,14 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		if !manifest.NoImplInitDeps {
 			found := false
 			for _, l := range manifest.Libs {
+				l.Normalize()
 				if name, _ := l.GetName(); name == coreLibName {
 					found = true
 					break
 				}
 			}
 			if !found {
+				glog.Infof("Inserted core lib")
 				manifest.Libs = append(manifest.Libs, build.SWModule{
 					Location: coreLibLocation,
 				})
@@ -740,12 +743,19 @@ func prepareLib(
 	if !manifest.NoImplInitDeps {
 		pc.initDeps.AddDep(parentNodeName, name) // Implicit init dep
 	}
-	pc.mtx.Unlock()
 
 	if !pc.flagSet.Add(name) {
 		// That library is already handled by someone else
+		// App manifest can override library variants (in conds).
+		lm := &pc.libsHandled[name].Lib
+		if m.Variant != "" && parentNodeName == depsApp {
+			glog.V(1).Infof("%s variant: %q -> %q", name, lm.Variant, m.Variant)
+			lm.Variant = m.Variant
+		}
+		pc.mtx.Unlock()
 		return
 	}
+	pc.mtx.Unlock()
 
 	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
 
@@ -796,7 +806,7 @@ func prepareLib(
 	manifest.BuildVars[haveName] = "1"
 	manifest.CDefs[haveName] = "1"
 
-	lh := build.FWAppManifestLibHandled{
+	lh := &build.FWAppManifestLibHandled{
 		Lib:      *m,
 		Path:     libLocalDir,
 		Deps:     pc.deps.GetDeps(name),

@@ -12,5 +12,7 @@ conds:
     apply:
       libs:
         - origin: https://github.com/mongoose-os-libs/mylib1
+          # However, app is allowed to override the variant.
+          variant: foo
 
 manifest_version: 2018-08-29
