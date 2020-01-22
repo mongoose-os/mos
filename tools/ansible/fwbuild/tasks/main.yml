@@ -40,7 +40,8 @@
       - /data/letsencrypt:/data/letsencrypt:ro
     state: started
     pull: yes
-    restart_policy: always
+    restart_policy: unless-stopped
+    recreate: true
 
 - name: setup rm_fwbuild_volumes timer
   import_tasks: include/systemd_cron/tasks/main.yml
