@@ -16,7 +16,7 @@
 //
 package mgrpc
 
-//go:generate stringer -type=transport transport.go
+//XXXgo:generate stringer -type=transport transport.go
 
 // transport is an enum of supported transport protocols
 type transport int
