@@ -74,7 +74,7 @@ version/version.go version/version.json:
 
 version: version/version.go
 
-build-%: version
+build-%: deps version
 	@go version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
 	  go build -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
