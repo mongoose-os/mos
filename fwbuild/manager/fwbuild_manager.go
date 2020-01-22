@@ -160,6 +160,16 @@ func getImageName(version string) string {
 	return fmt.Sprintf("%s:%s", *instanceDockerImage, version)
 }
 
+func doPull(ctx context.Context, version string) error {
+	for _, image := range []string{getImageName(version), fmt.Sprintf("docker.io/mgos/mos:%s", version)} {
+		glog.Infof("Pulling %s...", image)
+		if err := docker.Pull(ctx, image); err != nil {
+			return errors.Annotatef(err, "error pulling %s", image)
+		}
+	}
+	return nil
+}
+
 // runBuild runs fwbuild-instance container with the params reqPar. Returns
 // zip data with the build output files; in case of build failure returned
 // error is errBuildFailure; this can be used to distinguish build failures
@@ -215,9 +225,9 @@ func runBuild(ctx context.Context, version string, reqPar *reqpar.RequestParams)
 			// If this is the first time, make it blocking.
 			// In either case, it's best effort so build does not fail.
 			if lastPullTimestamp.IsZero() {
-				docker.Pull(ctx, imageName)
+				doPull(ctx, version)
 			} else {
-				go docker.Pull(ctx, imageName)
+				go doPull(ctx, version)
 			}
 		} else {
 			imagePullTimestampLock.Unlock()
@@ -298,7 +308,7 @@ func handleFwbuildAction(w http.ResponseWriter, r *http.Request) {
 		w.Write(data)
 
 	case "pull":
-		if err := docker.Pull(ctx, getImageName(version)); err != nil {
+		if err := doPull(ctx, version); err != nil {
 			glog.Infof("Request error: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error() + "\n"))
