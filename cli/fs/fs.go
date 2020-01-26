@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -109,9 +110,8 @@ type GetResult struct {
 	Left *int64  `json:"left,omitempty"`
 }
 
-func GetFile(ctx context.Context, devConn dev.DevConn, name string) (string, error) {
+func getFileSink(ctx context.Context, devConn dev.DevConn, name string, sink io.Writer) error {
 	// Get file
-	contents := []byte{}
 	var offset int64
 
 	attempts := *flags.FsOpAttempts
@@ -133,24 +133,37 @@ func GetFile(ctx context.Context, devConn dev.DevConn, name string) (string, err
 			}
 			// TODO(dfrank): probably handle out of memory error by retrying with a
 			// smaller chunk size
-			return "", errors.Trace(err)
+			return errors.Trace(err)
 		}
 		attempts = *flags.FsOpAttempts
 
 		decoded, err := base64.StdEncoding.DecodeString(*chunk.Data)
 		if err != nil {
-			return "", errors.Trace(err)
+			return errors.Trace(err)
 		}
 
-		contents = append(contents, decoded...)
 		offset += int64(len(decoded))
+
+		for len(decoded) > 0 {
+			if n, err := sink.Write(decoded); err != nil {
+				return errors.Trace(err)
+			} else {
+				decoded = decoded[n:]
+			}
+		}
 
 		// Check if there is some data left
 		if *chunk.Left == 0 {
 			break
 		}
 	}
-	return string(contents), nil
+	return nil
+}
+
+func GetFile(ctx context.Context, devConn dev.DevConn, name string) (string, error) {
+	buf := bytes.NewBuffer(nil)
+	err := getFileSink(ctx, devConn, name, buf)
+	return string(buf.Bytes()), err
 }
 
 func Get(ctx context.Context, devConn dev.DevConn) error {
@@ -162,12 +175,7 @@ func Get(ctx context.Context, devConn dev.DevConn) error {
 		return errors.Errorf("extra arguments")
 	}
 	filename := args[1]
-	text, err := GetFile(ctx, devConn, filename)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	fmt.Print(string(text))
-	return nil
+	return errors.Trace(getFileSink(ctx, devConn, filename, os.Stdout))
 }
 
 func Put(ctx context.Context, devConn dev.DevConn) error {
