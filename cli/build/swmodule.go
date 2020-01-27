@@ -32,10 +32,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongoose-os/mos/common/ourgit"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/ourgit"
 
 	"github.com/golang/glog"
 	"github.com/juju/errors"
@@ -263,6 +263,23 @@ func (m *SWModule) PrepareLocalDir(
 	return localPath, nil
 }
 
+func getGHToken(tokenStr string) (string, error) {
+	if tokenStr == "" {
+		return "", nil
+	}
+	token := ""
+	if len(tokenStr) > 1 && tokenStr[0] == '@' {
+		if tokenData, err := ioutil.ReadFile(tokenStr[1:]); err != nil {
+			return "", errors.Trace(err)
+		} else {
+			token = string(tokenData)
+		}
+	} else {
+		token = tokenStr
+	}
+	return strings.TrimSpace(token), nil
+}
+
 func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
 	// Try public URL first. Most of our repos (and therefore assets) are public.
 	// API access limits do not apply to public asset access.
@@ -276,8 +293,12 @@ func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
 	relMetaURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", relMetaURL, nil)
-	if *flags.GHToken != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("token %s", *flags.GHToken))
+	token, err := getGHToken(*flags.GHToken)
+	if err != nil {
+		return nil, errors.Annotatef(err, "invalid --gh-token")
+	}
+	if token != "" {
+		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -323,8 +344,12 @@ func fetchGitHubAssetFromURL(assetName, tag, assetURL string) ([]byte, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", assetURL, nil)
 	req.Header.Add("Accept", "application/octet-stream")
-	if *flags.GHToken != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("token %s", *flags.GHToken))
+	token, err := getGHToken(*flags.GHToken)
+	if err != nil {
+		return nil, errors.Annotatef(err, "invalid --gh-token")
+	}
+	if token != "" {
+		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 	}
 	resp, err := client.Do(req)
 	if err != nil {

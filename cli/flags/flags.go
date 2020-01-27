@@ -44,7 +44,7 @@ var (
 	platform       = flag.String("platform", "", "Hardware platform")
 	SrcDir         = flag.String("src-dir", "", "")
 	Compress       = flag.Bool("compress", false, "")
-	GHToken        = flag.String("gh-token", "", "")
+	GHToken        = flag.String("gh-token", "", "GitHub token to use with API and asset reuqests. Can be token itself or @/path/to/file_with_token.")
 	ChunkSize      = flag.Int("chunk-size", 512, "Chunk size for operations")
 	FsOpAttempts   = flag.Int("fs-op-attempts", 3, "Chunk size for operations")
 	PID            = flag.String("pid", "mos", "")
