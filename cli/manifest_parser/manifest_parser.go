@@ -745,12 +745,18 @@ func prepareLib(
 	}
 
 	if !pc.flagSet.Add(name) {
-		// That library is already handled by someone else
-		// App manifest can override library variants (in conds).
-		lm := &pc.libsHandled[name].Lib
-		if m.Variant != "" && parentNodeName == depsApp {
-			glog.V(1).Infof("%s variant: %q -> %q", name, lm.Variant, m.Variant)
-			lm.Variant = m.Variant
+		if pc.libsHandled[name] != nil {
+			// That library is already handled by someone else
+			// App manifest can override library variants (in conds).
+			lm := &pc.libsHandled[name].Lib
+			if m.Variant != "" && parentNodeName == depsApp {
+				glog.V(1).Infof("%s variant: %q -> %q", name, lm.Variant, m.Variant)
+				lm.Variant = m.Variant
+			}
+		} else {
+			lpres <- libPrepareResult{
+				err: fmt.Errorf("duplicate library %q in %s", name, manifest.Origin),
+			}
 		}
 		pc.mtx.Unlock()
 		return
