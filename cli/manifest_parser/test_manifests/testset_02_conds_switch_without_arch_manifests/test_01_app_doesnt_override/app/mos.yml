@@ -16,4 +16,11 @@ libs:
 config_schema:
   - ["myapp", "o", {title: "Myapp settings"}]
 
+conds:
+  - when: '"1" == "1"'
+    apply:
+      name: Test app
+      description: Test app is best app
+      version: 1.2.3
+
 manifest_version: 2017-09-29

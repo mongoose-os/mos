@@ -32,8 +32,6 @@ import (
 	"github.com/juju/errors"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/mongoose-os/mos/common/ourfilepath"
-	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/cli/build"
 	"github.com/mongoose-os/mos/cli/build/archive"
 	moscommon "github.com/mongoose-os/mos/cli/common"
@@ -42,6 +40,8 @@ import (
 	"github.com/mongoose-os/mos/cli/interpreter"
 	"github.com/mongoose-os/mos/cli/manifest_parser"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/ourfilepath"
+	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -121,7 +121,7 @@ func buildRemote(bParams *buildParams) error {
 	// manifest.Sources contain all the app's sources we need to build, so that
 	// they will be whitelisted (see whitelisting logic below) and thus uploaded
 	// to the remote builder.
-	if err := manifest_parser.ExpandManifestConds(manifest, manifest, interp); err != nil {
+	if err := manifest_parser.ExpandManifestConds(manifest, manifest, interp, true); err != nil {
 		return errors.Trace(err)
 	}
 

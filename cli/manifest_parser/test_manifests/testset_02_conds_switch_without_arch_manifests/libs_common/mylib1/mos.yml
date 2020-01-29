@@ -11,4 +11,12 @@ filesystem:
 config_schema:
   - ["mylib1", "o", {title: "mylib1 settings"}]
 
+conds:
+  - when: '"1" == "1"'
+    apply:
+      # Top-level attributes can only be overriden in app's conds
+      name: Does not
+      description: work
+      version: from here
+
 manifest_version: 2017-09-29

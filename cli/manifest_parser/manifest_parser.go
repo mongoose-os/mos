@@ -62,8 +62,9 @@ const (
 	// - 2019-04-26: added warning and error
 	// - 2019-07-28: added init_before
 	// - 2020-01-21: added ability to override lib variants from conds in app manifest
+	// - 2020-01-29: added ability to override app name, description and version from app's conds
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2020-01-21"
+	maxManifestVersion = "2020-01-29"
 
 	depsApp = "app"
 
@@ -1069,7 +1070,7 @@ func expandManifestLibsAndConds(
 	//
 	// TODO(dfrank): probably make it so that if conds expression fails to
 	// evaluate, keep it unexpanded for now.
-	if err := ExpandManifestConds(rootManifest, rootManifest, interp); err != nil {
+	if err := ExpandManifestConds(rootManifest, rootManifest, interp, false); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -1158,7 +1159,7 @@ func expandManifestLibsAndConds(
 		// top-level (app) conds are evaluated first, and then evaluation proceeds
 		// from the bottom (starting with libs with no deps).
 
-		if err := ExpandManifestConds(manifest, commonManifest, interp); err != nil {
+		if err := ExpandManifestConds(manifest, commonManifest, interp, true); err != nil {
 			return errors.Annotatef(err, "expanding app manifest's conds")
 		}
 		if len(manifest.Libs) > 0 {
@@ -1168,7 +1169,7 @@ func expandManifestLibsAndConds(
 
 		for _, l := range manifest.LibsHandled {
 			if l.Manifest != nil && len(l.Manifest.Conds) > 0 {
-				if err := ExpandManifestConds(l.Manifest, commonManifest, interp); err != nil {
+				if err := ExpandManifestConds(l.Manifest, commonManifest, interp, false); err != nil {
 					return errors.Annotatef(err, "expanding %q conds", l.Lib.Name)
 				}
 				if len(l.Manifest.Libs) > 0 {
@@ -1240,7 +1241,7 @@ func expandAllLibsPaths(
 // `${build_vars.FOO} bar`) are expanded against dstManifest. See README.md,
 // Step 3 for details.
 func ExpandManifestConds(
-	dstManifest, refManifest *build.FWAppManifest, interp *interpreter.MosInterpreter,
+	dstManifest, refManifest *build.FWAppManifest, interp *interpreter.MosInterpreter, isAppManifest bool,
 ) error {
 	interp = interp.Copy()
 
@@ -1280,6 +1281,18 @@ func ExpandManifestConds(
 				skipFailedExpansions: true,
 			}); err != nil {
 				return errors.Trace(err)
+			}
+			// Conds in app's manifest can override name, description and version.
+			if isAppManifest {
+				if cond.Apply.Name != "" {
+					dstManifest.Name = cond.Apply.Name
+				}
+				if cond.Apply.Description != "" {
+					dstManifest.Description = cond.Apply.Description
+				}
+				if cond.Apply.Version != "" {
+					dstManifest.Version = cond.Apply.Version
+				}
 			}
 		}
 	}
