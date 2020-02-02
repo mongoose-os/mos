@@ -25,11 +25,17 @@ import (
 )
 
 var (
-	genDirFlag        = flag.String("gen-dir", "", "Directory to put build output under. Default is build_dir/gen")
+	buildDirFlag      = flag.String("build-dir", "", "Directory to put build output under. Default is project_dir/build")
+	genDirFlag        = flag.String("gen-dir", "", "Directory to put generated output under. Default is build_dir/gen")
 	binaryLibsDirFlag = flag.String("binary-libs-dir", "", "Directory to put binary libs under. Default is build_dir/objs")
 )
 
 func GetBuildDir(projectDir string) string {
+	if *buildDirFlag != "" {
+		if bdfa, err := filepath.Abs(*buildDirFlag); err == nil {
+			return bdfa
+		}
+	}
 	return filepath.Join(projectDir, "build")
 }
 
