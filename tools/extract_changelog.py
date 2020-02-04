@@ -101,10 +101,13 @@ def handle_repo(repo_name, from_tag, to_tag):
             ch, ts = line.split()
             ts = int(ts)
             ph = 1
+            cl = ""
         elif ph == 1:
             if line.startswith("CL: "):
                 cl = line[4:]
                 ph = 2
+            elif not cl:
+                cl = line.strip()
         elif ph == 2:
             if line.startswith(" "):
                 cl += "\n%s" % line.strip()
@@ -145,19 +148,20 @@ for res in results:
         errs.append(r)
     else:
         for e in r:
-            global_cl.append(e)
+            global_cl.append((repo,) + e)
 
 # Dedup entries. When a single change affect multiple repos, we'll get dups.
 cl_map = {}
-for ts, ch, cl in sorted(global_cl, key=lambda e: e[0]):
+for repo, ts, ch, cl in sorted(global_cl, key=lambda e: e[0]):
     oe = cl_map.get(cl)
     if oe:
-        oe[2].append(ch)
+        oe[3].append(ch)
     else:
-        cl_map[cl] = (ts, cl, [ch])
+        cl_map[cl] = (repo, ts, cl, [ch])
 
-for e in sorted(cl_map.values(), key=lambda e: e[0]):
-    print(" * %s (%s)" % ("\n   ".join(e[1].splitlines()), " ".join(e[2])))
+for e in sorted(cl_map.values(), key=lambda e: (e[0], e[1])):
+    repo_short = e[0].split("/")[-1]
+    print(" * %s: %s (%s)" % (repo_short, "\n   ".join(e[2].splitlines()), " ".join(e[3])))
 
 if len(errs) != 0:
     print("------------------------------------------------------")
