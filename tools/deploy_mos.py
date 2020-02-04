@@ -234,8 +234,6 @@ if __name__ == "__main__":
     if args.resume <= 40:
         print("(40) Building Docker images...")
         RunSubprocess(["make", "docker-build-mos", "docker-build-fwbuild-instance", "TAG=%s" % tag_effective])
-        if args.release_tag != "":
-            RunSubprocess(["make", "docker-push-release-mos", "docker-push-release-fwbuild-instance", "TAG=%s" % tag_effective])
 
     if args.resume <= 45:
         print("(45) Pushing Docker images...")
