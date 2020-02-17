@@ -644,7 +644,6 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 				}
 			}
 			if !found {
-				glog.Infof("Inserted core lib")
 				manifest.Libs = append(manifest.Libs, build.SWModule{
 					Location: coreLibLocation,
 				})
@@ -652,7 +651,19 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		}
 
 		for _, l := range pc.adjustments.ExtraLibs {
-			manifest.Libs = append(manifest.Libs, l)
+			l.Normalize()
+			lName, _ := l.GetName()
+			found := false
+			for _, al := range manifest.Libs {
+				al.Normalize()
+				if name, _ := al.GetName(); name == lName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				manifest.Libs = append(manifest.Libs, l)
+			}
 		}
 		pc.adjustments.ExtraLibs = nil
 
