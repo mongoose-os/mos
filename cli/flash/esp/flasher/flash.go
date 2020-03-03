@@ -27,11 +27,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/common/fwbundle"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/flash/common"
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
+	"github.com/mongoose-os/mos/common/fwbundle"
 )
 
 const (
@@ -126,19 +126,20 @@ func writeImages(ct esp.ChipType, cfr *cfResult, images []*image, opts *esp.Flas
 	kcs := esp32.KeyEncodingSchemeNone
 	if ct == esp.ChipESP32 {
 		_, _, fusesByName, err = esp32.ReadFuses(cfr.fc)
-		if err != nil {
-			return errors.Annotatef(err, "failed to read eFuses")
-		}
-
-		if fcnt, err := fusesByName[esp32.FlashCryptCntFuseName].Value(true /* withDiffs */); err == nil {
-			encryptionEnabled = (bits.OnesCount64(fcnt.Uint64())%2 != 0)
-			kcs = esp32.GetKeyEncodingScheme(fusesByName)
-			common.Reportf("Flash encryption: %s, scheme: %s", enDis(encryptionEnabled), kcs)
-		}
-
-		if abs0, err := fusesByName[esp32.AbstractDone0FuseName].Value(true /* withDiffs */); err == nil {
-			secureBootEnabled = (abs0.Int64() != 0)
-			common.Reportf("Secure boot: %s", enDis(secureBootEnabled))
+		if err == nil {
+			if fcnt, err := fusesByName[esp32.FlashCryptCntFuseName].Value(true /* withDiffs */); err == nil {
+				encryptionEnabled = (bits.OnesCount64(fcnt.Uint64())%2 != 0)
+				kcs = esp32.GetKeyEncodingScheme(fusesByName)
+				common.Reportf("Flash encryption: %s, scheme: %s", enDis(encryptionEnabled), kcs)
+			}
+			if abs0, err := fusesByName[esp32.AbstractDone0FuseName].Value(true /* withDiffs */); err == nil {
+				secureBootEnabled = (abs0.Int64() != 0)
+				common.Reportf("Secure boot: %s", enDis(secureBootEnabled))
+			}
+		} else {
+			// Some boards (ARDUINO NANO 33 IOT) do not support memory reading commands to read efuses.
+			// Allow to proceed anyway.
+			common.Reportf("Failed to read eFuses, assuming no flash encryption")
 		}
 	}
 
