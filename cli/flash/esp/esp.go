@@ -32,7 +32,6 @@ type FlashOpts struct {
 	FlasherBaudRate        uint
 	InvertedControlLines   bool
 	FlashParams            string
-	ReadFuses              bool
 	EraseChip              bool
 	EnableCompression      bool
 	MinimizeWrites         bool
