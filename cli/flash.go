@@ -76,6 +76,7 @@ func init() {
 			"Valid values for size are: 2m, 4m, 8m, 16m, 32m, 16m-c1, 32m-c1, 32m-c2. "+
 			"If left empty, an attempt will be made to auto-detect. freq is SPI frequency "+
 			"and can be one of 20m, 26m, 40m, 80m")
+	flag.BoolVar(&espFlashOpts.ReadFuses, "esp-read-fuses", true, "Read ESP32 efuses")
 	flag.BoolVar(&espFlashOpts.EraseChip, "esp-erase-chip", false,
 		"Erase entire chip before flashing")
 	flag.BoolVar(&espFlashOpts.EnableCompression, "esp-enable-compression", true,

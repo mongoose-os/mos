@@ -124,7 +124,7 @@ func writeImages(ct esp.ChipType, cfr *cfResult, images []*image, opts *esp.Flas
 	var esp32EncryptionKey []byte
 	var fusesByName map[string]*esp32.Fuse
 	kcs := esp32.KeyEncodingSchemeNone
-	if ct == esp.ChipESP32 {
+	if ct == esp.ChipESP32 && opts.ReadFuses {
 		_, _, fusesByName, err = esp32.ReadFuses(cfr.fc)
 		if err != nil {
 			return errors.Annotatef(err, "failed to read eFuses")
