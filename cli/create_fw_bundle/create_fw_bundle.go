@@ -88,7 +88,7 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 				return errors.Annotatef(err, "%s", ps)
 			}
 			if strings.HasSuffix(p.Src, ".hex") {
-				hpp, err := fwbundle.PartsFromHexFile(p.Src, p.Name)
+				hpp, err := fwbundle.PartsFromHexFile(p.Src, p.Name, 255, 512)
 				if err != nil {
 					return errors.Annotatef(err, "%s", ps)
 				}
