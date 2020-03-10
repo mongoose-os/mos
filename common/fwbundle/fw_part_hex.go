@@ -37,7 +37,7 @@ type HexPart struct {
 	Data []byte
 }
 
-func ParseHexBundle(hexData []byte) (*HexBundle, error) {
+func ParseHexBundle(hexData []byte, fill byte, maxGapSize int) (*HexBundle, error) {
 	hb := &HexBundle{}
 	eof := false
 	scanner := bufio.NewScanner(bytes.NewBuffer(hexData))
@@ -90,14 +90,24 @@ func ParseHexBundle(hexData []byte) (*HexBundle, error) {
 				setPartBase = true
 			}
 			if curData != nil && addr != curAddr {
-				// There is a discontinuity in data, flush the part.
-				hb.Parts = append(hb.Parts, &HexPart{
-					Addr: partBase,
-					Data: curData,
-				})
-				curBase = addr
-				curData = nil
-				partBase = addr
+				// There is a discontinuity in data.
+				gap := int(addr - curAddr)
+				if gap < maxGapSize {
+					// Fill the gap if we're told so
+					for i := 0; i < gap; i++ {
+						curData = append(curData, fill)
+					}
+				} else {
+					// Flush the part, start a new one
+					hb.Parts = append(hb.Parts, &HexPart{
+						Addr: partBase,
+						Data: curData,
+					})
+					curBase = addr
+					curData = nil
+					partBase = addr
+
+				}
 			}
 			curData = append(curData, data...)
 			curAddr = curBase + uint32(recOffset) + uint32(len(data))
@@ -152,8 +162,8 @@ func ParseHexBundle(hexData []byte) (*HexBundle, error) {
 	return hb, nil
 }
 
-func PartsFromHex(hexData []byte, baseName string) ([]*FirmwarePart, error) {
-	hb, err := ParseHexBundle(hexData)
+func PartsFromHex(hexData []byte, baseName string, fill byte, maxGapSize int) ([]*FirmwarePart, error) {
+	hb, err := ParseHexBundle(hexData, fill, maxGapSize)
 	if err != nil {
 		return nil, errors.Annotatef(err, "error parsing hex data")
 	}
@@ -175,10 +185,10 @@ func PartsFromHex(hexData []byte, baseName string) ([]*FirmwarePart, error) {
 	return pp, nil
 }
 
-func PartsFromHexFile(fname string, baseName string) ([]*FirmwarePart, error) {
+func PartsFromHexFile(fname string, baseName string, fill byte, maxGapSize int) ([]*FirmwarePart, error) {
 	hexData, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	return PartsFromHex(hexData, baseName)
+	return PartsFromHex(hexData, baseName, fill, maxGapSize)
 }

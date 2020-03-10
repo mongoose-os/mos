@@ -102,7 +102,7 @@ func TestParseHexBundle(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		hb, err := ParseHexBundle([]byte(c.data))
+		hb, err := ParseHexBundle([]byte(c.data), 255, 0)
 		if c.fail {
 			if err == nil {
 				t.Fatalf("%d: %s: expected failure, got %#v", i, c.data, hb)
