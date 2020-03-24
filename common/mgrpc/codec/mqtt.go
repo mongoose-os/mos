@@ -22,9 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
 	"sync"
-	"time"
 
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 
@@ -65,7 +65,7 @@ func MQTTClientOptsFromURL(us, clientID, user, pass string) (*mqtt.ClientOptions
 	}
 
 	if clientID == "" {
-		clientID = fmt.Sprintf("mos-%v", time.Now().Unix())
+		clientID = fmt.Sprintf("mos-%d", rand.Int31())
 	}
 
 	topic := u.Path[1:]

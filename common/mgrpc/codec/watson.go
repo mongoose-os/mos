@@ -19,9 +19,9 @@ package codec
 import (
 	"crypto/tls"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/juju/errors"
@@ -71,7 +71,7 @@ func NewWatsonCodec(dst string, tlsConfig *tls.Config, co *WatsonCodecOptions) (
 
 	appId := co.AppID
 	if appId == "" {
-		appId = fmt.Sprintf("mos-%v", time.Now().Unix())
+		appId = fmt.Sprintf("mos-%d", rand.Int31())
 	}
 	devType, devId := pp[1], pp[2]
 
