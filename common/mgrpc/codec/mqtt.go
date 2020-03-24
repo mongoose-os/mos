@@ -53,6 +53,9 @@ type mqttCodec struct {
 	closeOnce   sync.Once
 	isTLS       bool
 	pubTopic    string
+	subTopic    string
+	subTopics   map[string]bool
+	mu          sync.Mutex
 }
 
 func MQTTClientOptsFromURL(us, clientID, user, pass string) (*mqtt.ClientOptions, string, error) {
@@ -116,7 +119,9 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 		rchan:       make(chan frame.Frame),
 		src:         co.Src,
 		pubTopic:    co.PubTopic,
+		subTopic:    co.SubTopic,
 		isTLS:       (u.Scheme == "mqtts"),
+		subTopics:   make(map[string]bool),
 	}
 	if c.src == "" {
 		c.src = opts.ClientID
@@ -131,18 +136,27 @@ func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error
 		return nil, errors.Annotatef(err, "MQTT connect error")
 	}
 
-	subTopic := co.SubTopic
-	if subTopic == "" {
-		subTopic = fmt.Sprintf("%s/rpc", c.src)
-	}
-	glog.V(1).Infof("Subscribing to [%s]", subTopic)
-	token = c.cli.Subscribe(subTopic, 1 /* qos */, c.onMessage)
-	token.Wait()
-	if err := token.Error(); err != nil {
-		return nil, errors.Annotatef(err, "MQTT subscribe error")
+	if c.subTopic != "" {
+		err = c.subscribe(c.subTopic)
 	}
 
-	return c, nil
+	return c, errors.Trace(err)
+}
+
+func (c *mqttCodec) subscribe(topic string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.subTopics[topic] {
+		return nil
+	}
+	glog.V(1).Infof("Subscribing to [%s]", topic)
+	token := c.cli.Subscribe(topic, 1 /* qos */, c.onMessage)
+	token.Wait()
+	if err := token.Error(); err != nil {
+		return errors.Annotatef(err, "MQTT subscribe error")
+	}
+	c.subTopics[topic] = true
+	return nil
 }
 
 func (c *mqttCodec) onMessage(cli mqtt.Client, msg mqtt.Message) {
@@ -198,13 +212,20 @@ func (c *mqttCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 }
 
 func (c *mqttCodec) Send(ctx context.Context, f *frame.Frame) error {
-	f.Src = c.src
+	if f.Dst == "" {
+		f.Dst = c.dst
+	}
+	if c.subTopic == "" {
+		f.Src = fmt.Sprintf("%s/rpc-resp/%s", f.Dst, c.src)
+		if err := c.subscribe(fmt.Sprintf("%s/rpc", f.Src)); err != nil {
+			return errors.Trace(err)
+		}
+	} else {
+		f.Src = c.src
+	}
 	msg, err := json.Marshal(f)
 	if err != nil {
 		return errors.Trace(err)
-	}
-	if f.Dst == "" {
-		f.Dst = c.dst
 	}
 	topic := c.pubTopic
 	if topic == "" {
