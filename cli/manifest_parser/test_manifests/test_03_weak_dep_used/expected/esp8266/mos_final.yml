@@ -61,6 +61,7 @@ libs_handled:
     location: https://github.com/mongoose-os-libs/core
     name: core
   path: __APP_ROOT__/libs/core
+  version: "1.0"
 - lib:
     origin: https://github.com/mongoose-os-libs/mylib1
     location: https://github.com/mongoose-os-libs/mylib1
@@ -71,6 +72,7 @@ libs_handled:
   - mylib2
   sources:
   - __APP_ROOT__/libs/mylib1/src/mylib1_src1.c
+  version: 1.2.3
 - lib:
     origin: https://github.com/mongoose-os-libs/mylib2
     location: https://github.com/mongoose-os-libs/mylib2
@@ -90,6 +92,7 @@ libs_handled:
   - core
   sources:
   - __APP_ROOT__/libs/mylib4/src/mylib4_src1.c
+  version: "1.0"
 - lib:
     origin: https://github.com/mongoose-os-libs/mylib3
     location: https://github.com/mongoose-os-libs/mylib3
@@ -100,6 +103,7 @@ libs_handled:
   - mylib4
   sources:
   - __APP_ROOT__/libs/mylib3/src/mylib3_src1.c
+  version: "1.0"
 init_deps:
 - core
 - mylib4

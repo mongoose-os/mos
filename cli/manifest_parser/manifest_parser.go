@@ -828,6 +828,7 @@ func prepareLib(
 		Lib:      *m,
 		Path:     libLocalDir,
 		Deps:     pc.deps.GetDeps(name),
+		Version:  libManifest.Version,
 		Manifest: libManifest,
 	}
 	lh.Lib.Name = name
@@ -1148,8 +1149,8 @@ func expandManifestLibsAndConds(
 			// No more conds in the common manifest, so cleanup all libs manifests,
 			// and return commonManifest
 
-			for k, _ := range commonManifest.LibsHandled {
-				commonManifest.LibsHandled[k].Manifest = nil
+			for _, l := range commonManifest.LibsHandled {
+				l.Manifest = nil
 			}
 			*manifest = *commonManifest
 
@@ -1513,9 +1514,10 @@ func mergeSupportedPlatforms(p1, p2 []string) []string {
 }
 
 type libsInitDataItem struct {
-	Name  string
-	Ident string
-	Deps  []string
+	Name    string
+	Ident   string
+	Version string
+	Deps    []string
 }
 
 type libsInitData struct {
@@ -1541,9 +1543,10 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 			continue
 		}
 		tplData.Libs = append(tplData.Libs, libsInitDataItem{
-			Name:  v.Lib.Name,
-			Ident: ourutil.IdentifierFromString(v.Lib.Name),
-			Deps:  v.InitDeps,
+			Name:    v.Lib.Name,
+			Ident:   ourutil.IdentifierFromString(v.Lib.Name),
+			Version: v.Version,
+			Deps:    v.InitDeps,
 		})
 	}
 

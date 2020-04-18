@@ -24,5 +24,6 @@ libs_handled:
     location: https://github.com/mongoose-os-libs/core
     name: core
   path: __APP_ROOT__/libs/core
+  version: "1.0"
 init_deps:
 - core

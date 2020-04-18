@@ -13,34 +13,39 @@ extern bool mgos_mylib2_init(void);
 extern bool mgos_mylib1_init(void);
 extern bool mgos_mylib3_init(void);
 
-static const struct lib_descr {
-  const char *title;
+#ifndef MGOS_LIB_INFO_VERSION
+struct mgos_lib_info {
+  const char *name;
+  const char *version;
   bool (*init)(void);
-} descrs[] = {
+};
+#endif
+
+const struct mgos_lib_info mgos_libs_info[] = {
 
     // "mylib4". deps: [ "core" ]
-    {.title = "mylib4", .init = mgos_mylib4_init},
+    {.name = "mylib4", .version = "1.0", .init = mgos_mylib4_init},
 
     // "mylib2". deps: [ "core" "mylib4" ]
-    {.title = "mylib2", .init = mgos_mylib2_init},
+    {.name = "mylib2", .version = "", .init = mgos_mylib2_init},
 
     // "mylib1". deps: [ "core" "mylib2" ]
-    {.title = "mylib1", .init = mgos_mylib1_init},
+    {.name = "mylib1", .version = "1.2.3", .init = mgos_mylib1_init},
 
     // "mylib3". deps: [ "core" "mylib4" ]
-    {.title = "mylib3", .init = mgos_mylib3_init},
+    {.name = "mylib3", .version = "1.0", .init = mgos_mylib3_init},
 
+    // Last entry.
+    {.name = NULL},
 };
 
 bool mgos_deps_init(void) {
-  size_t i;
-  for (i = 0; i < sizeof(descrs) / sizeof(struct lib_descr); i++) {
-    LOG(LL_DEBUG, ("init %s...", descrs[i].title));
-    if (!descrs[i].init()) {
-      LOG(LL_ERROR, ("%s init failed", descrs[i].title));
+  for (const struct mgos_lib_info *l = mgos_libs_info; l->name != NULL; l++) {
+    LOG(LL_DEBUG, ("Init %s %s...", l->name, l->version));
+    if (!l->init()) {
+      LOG(LL_ERROR, ("%s init failed", l->name));
       return false;
     }
   }
-
   return true;
 }

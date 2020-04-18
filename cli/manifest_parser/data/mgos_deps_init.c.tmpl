@@ -10,25 +10,30 @@
 {{range .Libs}}
 extern bool mgos_{{.Ident}}_init(void);{{end}}
 
-static const struct lib_descr {
-  const char *title;
+#ifndef MGOS_LIB_INFO_VERSION
+struct mgos_lib_info {
+  const char *name;
+  const char *version;
   bool (*init)(void);
-} descrs[] = {
+};
+#endif
+
+const struct mgos_lib_info mgos_libs_info[] = {
 {{range .Libs}}
     // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
-    {.title = "{{.Name}}", .init = mgos_{{.Ident}}_init},
+    {.name = "{{.Name}}", .version = "{{.Version}}", .init = mgos_{{.Ident}}_init},
 {{end}}
+    // Last entry.
+    {.name = NULL},
 };
 
 bool mgos_deps_init(void) {
-  size_t i;
-  for (i = 0; i < sizeof(descrs) / sizeof(struct lib_descr); i++) {
-    LOG(LL_DEBUG, ("init %s...", descrs[i].title));
-    if (!descrs[i].init()) {
-      LOG(LL_ERROR, ("%s init failed", descrs[i].title));
+  for (const struct mgos_lib_info *l = mgos_libs_info; l->name != NULL; l++) {
+    LOG(LL_DEBUG, ("Init %s %s...", l->name, l->version));
+    if (!l->init()) {
+      LOG(LL_ERROR, ("%s init failed", l->name));
       return false;
     }
   }
-
   return true;
 }
