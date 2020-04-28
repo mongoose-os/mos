@@ -109,6 +109,8 @@ deps-mac:
 	brew install coreutils libftdi libusb-compat pkg-config || true
 
 downloads-mac: deps-mac mos
+	mkdir -p downloads/mos/mac
+	mv mos downloads/mos/mac/mos
 
 downloads-win:
 	docker run -i --rm \
