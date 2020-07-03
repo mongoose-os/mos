@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -50,6 +51,7 @@ var (
 	instanceDockerImage = flag.String("instance-docker-image", "docker.io/mgos/fwbuild-instance", "Fwbuild instance docker image, without a tag")
 	mosImage            = flag.String("mos-image", "docker.io/mgos/mos", "Mos tool docker image, without a tag")
 	volumesDir          = flag.String("volumes-dir", "/var/tmp/fwbuild-volumes", "")
+	acmeChallengeDir    = flag.String("acme-challenge-dir", "", "Directory to map /.well-known/acme-challenge to")
 
 	port              = flag.String("port", "80", "HTTP port to listen at.")
 	portTLS           = flag.String("port-tls", "443", "HTTPS port to listen at.")
@@ -140,11 +142,15 @@ func CreateHandler() (http.Handler, error) {
 	rRoot.Handle(pat.New("/api/*"), rAPI)
 	rAPI.HandleFunc(pat.New("/fwbuild/:version/:action"), handleFwbuildAction)
 
+	if *acmeChallengeDir != "" {
+		rRoot.HandleFunc(pat.New("/.well-known/acme-challenge/:file"), handleACMEChallenge)
+	}
+
 	assetInfo := func(path string) (os.FileInfo, error) {
 		return os.Stat(path)
 	}
 
-	rRoot.Handle(pat.New("/"), http.FileServer(
+	rRoot.Handle(pat.New("/*"), http.FileServer(
 		&assetfs.AssetFS{
 			Asset:     Asset,
 			AssetDir:  AssetDir,
@@ -154,6 +160,10 @@ func CreateHandler() (http.Handler, error) {
 	))
 
 	return rRoot, nil
+}
+
+func handleACMEChallenge(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, filepath.Join(*acmeChallengeDir, pat.Param(r, "file")))
 }
 
 func getImageName(version string) string {

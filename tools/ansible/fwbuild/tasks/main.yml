@@ -33,6 +33,7 @@
       --port-tls=443
       --cert-file=/data/letsencrypt/live/mongoose.cloud/fullchain.pem
       --key-file=/data/letsencrypt/live/mongoose.cloud/privkey.pem
+      --acme-challenge-dir=/data/letsencrypt/www/.well-known/acme-challenge
 
     volumes:
       - "{{ fwbuild_volumes_dir }}:{{ fwbuild_volumes_dir }}"
