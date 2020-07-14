@@ -58,6 +58,11 @@ func buildRemote(bParams *buildParams) error {
 
 	buildDir := moscommon.GetBuildDir(projectDir)
 
+	os.RemoveAll(buildDir)
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+		return errors.Annotatef(err, "failed to create build directory")
+	}
+
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
 	appStagingDir, err := ioutil.TempDir(paths.TmpDir, "tmp_mos_src_")
@@ -308,8 +313,9 @@ func buildRemote(bParams *buildParams) error {
 
 		// unzip build results
 		r := bytes.NewReader(body.Bytes())
-		os.RemoveAll(buildDir)
-		archive.UnzipInto(r, r.Size(), ".", 0)
+		if err = archive.UnzipInto(r, r.Size(), buildDir, 1 /* skipLevels */); err != nil {
+			return errors.Annotatef(err, "failed to unzip build results")
+		}
 
 		// Save local log
 		ioutil.WriteFile(moscommon.GetBuildLogLocalFilePath(buildDir), logBuf.Bytes(), 0666)
