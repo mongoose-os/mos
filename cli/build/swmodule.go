@@ -639,7 +639,7 @@ func prepareLocalCopyGitLocked(
 
 	// Now we know that the repo is either clean or non-existing, so, if asked to
 	// delete in case of a failure, defer a fallback function.
-	if deleteIfFailed {
+	if deleteIfFailed && false {
 		defer func() {
 			if retErr != nil {
 				// Instead of returning an error, try to delete the directory and
@@ -714,8 +714,8 @@ func prepareLocalCopyGitLocked(
 
 	// If the desired mongoose-os version isn't a known branch, do git fetch
 	if !branchExists && !tagExists {
-		glog.V(2).Infof("%s: neither branch nor tag exists, fetching...", name)
-		err = gitinst.Fetch(targetDir, ourgit.FetchOptions{})
+		glog.V(2).Infof("%s: %s is neither a branch nor a tag, fetching...", name, version)
+		err = gitinst.Fetch(targetDir, version, ourgit.FetchOptions{Depth: 1})
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -782,7 +782,7 @@ func prepareLocalCopyGitLocked(
 
 		if wantPull {
 			freportf(logWriter, "%s: Pulling...", name)
-			err = gitinst.Pull(targetDir)
+			err = gitinst.Pull(targetDir, version)
 			if err != nil {
 				return errors.Trace(err)
 			}

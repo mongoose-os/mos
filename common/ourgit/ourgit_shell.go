@@ -60,24 +60,26 @@ func (m *ourGitShell) Checkout(localDir string, id string, refType RefType) erro
 	return nil
 }
 
-func (m *ourGitShell) Pull(localDir string) error {
-	_, err := shellGit(localDir, "pull", "--all")
+func (m *ourGitShell) Pull(localDir string, branch string) error {
+	_, err := shellGit(localDir, "pull", "origin", branch)
 	if err != nil {
 		return errors.Annotatef(err, "failed to git pull")
 	}
 	return nil
 }
 
-func (m *ourGitShell) Fetch(localDir string, opts FetchOptions) error {
+func (m *ourGitShell) Fetch(localDir string, what string, opts FetchOptions) error {
 	args := []string{"--tags"}
 
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))
 	}
 
+	args = append(args, "origin", fmt.Sprintf("%s:%s", what, what))
+
 	_, err := shellGit(localDir, "fetch", args...)
 	if err != nil {
-		return errors.Annotatef(err, "failed to git fetch")
+		return errors.Annotatef(err, "failed to git fetch %s %s", localDir, what)
 	}
 	return nil
 }

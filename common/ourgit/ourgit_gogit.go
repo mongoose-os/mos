@@ -5,6 +5,7 @@ package ourgit
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,6 +14,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/juju/errors"
 	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
@@ -27,7 +29,7 @@ func (m *ourGitGoGit) GetCurrentHash(localDir string) (string, error) {
 
 	head, err := repo.Head()
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", errors.Annotatef(err, "%s", localDir)
 	}
 
 	return head.Hash().String(), nil
@@ -172,8 +174,8 @@ func (m *ourGitGoGit) ResetHard(localDir string) error {
 	return nil
 }
 
-func (m *ourGitGoGit) Pull(localDir string) error {
-	glog.Infof("Pulling %s", localDir)
+func (m *ourGitGoGit) Pull(localDir string, branch string) error {
+	glog.Infof("Pulling %s %s", localDir, branch)
 
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
@@ -185,7 +187,9 @@ func (m *ourGitGoGit) Pull(localDir string) error {
 		return errors.Trace(err)
 	}
 
-	err = wt.Pull(&git.PullOptions{})
+	err = wt.Pull(&git.PullOptions{
+		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
+	})
 	if err != nil && errors.Cause(err) != git.NoErrAlreadyUpToDate {
 		return errors.Trace(err)
 	}
@@ -193,18 +197,30 @@ func (m *ourGitGoGit) Pull(localDir string) error {
 	return nil
 }
 
-func (m *ourGitGoGit) Fetch(localDir string, opts FetchOptions) error {
+func (m *ourGitGoGit) Fetch(localDir string, what string, opts FetchOptions) error {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return errors.Annotatef(err, "failed to open repo %s", localDir)
 	}
 
+	// Try fetching as a branch.
 	err = repo.Fetch(&git.FetchOptions{
-		Tags:  git.AllTags,
-		Depth: opts.Depth,
+		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", what, what))},
+		Tags:     git.AllTags,
+		Depth:    opts.Depth,
+	})
+	if err == nil || errors.Cause(err) == git.NoErrAlreadyUpToDate {
+		return nil
+	}
+
+	// Try fetching as a tag.
+	err = repo.Fetch(&git.FetchOptions{
+		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", what, what))},
+		Tags:     git.AllTags,
+		Depth:    opts.Depth,
 	})
 	if err != nil && errors.Cause(err) != git.NoErrAlreadyUpToDate {
-		return errors.Annotatef(err, "failed to git fetch %s", localDir)
+		return errors.Annotatef(err, "failed to git fetch %s %s", localDir, what)
 	}
 
 	return nil
@@ -225,7 +241,7 @@ func (m *ourGitGoGit) IsClean(localDir, version string, excludeGlobs []string) (
 
 	status, err := wt.Status()
 	if err != nil {
-		return false, errors.Trace(err)
+		return false, errors.Annotatef(err, "IsClean(%s)", localDir)
 	}
 
 	r := true

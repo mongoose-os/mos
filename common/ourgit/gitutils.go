@@ -10,8 +10,8 @@ type OurGit interface {
 	GetToplevelDir(localDir string) (string, error)
 	Checkout(localDir string, id string, refType RefType) error
 	ResetHard(localDir string) error
-	Pull(localDir string) error
-	Fetch(localDir string, opts FetchOptions) error
+	Pull(localDir string, branch string) error
+	Fetch(localDir string, what string, opts FetchOptions) error
 	IsClean(localDir, version string, excludeGlobs []string) (bool, error)
 	Clone(srcURL, localDir string, opts CloneOptions) error
 	GetOriginUrl(localDir string) (string, error)
