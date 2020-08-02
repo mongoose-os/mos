@@ -63,8 +63,9 @@ const (
 	// - 2019-07-28: added init_before
 	// - 2020-01-21: added ability to override lib variants from conds in app manifest
 	// - 2020-01-29: added ability to override app name, description and version from app's conds
+	// - 2020-08-02: added asset_api for multiple asset-fetching mechanisms
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2020-01-29"
+	maxManifestVersion = "2020-08-02"
 
 	depsApp = "app"
 
