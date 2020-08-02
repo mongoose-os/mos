@@ -1,4 +1,4 @@
-# git-build-recipe format 0.4 deb-version {latest-tag}+{git-commit}~eoan0
+# git-build-recipe format 0.4 deb-version {latest-tag}+{git-commit}~groovy0
 
 # Build from local repo (volume-mount a clone of https://github.com/mongoose-os/mos.git to /src):
 /src 1.11_CHANGE_ME

@@ -25,7 +25,7 @@ make deps
 
 mkdir -p $HOME/tmp/out-${DISTR}
 rm -rf $HOME/tmp/out-${DISTR}/*
-docker pull ${IMAGE}
+#docker pull ${IMAGE}
 docker run -i -t --rm \
     -v $SRC:/src \
     -v ${RECIPE}:/recipe \
