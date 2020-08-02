@@ -63,7 +63,7 @@ const (
 	// - 2019-07-28: added init_before
 	// - 2020-01-21: added ability to override lib variants from conds in app manifest
 	// - 2020-01-29: added ability to override app name, description and version from app's conds
-	// - 2020-08-02: added asset_api for multiple asset-fetching mechanisms
+	// - 2020-08-02: added asset_api for multiple asset-fetching mechanisms; fs_filters
 	minManifestVersion = "2017-03-17"
 	maxManifestVersion = "2020-08-02"
 
@@ -277,6 +277,36 @@ func ReadManifestFinal(
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
+
+	// Apply fs_filters.
+	var newFs []string
+	for i, f := range manifest.Filesystem {
+		bf := filepath.Base(f)
+		include := true
+		for _, e := range manifest.FSFilters {
+			if e.Include != "" && e.Exclude != "" {
+				return nil, nil, errors.Errorf("fs_filters entry %d: only one of include or exclude is allowed", i)
+			}
+			if e.Include != "" {
+				if matched, _ := path.Match(e.Include, bf); matched {
+					include = true
+					break
+				}
+			}
+			if e.Exclude != "" {
+				if matched, _ := path.Match(e.Exclude, bf); matched {
+					glog.Infof("%q excluded by %q", f, e.Exclude)
+					include = false
+					break
+				}
+			}
+		}
+		if include {
+			newFs = append(newFs, f)
+		}
+	}
+	manifest.Filesystem = newFs
+	manifest.FSFilters = nil
 
 	// When building an app, also add all libs' sources or prebuilt binaries.
 	if manifest.Type == build.AppTypeApp {

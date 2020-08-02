@@ -63,14 +63,20 @@ type FWAppManifestLibHandled struct {
 type FWAppManifest struct {
 	AppManifest `yaml:",inline"`
 	// arch was deprecated at 2017/08/15 and should eventually be removed.
-	ArchOld        string             `yaml:"arch,omitempty" json:"arch"`
-	Platform       string             `yaml:"platform,omitempty" json:"platform"`
-	Platforms      []string           `yaml:"platforms,omitempty" json:"platforms"`
-	Author         string             `yaml:"author,omitempty" json:"author"`
-	Description    string             `yaml:"description,omitempty" json:"description"`
-	Sources        []string           `yaml:"sources,omitempty" json:"sources"`
-	Includes       []string           `yaml:"includes,omitempty" json:"includes"`
-	Filesystem     []string           `yaml:"filesystem,omitempty" json:"filesystem"`
+	ArchOld     string   `yaml:"arch,omitempty" json:"arch"`
+	Platform    string   `yaml:"platform,omitempty" json:"platform"`
+	Platforms   []string `yaml:"platforms,omitempty" json:"platforms"`
+	Author      string   `yaml:"author,omitempty" json:"author"`
+	Description string   `yaml:"description,omitempty" json:"description"`
+	Sources     []string `yaml:"sources,omitempty" json:"sources"`
+	Includes    []string `yaml:"includes,omitempty" json:"includes"`
+	// Globs of files to include.
+	Filesystem []string `yaml:"filesystem,omitempty" json:"filesystem"`
+	// File filters. Only supported on the app level.
+	// Consists of glob patterns that include or exclude files by their name.
+	// If file does not match any of the filters, it is included by default.
+	FSFilters []*FSFilterEntry `yaml:"fs_filters,omitempty" json:"fs_filters"`
+
 	BinaryLibs     []string           `yaml:"binary_libs,omitempty" json:"binary_libs"`
 	ExtraFiles     []string           `yaml:"extra_files,omitempty" json:"extra_files"`
 	FFISymbols     []string           `yaml:"ffi_symbols,omitempty" json:"ffi_symbols"`
@@ -111,6 +117,11 @@ type FWAppManifest struct {
 	// Origin of this manifest - file name or something else that will help user identify the location.
 	// This field is not persisted and is only kept at runtime.
 	Origin string `yaml:"-" json:"-"`
+}
+
+type FSFilterEntry struct {
+	Include string `yaml:"include,omitempty" json:"include"`
+	Exclude string `yaml:"exclude,omitempty" json:"exclude"`
 }
 
 // ConfigSchemaItem represents a single config schema item, like this:

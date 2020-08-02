@@ -1,0 +1,22 @@
+author: mongoose-os
+description: My test app
+version: 1.0
+
+sources:
+  - src
+
+filesystem:
+  - fs
+
+fs_filters:
+  - include: "*_b1"
+  - exclude: "mylib1_*"
+  - exclude: "*.js"
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/mylib1
+
+config_schema:
+  - ["myapp", "o", {title: "Myapp settings"}]
+
+manifest_version: 2017-09-29
