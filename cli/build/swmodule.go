@@ -17,12 +17,11 @@
 package build
 
 import (
+	"bufio"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -32,13 +31,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongoose-os/mos/cli/flags"
+	"github.com/golang/glog"
+	"github.com/juju/errors"
+
 	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"github.com/mongoose-os/mos/common/ourgit"
-
-	"github.com/golang/glog"
-	"github.com/juju/errors"
 )
 
 type SWModule struct {
@@ -50,8 +48,18 @@ type SWModule struct {
 	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
 	Variant   string `yaml:"variant,omitempty" json:"variant,omitempty"`
 
+	// API used to download binary assets. If not specified, will take a guess based on location.
+	AssetAPI SWModuleAssetAPIType `yaml:"asset_api,omitempty" json:"asset_api,omitempty"`
+
 	localPath string
 }
+
+type SWModuleAssetAPIType string
+
+const (
+	AssetAPIGitHub SWModuleAssetAPIType = "github"
+	AssetAPIGitLab                      = "gitlab"
+)
 
 type SWModuleType int
 
@@ -77,7 +85,7 @@ var (
 	boardsLibNewName = "zz_boards"
 )
 
-func parseGitLocation(loc string) (string, string, string, string, string, error) {
+func parseGitLocation(loc string) (string, string, string, string, string, string, error) {
 	isShort := false
 	var repoPath, repoName, libName, repoURL, pathWithinRepo string
 	u, err := url.Parse(loc)
@@ -90,7 +98,7 @@ func parseGitLocation(loc string) (string, string, string, string, string, error
 			}
 			isShort = true
 		} else {
-			return "", "", "", "", "", errors.Errorf("%q is not a Git location spec 1", loc)
+			return "", "", "", "", "", "", errors.Errorf("%q is not a Git location spec 1", loc)
 		}
 	} else if u.Host == "" && u.Opaque != "" {
 		/* Git short-hand repo path w/o user@, i.e. server:name */
@@ -100,12 +108,12 @@ func parseGitLocation(loc string) (string, string, string, string, string, error
 		}
 		isShort = true
 	} else if u.Scheme == "" {
-		return "", "", "", "", "", errors.Errorf("%q is not a Git location spec 2", loc)
+		return "", "", "", "", "", "", errors.Errorf("%q is not a Git location spec 2", loc)
 	}
 
 	parts := strings.Split(u.Path, "/")
 	if len(parts) == 0 {
-		return "", "", "", "", "", errors.Errorf("path is empty in %q", loc)
+		return "", "", "", "", "", "", errors.Errorf("path is empty in %q", loc)
 	}
 	libName = parts[len(parts)-1]
 	if strings.HasSuffix(libName, ".git") {
@@ -149,7 +157,7 @@ func parseGitLocation(loc string) (string, string, string, string, string, error
 		repoURL = u.String()
 	}
 
-	return repoPath, repoName, libName, repoURL, pathWithinRepo, nil
+	return u.Host, repoPath, repoName, libName, repoURL, pathWithinRepo, nil
 }
 
 func (m *SWModule) Normalize() error {
@@ -231,7 +239,7 @@ func (m *SWModule) PrepareLocalDir(
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		_, _, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
+		_, _, _, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
 		if err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
 			return "", errors.Trace(err)
@@ -263,143 +271,87 @@ func (m *SWModule) PrepareLocalDir(
 	return localPath, nil
 }
 
-func getGHToken(tokenStr string) (string, error) {
+func getToken(tokenStr, host string) (string, error) {
 	if tokenStr == "" {
 		return "", nil
 	}
-	token := ""
-	if len(tokenStr) > 1 && tokenStr[0] == '@' {
-		if tokenData, err := ioutil.ReadFile(tokenStr[1:]); err != nil {
-			return "", errors.Trace(err)
-		} else {
-			token = string(tokenData)
-		}
-	} else {
-		token = tokenStr
-	}
-	return strings.TrimSpace(token), nil
-}
-
-func fetchGitHubAsset(loc, owner, repo, tag, assetName string) ([]byte, error) {
-	// Try public URL first. Most of our repos (and therefore assets) are public.
-	// API access limits do not apply to public asset access.
-	if strings.HasPrefix(loc, "https://") {
-		assetURL := fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", owner, repo, tag, assetName)
-		data, err := fetchGitHubAssetFromURL(assetName, tag, assetURL)
-		if err == nil {
-			return data, nil
-		}
-	}
-	relMetaURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", relMetaURL, nil)
-	token, err := getGHToken(*flags.GHToken)
-	if err != nil {
-		return nil, errors.Annotatef(err, "invalid --gh-token")
-	}
-	if token != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to fetch %s", relMetaURL)
-	}
-	defer resp.Body.Close()
-	assetURL := ""
-	if resp.StatusCode == http.StatusOK {
-		relMetaData, err := ioutil.ReadAll(resp.Body)
+	var entries []string
+	if strings.HasPrefix(tokenStr, "@") {
+		f, err := os.Open(tokenStr[1:])
 		if err != nil {
-			return nil, errors.Trace(err)
+			return "", errors.Annotatef(err, "failed to open token file")
 		}
-		glog.V(4).Infof("%s/%s/%s/%s: Release metadata: %s", owner, repo, tag, assetName, string(relMetaData))
-		var relMeta struct {
-			ID     int `json:"id"`
-			Assets []*struct {
-				Name string `json:"name"`
-				URL  string `json:"url"`
-			}
-		}
-		if err = json.Unmarshal(relMetaData, &relMeta); err != nil {
-			return nil, errors.Annotatef(err, "failed to parse GitHub release info")
-		}
-		for _, a := range relMeta.Assets {
-			if a.Name == assetName {
-				assetURL = a.URL
-				break
-			}
-		}
-		if assetURL == "" {
-			return nil, errors.Annotatef(os.ErrNotExist, "%s/%s: no asset %s found in release %s", owner, repo, assetName, tag)
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		scanner.Split(bufio.ScanLines)
+		for scanner.Scan() {
+			entries = append(entries, scanner.Text())
 		}
 	} else {
-		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
+		entries = strings.Split(tokenStr, ",")
 	}
-	glog.Infof("%s/%s/%s/%s: Asset URL: %s", owner, repo, tag, assetName, assetURL)
-	return fetchGitHubAssetFromURL(assetName, tag, assetURL)
-}
-
-func fetchGitHubAssetFromURL(assetName, tag, assetURL string) ([]byte, error) {
-	ourutil.Reportf("Fetching %s (%s) from %s...", assetName, tag, assetURL)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", assetURL, nil)
-	req.Header.Add("Accept", "application/octet-stream")
-	token, err := getGHToken(*flags.GHToken)
-	if err != nil {
-		return nil, errors.Annotatef(err, "invalid --gh-token")
+	defaultToken := ""
+	for _, e := range entries {
+		parts := strings.Split(e, ":")
+		switch len(parts) {
+		case 1:
+			// No host specified, use unless a more specific entry exists.
+			defaultToken = strings.TrimSpace(parts[0])
+		case 2:
+			// host:token
+			if strings.TrimSpace(parts[0]) == host {
+				return strings.TrimSpace(parts[1]), nil
+			}
+		}
 	}
-	if token != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to fetch %s", assetURL)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got %d status code when fetching %s", resp.StatusCode, assetURL)
-	}
-	// Fetched the asset successfully
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	return data, nil
+	return defaultToken, nil
 }
 
 func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) error {
 	version := m.GetVersion(defaultVersion)
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		if !strings.Contains(m.Location, "github.com") {
-			break
-		}
-		repoPath, _, libName, _, _, err := parseGitLocation(m.Location)
+		repoHost, repoPath, _, libName, _, _, err := parseGitLocation(m.Location)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		pp := strings.Split(repoPath, "/")
 		assetName := fmt.Sprintf("lib%s-%s.a", libName, platform)
-		var data []byte
-		for i := 1; i <= 3; i++ {
-			data, err = fetchGitHubAsset(m.Location, pp[0], pp[1], version, assetName)
-			if err == nil || os.IsNotExist(errors.Cause(err)) {
-				break
+		assetAPIType := m.AssetAPI
+		if assetAPIType == "" {
+			switch {
+			case strings.Contains(m.Location, "github"):
+				assetAPIType = AssetAPIGitHub
+			case strings.Contains(m.Location, "gitlab"):
+				assetAPIType = AssetAPIGitLab
+			default:
+				return errors.Annotatef(err, "%s: asset_api not specified and could not be guessed", libName)
 			}
-			// Sometimes asset downloads fail. GitHub doesn't like us, or rate limiting or whatever.
-			// Try a couple times.
-			glog.Errorf("GitHub asset %s download failed (attempt %d): %s", assetName, i, err)
-			time.Sleep(1 * time.Second)
+		}
+		var assetData []byte
+		switch assetAPIType {
+		case AssetAPIGitHub:
+			for i := 1; i <= 3; i++ {
+				assetData, err = fetchGitHubAsset(m.Location, repoHost, repoPath, version, assetName)
+				if err == nil || os.IsNotExist(errors.Cause(err)) {
+					break
+				}
+				// Sometimes asset downloads fail. GitHub doesn't like us, or rate limiting or whatever.
+				// Try a couple times.
+				glog.Errorf("GitHub asset %s download failed (attempt %d): %s", assetName, i, err)
+				time.Sleep(1 * time.Second)
+			}
+		case AssetAPIGitLab:
+			assetData, err = fetchGitLabAsset(repoHost, repoPath, version, assetName)
 		}
 		if err != nil {
-			return errors.Annotatef(err, "failed to download %s", assetName)
+			return errors.Annotatef(err, "%s: failed to download %s asset %s", libName, assetAPIType, assetName)
 		}
 
 		if err := os.MkdirAll(filepath.Dir(tgt), 0755); err != nil {
 			return errors.Trace(err)
 		}
 
-		if err := ioutil.WriteFile(tgt, data, 0644); err != nil {
+		if err := ioutil.WriteFile(tgt, assetData, 0644); err != nil {
 			return errors.Trace(err)
 		}
 		return nil
@@ -429,7 +381,7 @@ func (m *SWModule) getLocalGitRepoDir(libsDir, defaultVersion string) (string, e
 	if m.GetType() != SWModuleTypeGit {
 		return "", errors.Errorf("%q is not a Git lib", m.Location)
 	}
-	_, repoName, _, _, _, err := parseGitLocation(m.Location)
+	_, _, repoName, _, _, _, err := parseGitLocation(m.Location)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -443,7 +395,7 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		_, _, _, _, pathWithinRepo, _ := parseGitLocation(m.Location)
+		_, _, _, _, _, pathWithinRepo, _ := parseGitLocation(m.Location)
 		return filepath.Join(localRepoPath, pathWithinRepo), nil
 
 	case SWModuleTypeLocal:
@@ -497,7 +449,7 @@ func (m *SWModule) getName() (string, error) {
 
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		_, _, libName, _, _, err := parseGitLocation(m.Location)
+		_, _, _, libName, _, _, err := parseGitLocation(m.Location)
 		return libName, err
 	case SWModuleTypeLocal:
 		_, name := filepath.Split(m.Location)
