@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -15,10 +16,24 @@ import (
 	"github.com/juju/errors"
 )
 
-type ourGitShell struct{}
+const (
+	GitAskPassEnv   = "GIT_ASKPASS"
+	gitCredsUserEnv = "_MOS_GIT_CREDS_USER"
+	gitCredsPassEnv = "_MOS_GIT_CREDS_PASS"
+)
+
+// NewOurGit returns a shell-based implementation of OurGit
+// (external git binary is required for that to work)
+func NewOurGitShell(creds *Credentials) OurGit {
+	return &ourGitShell{creds: creds}
+}
+
+type ourGitShell struct {
+	creds *Credentials
+}
 
 func (m *ourGitShell) GetCurrentHash(localDir string) (string, error) {
-	resp, err := shellGit(localDir, "rev-parse", "HEAD")
+	resp, err := m.shellGit(localDir, "rev-parse", "HEAD")
 	if err != nil {
 		return "", errors.Annotatef(err, "failed to get current hash")
 	}
@@ -29,7 +44,7 @@ func (m *ourGitShell) GetCurrentHash(localDir string) (string, error) {
 }
 
 func (m *ourGitShell) DoesBranchExist(localDir string, branch string) (bool, error) {
-	resp, err := shellGit(localDir, "branch", "--list", branch)
+	resp, err := m.shellGit(localDir, "branch", "--list", branch)
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to check if branch %q exists", branch)
 	}
@@ -37,7 +52,7 @@ func (m *ourGitShell) DoesBranchExist(localDir string, branch string) (bool, err
 }
 
 func (m *ourGitShell) DoesTagExist(localDir string, tag string) (bool, error) {
-	resp, err := shellGit(localDir, "tag", "--list", tag)
+	resp, err := m.shellGit(localDir, "tag", "--list", tag)
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to check if tag %q exists", tag)
 	}
@@ -45,7 +60,7 @@ func (m *ourGitShell) DoesTagExist(localDir string, tag string) (bool, error) {
 }
 
 func (m *ourGitShell) GetToplevelDir(localDir string) (string, error) {
-	resp, err := shellGit(localDir, "rev-parse", "--show-toplevel")
+	resp, err := m.shellGit(localDir, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", errors.Annotatef(err, "failed to get git toplevel dir")
 	}
@@ -53,7 +68,7 @@ func (m *ourGitShell) GetToplevelDir(localDir string) (string, error) {
 }
 
 func (m *ourGitShell) Checkout(localDir string, id string, refType RefType) error {
-	_, err := shellGit(localDir, "checkout", id)
+	_, err := m.shellGit(localDir, "checkout", id)
 	if err != nil {
 		return errors.Annotatef(err, "failed to git checkout %s", id)
 	}
@@ -61,7 +76,7 @@ func (m *ourGitShell) Checkout(localDir string, id string, refType RefType) erro
 }
 
 func (m *ourGitShell) Pull(localDir string, branch string) error {
-	_, err := shellGit(localDir, "pull", "origin", branch)
+	_, err := m.shellGit(localDir, "pull", "origin", branch)
 	if err != nil {
 		return errors.Annotatef(err, "failed to git pull")
 	}
@@ -77,7 +92,7 @@ func (m *ourGitShell) Fetch(localDir string, what string, opts FetchOptions) err
 
 	args = append(args, "origin", fmt.Sprintf("%s:%s", what, what))
 
-	_, err := shellGit(localDir, "fetch", args...)
+	_, err := m.shellGit(localDir, "fetch", args...)
 	if err != nil {
 		return errors.Annotatef(err, "failed to git fetch %s %s", localDir, what)
 	}
@@ -92,7 +107,7 @@ func (m *ourGitShell) IsClean(localDir, version string, excludeGlobs []string) (
 	for _, g := range excludeGlobs {
 		flags = append(flags, fmt.Sprintf("--exclude=%s", g))
 	}
-	resp, err := shellGit(localDir, "ls-files", flags...)
+	resp, err := m.shellGit(localDir, "ls-files", flags...)
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to git ls-files")
 	}
@@ -106,7 +121,7 @@ func (m *ourGitShell) IsClean(localDir, version string, excludeGlobs []string) (
 	// Unfortunately, git ls-files is unable to show staged and uncommitted files.
 	// So, specifically for these files, we'll have to run git diff --cached:
 
-	resp, err = shellGit(localDir, "diff", "--cached", "--name-only")
+	resp, err = m.shellGit(localDir, "diff", "--cached", "--name-only")
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to git diff --cached")
 	}
@@ -127,7 +142,7 @@ scan:
 	}
 
 	// Working directory is clean. Are we on a particular tag?
-	resp, err = shellGit(localDir, "describe", "--tags", "--exact-match", "HEAD")
+	resp, err = m.shellGit(localDir, "describe", "--tags", "--exact-match", "HEAD")
 	if err == nil {
 		// We are. That's cool, we can manage the repo then.
 		return true, nil
@@ -145,10 +160,10 @@ scan:
 	// precense of some commits which would not be fetched by the remote builder,
 	// so the repo is dirty.
 
-	resp, err = shellGit(localDir, "cherry")
+	resp, err = m.shellGit(localDir, "cherry")
 	if err != nil {
 		// Apparently the repo is not on a branch, retry with the version
-		resp, err = shellGit(localDir, "cherry", version)
+		resp, err = m.shellGit(localDir, "cherry", version)
 		if err != nil {
 			// We can get an error at this point if given version does not exist
 			// in the repository; in this case assume the repo is clean
@@ -167,7 +182,7 @@ scan:
 }
 
 func (m *ourGitShell) ResetHard(localDir string) error {
-	_, err := shellGit(localDir, "checkout", ".")
+	_, err := m.shellGit(localDir, "checkout", ".")
 	if err != nil {
 		return errors.Annotatef(err, "failed to git checkout .")
 	}
@@ -175,7 +190,7 @@ func (m *ourGitShell) ResetHard(localDir string) error {
 }
 
 func (m *ourGitShell) Clone(srcURL, targetDir string, opts CloneOptions) error {
-	args := []string{"clone"}
+	var args []string
 
 	if opts.ReferenceDir != "" {
 		args = append(args, "--reference", opts.ReferenceDir)
@@ -189,21 +204,15 @@ func (m *ourGitShell) Clone(srcURL, targetDir string, opts CloneOptions) error {
 		args = append(args, "-b", opts.Ref)
 	}
 
-	var berr bytes.Buffer
 	args = append(args, srcURL, targetDir)
-	cmd := exec.Command("git", args...)
-	cmd.Stderr = &berr
 
-	err := cmd.Run()
-	if err != nil {
-		return errors.Annotatef(err, "cloning %s: %s", srcURL, berr.String())
-	}
+	_, err := m.shellGit("", "clone", args...)
 
-	return nil
+	return errors.Trace(err)
 }
 
 func (m *ourGitShell) GetOriginUrl(localDir string) (string, error) {
-	resp, err := shellGit(localDir, "remote", "get-url", "origin")
+	resp, err := m.shellGit(localDir, "remote", "get-url", "origin")
 	if err != nil {
 		return "", errors.Annotatef(err, "failed to get origin URL")
 	}
@@ -227,8 +236,25 @@ func (m *ourGitShell) HashesEqual(hash1, hash2 string) bool {
 	return hash1[:minLen] == hash2[:minLen]
 }
 
-func shellGit(localDir string, subcmd string, args ...string) (string, error) {
+func (m *ourGitShell) shellGit(localDir string, subcmd string, args ...string) (string, error) {
 	cmd := exec.Command("git", append([]string{subcmd}, args...)...)
+
+	// If the user provided their own password helper, do nothing.
+	// Otherwise, insert ourselves as auth provider.
+	if os.Getenv(GitAskPassEnv) == "" {
+		var user, pass string
+		if m.creds != nil {
+			user = m.creds.User
+			pass = m.creds.Pass
+		}
+		if myPath, err := os.Executable(); err == nil {
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("%s=%s", GitAskPassEnv, myPath),
+				fmt.Sprintf("%s=%s", gitCredsUserEnv, user),
+				fmt.Sprintf("%s=%s", gitCredsPassEnv, pass),
+			)
+		}
+	}
 
 	var b bytes.Buffer
 	var berr bytes.Buffer
@@ -241,6 +267,23 @@ func shellGit(localDir string, subcmd string, args ...string) (string, error) {
 	}
 	resp := b.String()
 	return strings.TrimRight(resp, "\r\n"), nil
+}
+
+func RunAskPassHelper() {
+	// Helper is invoked twice, once for username and once for password, the only difference is in the prompt text.
+	// We try to guess what to output but it will fail if Git is localized, so we revert to spitting out password
+	// since in practice username is ignored most of the time (GitHub, GitLab).
+	// If necessary, this can be improved with some additional effort (such as keeping a flag file).
+	prompt := os.Args[1]
+	if os.Getenv(gitCredsUserEnv) == "" && os.Getenv(gitCredsPassEnv) == "" {
+		fmt.Fprintf(os.Stderr, "Git credentials required but none were provided. Supply --gh-token.\n")
+		os.Exit(1)
+	}
+	if strings.Contains(strings.ToLower(prompt), "username") {
+		os.Stdout.WriteString(os.Getenv(gitCredsUserEnv))
+	} else {
+		os.Stdout.WriteString(os.Getenv(gitCredsPassEnv))
+	}
 }
 
 // HaveShellGit checks if "git" command is available.

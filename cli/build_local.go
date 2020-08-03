@@ -84,7 +84,7 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 }
 
 func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (err error) {
-	gitinst := mosgit.NewOurGit()
+	gitinst := mosgit.NewOurGit(nil)
 
 	buildDir := moscommon.GetBuildDir(projectDir)
 

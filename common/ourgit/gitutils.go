@@ -43,17 +43,9 @@ const (
 	fullHashLen = 40
 )
 
-// NewOurGit returns a go-git-based implementation of OurGit
-// (it doesn't require an external git binary, but is somewhat limited; for
-// example, it doesn't support referenced repositories)
-func NewOurGitGoGit() OurGit {
-	return &ourGitGoGit{}
-}
-
-// NewOurGit returns a shell-based implementation of OurGit
-// (external git binary is required for that to work)
-func NewOurGitShell() OurGit {
-	return &ourGitShell{}
+type Credentials struct {
+	User string
+	Pass string
 }
 
 func HashesEqual(hash1, hash2 string) bool {

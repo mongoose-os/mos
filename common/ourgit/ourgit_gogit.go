@@ -15,11 +15,29 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/golang/glog"
 	"github.com/juju/errors"
 )
 
-type ourGitGoGit struct{}
+// NewOurGit returns a go-git-based implementation of OurGit
+// (it doesn't require an external git binary, but is somewhat limited; for
+// example, it doesn't support referenced repositories)
+func NewOurGitGoGit(creds *Credentials) OurGit {
+	res := &ourGitGoGit{}
+	if creds != nil {
+		res.auth = &http.BasicAuth{
+			Username: creds.User,
+			Password: creds.Pass,
+		}
+	}
+	return res
+}
+
+type ourGitGoGit struct {
+	auth transport.AuthMethod
+}
 
 func (m *ourGitGoGit) GetCurrentHash(localDir string) (string, error) {
 	repo, err := git.PlainOpen(localDir)
@@ -188,6 +206,7 @@ func (m *ourGitGoGit) Pull(localDir string, branch string) error {
 	}
 
 	err = wt.Pull(&git.PullOptions{
+		Auth:          m.auth,
 		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
 	})
 	if err != nil && errors.Cause(err) != git.NoErrAlreadyUpToDate {
@@ -205,6 +224,7 @@ func (m *ourGitGoGit) Fetch(localDir string, what string, opts FetchOptions) err
 
 	// Try fetching as a branch.
 	err = repo.Fetch(&git.FetchOptions{
+		Auth:     m.auth,
 		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", what, what))},
 		Tags:     git.AllTags,
 		Depth:    opts.Depth,
@@ -215,6 +235,7 @@ func (m *ourGitGoGit) Fetch(localDir string, what string, opts FetchOptions) err
 
 	// Try fetching as a tag.
 	err = repo.Fetch(&git.FetchOptions{
+		Auth:     m.auth,
 		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", what, what))},
 		Tags:     git.AllTags,
 		Depth:    opts.Depth,
@@ -281,6 +302,7 @@ func (m *ourGitGoGit) Clone(srcURL, localDir string, opts CloneOptions) error {
 
 	goGitOpts := []git.CloneOptions{
 		git.CloneOptions{
+			Auth:  m.auth,
 			URL:   srcURL,
 			Depth: opts.Depth,
 			Tags:  git.TagFollowing,

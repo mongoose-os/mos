@@ -21,11 +21,11 @@ var (
 
 // NewOurGit returns an instance of OurGit: if --use-shell-git is given it'll
 // be a shell-based implementation; otherwise a go-git-based one.
-func NewOurGit() ourgit.OurGit {
+func NewOurGit(creds *ourgit.Credentials) ourgit.OurGit {
 	if *useShellGitFlag {
-		return ourgit.NewOurGitShell()
+		return ourgit.NewOurGitShell(creds)
 	} else if *useGoGitFlag {
-		return ourgit.NewOurGitGoGit()
+		return ourgit.NewOurGitGoGit(creds)
 	}
 	// User did not express a preference.
 	// In that case, prefer shell Git to go-git (if available).
@@ -39,9 +39,9 @@ func NewOurGit() ourgit.OurGit {
 		checkedShellGit = true
 	}
 	if haveShellGit {
-		return ourgit.NewOurGitShell()
+		return ourgit.NewOurGitShell(creds)
 	} else {
-		return ourgit.NewOurGitGoGit()
+		return ourgit.NewOurGitGoGit(creds)
 	}
 }
 

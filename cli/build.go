@@ -478,9 +478,10 @@ func (lpr *compProviderReal) GetLibLocalPath(
 		return "", errors.Trace(err)
 	}
 
-	m.SetCredentials(lpr.bParams.GetCredentialsForHost(m.GetHostName()))
+	creds := lpr.bParams.GetCredentialsForHost(m.GetHostName())
+	m.SetCredentials(creds)
 
-	gitinst := mosgit.NewOurGit()
+	gitinst := mosgit.NewOurGit(build.BuildCredsToGitCreds(creds))
 
 	appDir, err := getCodeDirAbs()
 	if err != nil {

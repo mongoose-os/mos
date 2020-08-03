@@ -200,7 +200,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 		}
 
 		// Dir exists, check if the repo is clean
-		gitinst := mosgit.NewOurGit()
+		gitinst := mosgit.NewOurGit(BuildCredsToGitCreds(m.credentials))
 		isClean, err := mosgit.IsClean(gitinst, rp, m.getVersionGit(defaultVersion))
 		if err != nil {
 			return false, errors.Trace(err)
@@ -242,7 +242,7 @@ func (m *SWModule) PrepareLocalDir(
 		}
 		_, _, _, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
-		if err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
+		if err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth, m.credentials); err != nil {
 			return "", errors.Trace(err)
 		}
 
@@ -488,6 +488,10 @@ func (m *SWModule) SetCredentials(creds *Credentials) {
 	m.credentials = creds
 }
 
+func (m *SWModule) GetCredentials() *Credentials {
+	return m.credentials
+}
+
 var (
 	repoLocks     = map[string]*sync.Mutex{}
 	repoLocksLock = sync.Mutex{}
@@ -497,6 +501,7 @@ func prepareLocalCopyGit(
 	name, origin, version, targetDir string,
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
+	creds *Credentials,
 ) (retErr error) {
 
 	repoLocksLock.Lock()
@@ -508,15 +513,16 @@ func prepareLocalCopyGit(
 	repoLocksLock.Unlock()
 	lock.Lock()
 	defer lock.Unlock()
-	return prepareLocalCopyGitLocked(name, origin, version, targetDir, logWriter, deleteIfFailed, pullInterval, cloneDepth)
+	return prepareLocalCopyGitLocked(name, origin, version, targetDir, logWriter, deleteIfFailed, pullInterval, cloneDepth, creds)
 }
 
 func prepareLocalCopyGitLocked(
 	name, origin, version, targetDir string,
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
+	creds *Credentials,
 ) (retErr error) {
-	gitinst := mosgit.NewOurGit()
+	gitinst := mosgit.NewOurGit(BuildCredsToGitCreds(creds))
 	// version is already converted from "" or "latest" to "master" here.
 
 	// Check if we should clone or pull git repo inside of targetDir.
@@ -603,7 +609,7 @@ func prepareLocalCopyGitLocked(
 				}
 
 				glog.V(2).Infof("calling prepareLocalCopyGit() again")
-				retErr = prepareLocalCopyGitLocked(name, origin, version, targetDir, logWriter, false, pullInterval, cloneDepth)
+				retErr = prepareLocalCopyGitLocked(name, origin, version, targetDir, logWriter, false, pullInterval, cloneDepth, creds)
 			}
 		}()
 	}
@@ -751,6 +757,13 @@ func prepareLocalCopyGitLocked(
 	freportf(logWriter, "%s: Done, hash %s", name, curHash)
 
 	return nil
+}
+
+func BuildCredsToGitCreds(creds *Credentials) *ourgit.Credentials {
+	if creds == nil {
+		return nil
+	}
+	return &ourgit.Credentials{User: creds.User, Pass: creds.Pass}
 }
 
 func freportf(logFile io.Writer, f string, args ...interface{}) {

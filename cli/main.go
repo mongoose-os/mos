@@ -52,6 +52,7 @@ import (
 	"github.com/mongoose-os/mos/cli/ota"
 	"github.com/mongoose-os/mos/cli/update"
 	"github.com/mongoose-os/mos/cli/watson"
+	"github.com/mongoose-os/mos/common/ourgit"
 	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/version"
 )
@@ -228,6 +229,12 @@ func main() {
 	seed1 := time.Now().UnixNano()
 	seed2, _ := cRand.Int(cRand.Reader, big.NewInt(4000000000))
 	mRand.Seed(seed1 ^ seed2.Int64())
+
+	// We are being invoked as a Git askpass helper. Spit out
+	if os.Getenv(ourgit.GitAskPassEnv) != "" {
+		ourgit.RunAskPassHelper()
+		return
+	}
 
 	defer glog.Flush()
 	go func() {

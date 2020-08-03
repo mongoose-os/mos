@@ -38,8 +38,6 @@ import (
 	goversion "github.com/mcuadros/go-version"
 	flag "github.com/spf13/pflag"
 
-	"github.com/mongoose-os/mos/common/ourgit"
-	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/common/paths"
@@ -47,6 +45,8 @@ import (
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/ourgit"
+	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -392,7 +392,7 @@ func migrateProjects(dirTpl, oldVer, newVer string) error {
 func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	gitinst := mosgit.NewOurGit()
+	gitinst := mosgit.NewOurGit(nil)
 
 	glog.Infof("Copying %s as %s...", oldDir, newDir)
 	if err := ourio.CopyDir(oldDir, newDir, nil); err != nil {
@@ -449,7 +449,7 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 // dirVersion might differ from projectVersion if only the suffix is a valid
 // git SHA, in which case dirVersion will be "latest".
 func parseProjectDirname(projectDir string) (basename, projectVersion, dirVersion string) {
-	gitinst := mosgit.NewOurGit()
+	gitinst := mosgit.NewOurGit(nil)
 
 	projectDirBase := filepath.Base(projectDir)
 	parts := strings.Split(projectDirBase, "-")
