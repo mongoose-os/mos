@@ -33,7 +33,6 @@ fwbuild-instance: OUT ?= fwbuild-instance
 fwbuild-instance: build-fwbuild-instance
 
 deps:
-	go mod tidy
 	go mod download
 	go mod vendor
 
@@ -129,7 +128,7 @@ os-check:
 	@[ "`uname -s`" == "Darwin" ] || \
 	  { echo === Can only build downloads on a Mac, this is `uname -s`; exit 1; }
 
-downloads: os-check clean clean-version downloads-linux downloads-mac downloads-win
+downloads: os-check clean clean-version deps downloads-linux downloads-mac downloads-win
 	cp version/version.json downloads/mos/
 
 deploy-downloads: downloads
