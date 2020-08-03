@@ -17,7 +17,6 @@
 package build
 
 import (
-	"bufio"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -52,6 +51,8 @@ type SWModule struct {
 	AssetAPI SWModuleAssetAPIType `yaml:"asset_api,omitempty" json:"asset_api,omitempty"`
 
 	localPath string
+	// Credential must be provided externally and never serialized in a manifest.
+	credentials *Credentials
 }
 
 type SWModuleAssetAPIType string
@@ -271,42 +272,6 @@ func (m *SWModule) PrepareLocalDir(
 	return localPath, nil
 }
 
-func getToken(tokenStr, host string) (string, error) {
-	if tokenStr == "" {
-		return "", nil
-	}
-	var entries []string
-	if strings.HasPrefix(tokenStr, "@") {
-		f, err := os.Open(tokenStr[1:])
-		if err != nil {
-			return "", errors.Annotatef(err, "failed to open token file")
-		}
-		defer f.Close()
-		scanner := bufio.NewScanner(f)
-		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() {
-			entries = append(entries, scanner.Text())
-		}
-	} else {
-		entries = strings.Split(tokenStr, ",")
-	}
-	defaultToken := ""
-	for _, e := range entries {
-		parts := strings.Split(e, ":")
-		switch len(parts) {
-		case 1:
-			// No host specified, use unless a more specific entry exists.
-			defaultToken = strings.TrimSpace(parts[0])
-		case 2:
-			// host:token
-			if strings.TrimSpace(parts[0]) == host {
-				return strings.TrimSpace(parts[1]), nil
-			}
-		}
-	}
-	return defaultToken, nil
-}
-
 func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) error {
 	version := m.GetVersion(defaultVersion)
 	switch m.GetType() {
@@ -330,8 +295,12 @@ func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) err
 		var assetData []byte
 		switch assetAPIType {
 		case AssetAPIGitHub:
+			token := ""
+			if m.credentials != nil {
+				token = m.credentials.Pass
+			}
 			for i := 1; i <= 3; i++ {
-				assetData, err = fetchGitHubAsset(m.Location, repoHost, repoPath, version, assetName)
+				assetData, err = fetchGitHubAsset(m.Location, repoHost, repoPath, version, assetName, token)
 				if err == nil || os.IsNotExist(errors.Cause(err)) {
 					break
 				}
@@ -341,7 +310,11 @@ func (m *SWModule) FetchPrebuiltBinary(platform, defaultVersion, tgt string) err
 				time.Sleep(1 * time.Second)
 			}
 		case AssetAPIGitLab:
-			assetData, err = fetchGitLabAsset(repoHost, repoPath, version, assetName)
+			token := ""
+			if m.credentials != nil {
+				token = m.credentials.Pass
+			}
+			assetData, err = fetchGitLabAsset(repoHost, repoPath, version, assetName, token)
 		}
 		if err != nil {
 			return errors.Annotatef(err, "%s: failed to download %s asset %s", libName, assetAPIType, assetName)
@@ -463,6 +436,18 @@ func (m *SWModule) getName() (string, error) {
 	}
 }
 
+func (m *SWModule) GetHostName() string {
+	switch m.GetType() {
+	case SWModuleTypeGit:
+		libHost, _, _, _, _, _, _ := parseGitLocation(m.Location)
+		return libHost
+	case SWModuleTypeLocal:
+		return ""
+	default:
+		return ""
+	}
+}
+
 func (m *SWModule) GetType() SWModuleType {
 	stype := m.Type
 
@@ -497,6 +482,10 @@ func (m *SWModule) GetType() SWModuleType {
 	default:
 		return SWModuleTypeLocal
 	}
+}
+
+func (m *SWModule) SetCredentials(creds *Credentials) {
+	m.credentials = creds
 }
 
 var (

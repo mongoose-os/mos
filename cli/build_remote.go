@@ -50,7 +50,7 @@ const (
 	localLibsDir = "local_libs"
 )
 
-func buildRemote(bParams *buildParams) error {
+func buildRemote(bParams *build.BuildParams) error {
 	appDir, err := getCodeDirAbs()
 	if err != nil {
 		return errors.Trace(err)

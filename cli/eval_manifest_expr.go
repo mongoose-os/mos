@@ -26,6 +26,7 @@ import (
 	"context"
 
 	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/cli/build"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/interpreter"
@@ -47,8 +48,8 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 
 	expr := args[0]
 
-	bParams := &buildParams{
-		ManifestAdjustments: manifest_parser.ManifestAdjustments{
+	bParams := &build.BuildParams{
+		ManifestAdjustments: build.ManifestAdjustments{
 			Platform: flags.Platform(),
 		},
 		CustomLibLocations: cll,
@@ -90,7 +91,7 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 	}
 
 	manifest, _, err := manifest_parser.ReadManifestFinal(
-		appDir, &manifest_parser.ManifestAdjustments{
+		appDir, &build.ManifestAdjustments{
 			Platform:  bParams.Platform,
 			BuildVars: buildVarsCli,
 		}, logWriter, interp,

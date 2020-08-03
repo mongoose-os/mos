@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -34,17 +35,16 @@ import (
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/common/paths"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/interpreter"
-	"github.com/mongoose-os/mos/cli/manifest_parser"
 	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"github.com/mongoose-os/mos/cli/update"
+	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -91,23 +91,62 @@ const (
 	projectDir = "."
 )
 
-type buildParams struct {
-	manifest_parser.ManifestAdjustments
-	BuildTarget           string
-	CustomLibLocations    map[string]string
-	CustomModuleLocations map[string]string
-	NoPlatformCheck       bool
-}
-
 func init() {
 	hiddenFlags = append(hiddenFlags, "docker_images")
 }
 
 // Build {{{
 
+func getCredentialsFromCLI() (map[string]build.Credentials, error) {
+	credsStr := *flags.GHToken
+	if credsStr == "" {
+		return nil, nil
+	}
+	var entries []string
+	if strings.HasPrefix(credsStr, "@") {
+		f, err := os.Open(credsStr[1:])
+		if err != nil {
+			return nil, errors.Annotatef(err, "failed to open token file")
+		}
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		scanner.Split(bufio.ScanLines)
+		for scanner.Scan() {
+			entries = append(entries, scanner.Text())
+		}
+	} else {
+		entries = strings.Split(credsStr, ",")
+	}
+	result := map[string]build.Credentials{}
+	for _, e := range entries {
+		host := ""
+		creds := build.Credentials{User: "mos"}
+		parts := strings.Split(e, ":")
+		switch len(parts) {
+		case 1:
+			// No host specified, used unless a more specific entry exists.
+			host = ""
+			creds.Pass = strings.TrimSpace(parts[0])
+		case 2:
+			// host:token
+			host = strings.TrimSpace(parts[0])
+			creds.Pass = strings.TrimSpace(parts[1])
+		case 3:
+			// host:user:password
+			host = strings.TrimSpace(parts[0])
+			creds.User = strings.TrimSpace(parts[1])
+			creds.Pass = strings.TrimSpace(parts[2])
+		default:
+			return nil, errors.Errorf("invalid credentials entry %q", e)
+		}
+		result[host] = creds
+	}
+	return result, nil
+}
+
 // Build command handler {{{
 func buildHandler(ctx context.Context, devConn dev.DevConn) error {
-	var bParams buildParams
+	var bParams build.BuildParams
 	if *buildParamsFlag != "" {
 		buildParamsBytes, err := ioutil.ReadFile(*buildParamsFlag)
 		if err != nil {
@@ -145,8 +184,13 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 			return errors.Trace(err)
 		}
 
-		bParams = buildParams{
-			ManifestAdjustments: manifest_parser.ManifestAdjustments{
+		credentials, err := getCredentialsFromCLI()
+		if err != nil {
+			return errors.Annotatef(err, "error parsing --gh-token")
+		}
+
+		bParams = build.BuildParams{
+			ManifestAdjustments: build.ManifestAdjustments{
 				Platform:  flags.Platform(),
 				BuildVars: buildVarsFromCLI,
 				CDefs:     cdefsFromCLI,
@@ -158,13 +202,14 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 			CustomLibLocations:    cll,
 			CustomModuleLocations: cml,
 			NoPlatformCheck:       *noPlatformCheckFlag,
+			Credentials:           credentials,
 		}
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
 }
 
-func doBuild(ctx context.Context, bParams *buildParams) error {
+func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 	var err error
 	buildDir := moscommon.GetBuildDir(projectDir)
 
@@ -420,19 +465,22 @@ func absPathSlice(slice []string) ([]string, error) {
 
 // manifest_parser.ComponentProvider implementation {{{
 type compProviderReal struct {
-	bParams   *buildParams
+	bParams   *build.BuildParams
 	logWriter io.Writer
 }
 
 func (lpr *compProviderReal) GetLibLocalPath(
 	m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 ) (string, error) {
-	gitinst := mosgit.NewOurGit()
 
 	name, err := m.GetName()
 	if err != nil {
 		return "", errors.Trace(err)
 	}
+
+	m.SetCredentials(lpr.bParams.GetCredentialsForHost(m.GetHostName()))
+
+	gitinst := mosgit.NewOurGit()
 
 	appDir, err := getCodeDirAbs()
 	if err != nil {
@@ -552,6 +600,8 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 	if err != nil {
 		return "", errors.Trace(err)
 	}
+
+	m.SetCredentials(lpr.bParams.GetCredentialsForHost(m.GetHostName()))
 
 	targetDir, ok := lpr.bParams.CustomModuleLocations[name]
 	if !ok {

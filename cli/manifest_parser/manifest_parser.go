@@ -102,17 +102,6 @@ type ReadManifestCallbacks struct {
 	ComponentProvider ComponentProvider
 }
 
-// Last-minute adjustments for the manifest, typically constructed from command
-// line
-type ManifestAdjustments struct {
-	Platform  string
-	BuildVars map[string]string
-	CDefs     map[string]string
-	CFlags    []string
-	CXXFlags  []string
-	ExtraLibs []build.SWModule
-}
-
 type RMFOut struct {
 	MTime time.Time
 
@@ -129,7 +118,7 @@ type libPrepareResult struct {
 }
 
 func ReadManifestFinal(
-	dir string, adjustments *ManifestAdjustments,
+	dir string, adjustments *build.ManifestAdjustments,
 	logWriter io.Writer, interp *interpreter.MosInterpreter,
 	cbs *ReadManifestCallbacks,
 	requireArch, preferPrebuiltLibs bool,
@@ -138,7 +127,7 @@ func ReadManifestFinal(
 	interp = interp.Copy()
 
 	if adjustments == nil {
-		adjustments = &ManifestAdjustments{}
+		adjustments = &build.ManifestAdjustments{}
 	}
 
 	fp := &RMFOut{}
@@ -432,7 +421,7 @@ type manifestParseContext struct {
 	// Directory of the "root" app. Might be a temporary directory.
 	rootAppDir string
 
-	adjustments ManifestAdjustments
+	adjustments build.ManifestAdjustments
 	logWriter   io.Writer
 
 	deps        *Deps
@@ -457,7 +446,7 @@ type manifestParseContext struct {
 // and also returns the most recent modification time of all encountered
 // manifests.
 func readManifestWithLibs(
-	dir string, adjustments *ManifestAdjustments,
+	dir string, adjustments *build.ManifestAdjustments,
 	logWriter io.Writer, interp *interpreter.MosInterpreter,
 	cbs *ReadManifestCallbacks,
 	requireArch bool,
@@ -883,12 +872,12 @@ func prepareLib(
 // manifest or given BuildParams have arch specified, then the returned
 // manifest will contain all arch-specific adjustments (if any)
 func ReadManifest(
-	appDir string, adjustments *ManifestAdjustments, interp *interpreter.MosInterpreter,
+	appDir string, adjustments *build.ManifestAdjustments, interp *interpreter.MosInterpreter,
 ) (*build.FWAppManifest, time.Time, error) {
 	interp = interp.Copy()
 
 	if adjustments == nil {
-		adjustments = &ManifestAdjustments{}
+		adjustments = &build.ManifestAdjustments{}
 	}
 
 	manifestFullName := moscommon.GetManifestFilePath(appDir)
@@ -1094,7 +1083,7 @@ func ReadManifestFile(
 //   b. Go to step 1
 func expandManifestLibsAndConds(
 	manifest *build.FWAppManifest, interp *interpreter.MosInterpreter,
-	adjustments *ManifestAdjustments,
+	adjustments *build.ManifestAdjustments,
 ) error {
 	interp = interp.Copy()
 

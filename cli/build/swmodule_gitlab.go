@@ -28,21 +28,15 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/juju/errors"
-
-	"github.com/mongoose-os/mos/cli/flags"
 )
 
 var mdLinkRegex = regexp.MustCompile(`\[([^\]]+)\]\(([^\)]+)\)`)
 
-func fetchGitLabAsset(host, repoPath, tag, assetName string) ([]byte, error) {
+func fetchGitLabAsset(host, repoPath, tag, assetName, token string) ([]byte, error) {
 	apiURLPrefix := fmt.Sprintf("https://%s/api/v4/projects/%s", host, url.QueryEscape(repoPath))
 	relMetaURL := fmt.Sprintf("%s/releases/%s", apiURLPrefix, tag)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", relMetaURL, nil)
-	token, err := getToken(*flags.GHToken, host)
-	if err != nil {
-		return nil, errors.Annotatef(err, "invalid --gh-token")
-	}
 	if token != "" {
 		req.Header.Add("PRIVATE-TOKEN", token)
 	}
@@ -113,5 +107,5 @@ func fetchGitLabAsset(host, repoPath, tag, assetName string) ([]byte, error) {
 
 	// Probably won't work due to https://gitlab.com/gitlab-org/gitlab/-/issues/24155
 	// but hey, give it a go.
-	return fetchAssetFromURL(host, assetName, tag, assetURL)
+	return fetchAssetFromURL(host, assetName, tag, assetURL, token)
 }

@@ -87,6 +87,7 @@ docker-build-%:
 	  --user $(shell id -u):$(shell id -g) \
 	  -e HOME=/tmp \
 	  -e GOBIN=/src/go/bin/$* \
+	  -e GOCACHE=/src/go/.cache \
 	  --entrypoint /usr/bin/make \
 	  docker.io/mgos/ubuntu-golang:bionic \
 	    -C /src $* OUT=tools/docker/$*/$*

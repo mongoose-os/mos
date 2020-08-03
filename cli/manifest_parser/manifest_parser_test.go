@@ -156,7 +156,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 		t.Logf("testing %q for %q %s descrFilename", appPath, platform, descrFilename)
 
 		manifest, _, err := ReadManifestFinal(
-			filepath.Join(appPath, appDir), &ManifestAdjustments{
+			filepath.Join(appPath, appDir), &build.ManifestAdjustments{
 				Platform:  platform,
 				BuildVars: descr.BuildVars,
 			}, logWriter, interp,

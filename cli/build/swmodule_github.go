@@ -27,18 +27,17 @@ import (
 	"github.com/golang/glog"
 	"github.com/juju/errors"
 
-	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"
 )
 
-func fetchGitHubAsset(loc, host, repoPath, tag, assetName string) ([]byte, error) {
+func fetchGitHubAsset(loc, host, repoPath, tag, assetName, token string) ([]byte, error) {
 	var apiURLPrefix string
 	if host == "github.com" {
 		// Try public URL first. Most of our repos (and therefore assets) are public.
 		// API access limits do not apply to public asset access.
 		if strings.HasPrefix(loc, "https://") {
 			assetURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repoPath, tag, assetName)
-			data, err := fetchAssetFromURL(host, assetName, tag, assetURL)
+			data, err := fetchAssetFromURL(host, assetName, tag, assetURL, token)
 			if err == nil {
 				return data, nil
 			}
@@ -50,10 +49,6 @@ func fetchGitHubAsset(loc, host, repoPath, tag, assetName string) ([]byte, error
 	relMetaURL := fmt.Sprintf("%s/repos/%s/releases/tags/%s", apiURLPrefix, repoPath, tag)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", relMetaURL, nil)
-	token, err := getToken(*flags.GHToken, host)
-	if err != nil {
-		return nil, errors.Annotatef(err, "invalid --gh-token")
-	}
 	if token != "" {
 		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 	}
@@ -91,19 +86,15 @@ func fetchGitHubAsset(loc, host, repoPath, tag, assetName string) ([]byte, error
 		return nil, errors.Annotatef(os.ErrNotExist, "%s: no asset %s found in release %s", repoPath, assetName, tag)
 	}
 	glog.Infof("%s/%s/%s: Asset URL: %s", repoPath, tag, assetName, assetURL)
-	return fetchAssetFromURL(host, assetName, tag, assetURL)
+	return fetchAssetFromURL(host, assetName, tag, assetURL, token)
 }
 
-func fetchAssetFromURL(host, assetName, tag, assetURL string) ([]byte, error) {
+func fetchAssetFromURL(host, assetName, tag, assetURL, token string) ([]byte, error) {
 	ourutil.Reportf("Fetching %s (%s) from %s...", assetName, tag, assetURL)
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", assetURL, nil)
 	req.Header.Add("Accept", "application/octet-stream")
-	token, err := getToken(*flags.GHToken, host)
-	if err != nil {
-		return nil, errors.Annotatef(err, "invalid --gh-token")
-	}
 	if token != "" {
 		req.Header.Add("Authorization", fmt.Sprintf("token %s", token)) // GitHub
 		req.Header.Add("PRIVATE-TOKEN", token)                          // GitLab

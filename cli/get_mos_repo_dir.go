@@ -26,6 +26,7 @@ import (
 	"context"
 
 	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/cli/build"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/interpreter"
@@ -44,8 +45,8 @@ func getMosRepoDir(ctx context.Context, devConn dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	bParams := &buildParams{
-		ManifestAdjustments: manifest_parser.ManifestAdjustments{
+	bParams := &build.BuildParams{
+		ManifestAdjustments: build.ManifestAdjustments{
 			Platform: flags.Platform(),
 		},
 		CustomLibLocations: cll,
@@ -58,7 +59,7 @@ func getMosRepoDir(ctx context.Context, devConn dev.DevConn) error {
 
 	interp := interpreter.NewInterpreter(newMosVars())
 
-	manifest, _, err := manifest_parser.ReadManifest(appDir, &manifest_parser.ManifestAdjustments{
+	manifest, _, err := manifest_parser.ReadManifest(appDir, &build.ManifestAdjustments{
 		Platform: bParams.Platform,
 	}, interp)
 	if err != nil {

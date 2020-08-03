@@ -25,7 +25,7 @@ func NewOurGit() ourgit.OurGit {
 	if *useShellGitFlag {
 		return ourgit.NewOurGitShell()
 	} else if *useGoGitFlag {
-		return ourgit.NewOurGit()
+		return ourgit.NewOurGitGoGit()
 	}
 	// User did not express a preference.
 	// In that case, prefer shell Git to go-git (if available).
@@ -41,7 +41,7 @@ func NewOurGit() ourgit.OurGit {
 	if haveShellGit {
 		return ourgit.NewOurGitShell()
 	} else {
-		return ourgit.NewOurGit()
+		return ourgit.NewOurGitGoGit()
 	}
 }
 

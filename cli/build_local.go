@@ -48,7 +48,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func buildLocal(ctx context.Context, bParams *buildParams) error {
+func buildLocal(ctx context.Context, bParams *build.BuildParams) error {
 	if isInDockerToolbox() {
 		freportf(logWriterStderr, "Docker Toolbox detected")
 	}
@@ -83,7 +83,7 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 	return strings.Join(append(cflags), " ")
 }
 
-func buildLocal2(ctx context.Context, bParams *buildParams, clean bool) (err error) {
+func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (err error) {
 	gitinst := mosgit.NewOurGit()
 
 	buildDir := moscommon.GetBuildDir(projectDir)

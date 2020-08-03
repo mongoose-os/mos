@@ -46,7 +46,7 @@ const (
 // NewOurGit returns a go-git-based implementation of OurGit
 // (it doesn't require an external git binary, but is somewhat limited; for
 // example, it doesn't support referenced repositories)
-func NewOurGit() OurGit {
+func NewOurGitGoGit() OurGit {
 	return &ourGitGoGit{}
 }
 

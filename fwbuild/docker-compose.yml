@@ -13,3 +13,4 @@ services:
       --volumes-dir=/var/tmp/fwbuild-volumes
       --port=8000
       --acme-challenge-dir=/acme-challenge
+      --image-pull-interval=0  # For using custom images during local development
