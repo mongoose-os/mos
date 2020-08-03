@@ -14,7 +14,10 @@ REPO := $(realpath .)
 GOBIN ?= $(REPO)/go/bin
 export GOBIN := $(GOBIN)
 export PATH := $(GOBIN):$(PATH)
+GOCACHE ?=
 SHELL := bash
+
+export GOCACHE
 
 all: mos fwbuild-manager fwbuild-instance
 
