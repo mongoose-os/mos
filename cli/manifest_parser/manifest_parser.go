@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-//go:generate go-bindata-assetfs -pkg manifest_parser -nocompress -modtime 1 -mode 420 data/
+//go:generate go-bindata-assetfs -pkg manifest_parser -nocompress -mode 420 data/
 
 // Check README.md for detailed explanation of parsing steps, limitations etc.
 

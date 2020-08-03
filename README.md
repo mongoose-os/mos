@@ -45,7 +45,7 @@ $ brew install mos
 
 You will need:
  * Git
- * Go version 1.10 or later
+ * Go version 1.13 or later
  * GNU Make
  * Python 3
  * libftdi + headers

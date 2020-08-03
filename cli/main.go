@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-//go:generate go-bindata-assetfs -pkg main -nocompress -modtime 1 -mode 420 web_root/...
+//go:generate go-bindata-assetfs -pkg main -nocompress -mode 420 web_root/...
 
 package main
 
@@ -34,7 +34,6 @@ import (
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 
-	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/cli/aws"
 	"github.com/mongoose-os/mos/cli/azure"
 	"github.com/mongoose-os/mos/cli/clone"
@@ -53,6 +52,7 @@ import (
 	"github.com/mongoose-os/mos/cli/ota"
 	"github.com/mongoose-os/mos/cli/update"
 	"github.com/mongoose-os/mos/cli/watson"
+	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/version"
 )
 

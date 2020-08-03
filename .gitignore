@@ -3,8 +3,10 @@ fwbuild-instance
 fwbuild-manager
 mos
 mos.exe
+mos/cli
 mos/mos
 pkg.build_id
 pkg.version
+vendor/
 version/version.json
 version/version.go

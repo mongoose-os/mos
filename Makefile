@@ -10,12 +10,9 @@ GOBUILD_GOARCH ?=
 GOBUILD_CC ?=
 GOBUILD_CXX ?=
 
-# Redirect GOPATH to ./go
 REPO := $(realpath .)
-export GOPATH := $(REPO)/go
-GOBIN ?= $(GOPATH)/bin
+GOBIN ?= $(REPO)/go/bin
 export GOBIN := $(GOBIN)
-export GOCACHE := $(REPO)/go/.cache
 export PATH := $(GOBIN):$(PATH)
 SHELL := bash
 
@@ -35,21 +32,22 @@ fwbuild-instance: PKG = github.com/mongoose-os/mos/fwbuild/instance
 fwbuild-instance: OUT ?= fwbuild-instance
 fwbuild-instance: build-fwbuild-instance
 
-PKGDIR = $(GOPATH)/src/$(PKG)
-
 deps:
-ifndef NODEPS
-	@[ -f $(GOBIN)/govendor ] || \
-		( go get github.com/kardianos/govendor && go install github.com/kardianos/govendor )
-	cd $(GOPATH)/src/github.com/mongoose-os/mos && $(GOBIN)/govendor sync -v
-endif
+	go mod tidy
+	go mod download
+	go mod vendor
 
-generate: deps
-	@[ -f $(GOBIN)/go-bindata ] || \
-	  go install github.com/mongoose-os/mos/vendor/github.com/jteeuwen/go-bindata/go-bindata
-	@[ -f $(GOBIN)/go-bindata-assetfs ] || \
-	  go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-	cd $(GOPATH)/src/github.com/mongoose-os/mos && go generate ./...
+$(GOBIN)/go-bindata:
+	go install github.com/mongoose-os/mos/vendor/github.com/go-bindata/go-bindata/go-bindata
+
+$(GOBIN)/go-bindata-assetfs:
+	go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+
+generate: $(GOBIN)/go-bindata $(GOBIN)/go-bindata-assetfs
+	go generate \
+	  github.com/mongoose-os/mos/cli/... \
+	  github.com/mongoose-os/mos/common/... \
+	  github.com/mongoose-os/mos/fwbuild/...
 
 version/version.go version/version.json:
 	@# If we are building a Debian package, use its version.
@@ -74,10 +72,10 @@ version/version.go version/version.json:
 
 version: version/version.go
 
-build-%: deps version
+build-%: version
 	@go version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
-	  go build -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
+	  go build -v -mod=vendor -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
 
 docker-build-%:
 	docker run -i --rm \
@@ -153,6 +151,6 @@ clean-version: clean
 	rm -f version/version.*
 
 test:
-	cd $(GOPATH)/src/github.com/mongoose-os/mos/cli && go test ./...
-	cd $(GOPATH)/src/github.com/mongoose-os/mos/common && go test ./...
-	cd $(GOPATH)/src/github.com/mongoose-os/mos/fwbuild && go test ./...
+	go test github.com/mongoose-os/mos/cli/...
+	go test github.com/mongoose-os/mos/common/...
+	go test github.com/mongoose-os/mos/fwbuild/...
