@@ -23,14 +23,14 @@ command should be `sudo apt-get install mos-latest`
 Use PKGBUILD:
 
 ```bash
-$ git clone https://github.com/cesanta/mos-tool
-$ cd mos-tool/mos/archlinux_pkgbuild/mos-release
+$ git clone https://github.com/mongoose-os/mos
+$ cd mos/cli/archlinux_pkgbuild/mos-release
 $ makepkg
 $ pacman -U ./mos-*.tar.xz
 ```
 
 Note: to use the very latest version from the git repo, instead of the released
-one, invoke `makepkg` from `mos-tool/mos/archlinux_pkgbuild/mos-latest`.
+one, invoke `makepkg` from `mos/cli/archlinux_pkgbuild/mos-latest`.
 
 ## Installing Mac OS
 
@@ -43,7 +43,7 @@ $ brew install mos
 
 ## Building manually
 
-Minimal required Go version is 1.8.
+Minimal required Go version is 1.13.
 
 Go and other required tools can be installed on Ubuntu 16.10 as follows:
 
@@ -51,44 +51,19 @@ Go and other required tools can be installed on Ubuntu 16.10 as follows:
 sudo apt install golang-go build-essential python python-git libftdi-dev
 ```
 
-Make sure you have `GOPATH` set, and `PATH` should contain `$GOPATH/bin`.
-It can be done by adding this to your `~/.bashrc`:
-
-```bash
-export GOPATH="$HOME/go"
-export PATH="$PATH:$GOPATH/bin"
-```
-
-Install govendor:
-
-```bash
-go get github.com/kardianos/govendor
-```
-
 Now clone the `mos-tool` repository into the proper location and `cd` to it
-
-```bash
-git clone https://github.com/cesanta/mos-tool $GOPATH/src/cesanta.com
-cd $GOPATH/src/cesanta.com
-```
-
-Fetch all vendored packages and save them under the `vendor` dir:
-
-```
-$ govendor sync -v
-```
 
 Now, `mos` tool can be built:
 
 ```
-make -C mos install
+make mos
 ```
 
-It will produce the binary `$GOPATH/bin/mos`.
+It will produce the binary `mos`.
 
 ## Changelog
 
-See [release notes for this repo](https://github.com/cesanta/mos-tool/releases).
+See [release notes for this repo](https://github.com/mongoose-os/mos).
 
 Up to version 1.25, mos tool was located under the
 [mongoose-os](https://github.com/cesanta/mongoose-os) repo, so its changelog
