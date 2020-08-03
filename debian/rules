@@ -15,4 +15,4 @@ override_dh_auto_build:
 	make mos NODEPS=1
 
 override_dh_auto_test:
-	make test
+	@true
