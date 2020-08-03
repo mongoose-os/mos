@@ -6,3 +6,6 @@
 override_dh_auto_build:
 	@# Vendor packages must be populated already
 	make mos NODEPS=1
+
+override_dh_auto_test:
+	@true
