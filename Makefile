@@ -82,6 +82,7 @@ docker-build-%:
 	docker run -i --rm \
 	  -v $(CURDIR):/src \
 	  --user $(shell id -u):$(shell id -g) \
+	  -e HOME=/tmp \
 	  -e GOBIN=/src/go/bin/$* \
 	  --entrypoint /usr/bin/make \
 	  docker.io/mgos/ubuntu-golang:bionic \
