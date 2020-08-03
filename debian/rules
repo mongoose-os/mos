@@ -11,8 +11,9 @@ export GOCACHE = /tmp/go-cache
 	dh $@ --buildsystem=golang --with=golang
 
 override_dh_auto_build:
-	@# Vendor packages must be populated already
-	make mos NODEPS=1
+	@# Vendor packages must be populated already.
+	@# Set GOCACHE because Launchpad has unwritable $HOME
+	make mos GOCACHE=/tmp/gocache
 
 override_dh_auto_test:
 	@true
