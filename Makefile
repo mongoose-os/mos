@@ -71,7 +71,10 @@ version/version.go version/version.json:
 
 version: version/version.go
 
-build-%: version
+# Fetch deps if building for the first time
+vendor/modules.txt: deps
+
+build-%: version vendor/modules.txt
 	@go version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
 	  go build -v -mod=vendor -tags $(GOBUILD_TAGS) -ldflags $(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
