@@ -32,15 +32,17 @@ fwbuild-instance: PKG = github.com/mongoose-os/mos/fwbuild/instance
 fwbuild-instance: OUT ?= fwbuild-instance
 fwbuild-instance: build-fwbuild-instance
 
-deps:
-	go mod download
-	go mod vendor
-
 $(GOBIN)/go-bindata:
 	go install github.com/mongoose-os/mos/vendor/github.com/go-bindata/go-bindata/go-bindata
 
 $(GOBIN)/go-bindata-assetfs:
 	go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+
+vendor/modules.txt:
+	go mod download
+	go mod vendor
+
+deps: vendor/modules.txt
 
 generate: $(GOBIN)/go-bindata $(GOBIN)/go-bindata-assetfs
 	go generate \
@@ -70,9 +72,6 @@ version/version.go version/version.json:
 	@echo
 
 version: version/version.go
-
-# Fetch deps if building for the first time
-vendor/modules.txt: deps
 
 build-%: version vendor/modules.txt
 	@go version
