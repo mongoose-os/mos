@@ -35,14 +35,14 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/cli/build"
+	"github.com/mongoose-os/mos/cli/build/archive"
+	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/common/docker"
 	"github.com/mongoose-os/mos/common/ourglob"
 	"github.com/mongoose-os/mos/common/ourio"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
-	"github.com/mongoose-os/mos/cli/build"
-	"github.com/mongoose-os/mos/cli/build/archive"
-	moscommon "github.com/mongoose-os/mos/cli/common"
 	flock "github.com/theckman/go-flock"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -54,6 +54,7 @@ var (
 
 	reqParFileName    = flag.String("req-params", "", "Request params filename")
 	outputZipFileName = flag.String("output-zip", "", "Output zip filename")
+	timeoutFlag       = flag.Duration("timeout", 15*time.Minute, "Timeout for builds")
 
 	locks = &locksStruct{
 		flockByPath: map[string]*flock.Flock{},
@@ -452,7 +453,7 @@ func buildFirmware() error {
 	var buildOutput bytes.Buffer
 	out := io.MultiWriter(&buildOutput, os.Stderr)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), *timeoutFlag)
 	defer cancel()
 
 	// Run cloud-mos docker container which will do the build {{{
