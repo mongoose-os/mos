@@ -135,7 +135,7 @@ os-check:
 	@[ "`uname -s`" == "Darwin" ] || \
 	  { echo === Can only build downloads on a Mac, this is `uname -s`; exit 1; }
 
-downloads: os-check clean clean-version deps downloads-linux downloads-mac downloads-win
+downloads: os-check clean-version clean-vendor deps downloads-linux downloads-mac downloads-win
 	cp version/version.json downloads/mos/
 
 deploy-downloads: downloads
@@ -151,8 +151,10 @@ clean: clean-tools
 	rm -rf mos mos.exe mos/mos fwbuild-instance fwbuild-manager downloads/mos/{dmg,mac,linux,win} *.gz
 
 clean-tools:
-	rm -rf vendor
 	rm -rf $(GOBIN)
+
+clean-vendor:
+	rm -rf vendor
 
 clean-version: clean
 	rm -f version/version.*
