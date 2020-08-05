@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/config"
 	"github.com/mongoose-os/mos/cli/dev"
@@ -32,6 +31,7 @@ import (
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"github.com/mongoose-os/mos/version"
+	glog "k8s.io/klog/v2"
 )
 
 type licenseRequest struct {

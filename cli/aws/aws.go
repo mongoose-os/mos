@@ -37,7 +37,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iot"
 	"github.com/go-ini/ini"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/atca"
 	"github.com/mongoose-os/mos/cli/config"
@@ -46,6 +45,7 @@ import (
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"github.com/mongoose-os/mos/cli/x509utils"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 )
 
 const (

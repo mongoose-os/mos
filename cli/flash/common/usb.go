@@ -19,9 +19,9 @@
 package common
 
 import (
-	"github.com/golang/glog"
 	"github.com/google/gousb"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 // OpenUSBDevice opens a USB device with specified VID, PID and (optionally) serial number.

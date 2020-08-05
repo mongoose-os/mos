@@ -26,10 +26,10 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
-	zip "github.com/mongoose-os/mos/common/ourzip"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	zip "github.com/mongoose-os/mos/common/ourzip"
+	glog "k8s.io/klog/v2"
 )
 
 const (

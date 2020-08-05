@@ -33,7 +33,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/build"
 	"github.com/mongoose-os/mos/cli/build/archive"
@@ -45,6 +44,7 @@ import (
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
 	flock "github.com/theckman/go-flock"
 	yaml "gopkg.in/yaml.v2"
+	glog "k8s.io/klog/v2"
 )
 
 var (

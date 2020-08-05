@@ -19,8 +19,8 @@ package cortex
 import (
 	"context"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/cli/flash/common"
 )

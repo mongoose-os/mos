@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/glog"
+	glog "k8s.io/klog/v2"
 )
 
 func Reportf(f string, args ...interface{}) {

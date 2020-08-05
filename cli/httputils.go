@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 const (

@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 type ConfigSetArg struct {

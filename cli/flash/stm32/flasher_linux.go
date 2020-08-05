@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 func GetSTLinkMountForPort(port string) (string, string, error) {

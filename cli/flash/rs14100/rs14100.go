@@ -24,16 +24,16 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/flash/common"
 	"github.com/mongoose-os/mos/cli/flash/common/cmsis-dap/dap"
 	"github.com/mongoose-os/mos/cli/flash/common/cmsis-dap/dp"
 	"github.com/mongoose-os/mos/cli/flash/common/cmsis-dap/memap"
 	"github.com/mongoose-os/mos/cli/flash/common/cortex"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
 )
 
 const (

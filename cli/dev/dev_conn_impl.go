@@ -22,13 +22,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	"github.com/mongoose-os/mos/cli/rpccreds"
 	"github.com/mongoose-os/mos/common/mgrpc"
 	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	"github.com/mongoose-os/mos/cli/rpccreds"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 )
 
 const (

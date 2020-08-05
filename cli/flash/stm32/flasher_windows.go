@@ -10,10 +10,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"golang.org/x/sys/windows"
+	glog "k8s.io/klog/v2"
 )
 
 // GetSTLinkMounts enumerated drives and finds ones that have

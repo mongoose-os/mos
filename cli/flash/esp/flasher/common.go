@@ -17,10 +17,10 @@
 package flasher
 
 import (
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp/rom_client"
+	glog "k8s.io/klog/v2"
 )
 
 const (

@@ -13,11 +13,11 @@ import (
 	"runtime"
 	"sort"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/flash/cc32xx"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
+	glog "k8s.io/klog/v2"
 )
 
 const (

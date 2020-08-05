@@ -34,7 +34,6 @@ import (
 
 	"context"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
@@ -46,6 +45,7 @@ import (
 	"github.com/mongoose-os/mos/common/multierror"
 	"github.com/mongoose-os/mos/common/ourio"
 	yaml "gopkg.in/yaml.v2"
+	glog "k8s.io/klog/v2"
 )
 
 func buildLocal(ctx context.Context, bParams *build.BuildParams) error {

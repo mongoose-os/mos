@@ -25,9 +25,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	glog "k8s.io/klog/v2"
 )
 
 const (

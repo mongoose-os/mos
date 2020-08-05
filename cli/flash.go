@@ -27,11 +27,10 @@ import (
 
 	"context"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/devutil"
 	"github.com/mongoose-os/mos/cli/flags"
@@ -42,6 +41,7 @@ import (
 	"github.com/mongoose-os/mos/cli/flash/rs14100"
 	"github.com/mongoose-os/mos/cli/flash/stm32"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/version"
 )
 

@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/cesanta/go-serial/serial"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/flash/common"
+	glog "k8s.io/klog/v2"
 )
 
 type loaderCmd uint8

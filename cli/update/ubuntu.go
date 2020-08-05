@@ -27,8 +27,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"

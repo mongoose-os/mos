@@ -24,9 +24,9 @@ import (
 
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"golang.org/x/net/websocket"
+	glog "k8s.io/klog/v2"
 )
 
 type ConnectFunc func(addr string) (Codec, error)

@@ -24,8 +24,8 @@ import (
 	"strings"
 
 	"github.com/fsouza/go-dockerclient"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 type ExitError struct {

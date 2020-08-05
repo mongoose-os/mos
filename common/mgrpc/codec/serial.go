@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/cesanta/go-serial/serial"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 const (

@@ -28,11 +28,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudiot/v1"
+	glog "k8s.io/klog/v2"
 )
 
 const (

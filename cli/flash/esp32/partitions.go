@@ -23,9 +23,9 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/fwbundle"
+	glog "k8s.io/klog/v2"
 )
 
 // esp_partition_info_t

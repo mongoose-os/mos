@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/atca"
 	"github.com/mongoose-os/mos/cli/config"
@@ -38,6 +37,7 @@ import (
 	"github.com/mongoose-os/mos/cli/x509utils"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudiot/v1"
+	glog "k8s.io/klog/v2"
 )
 
 func FileExists(path string) bool {

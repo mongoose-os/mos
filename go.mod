@@ -16,7 +16,6 @@ require (
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/go-ini/ini v1.39.0
 	github.com/gofrs/flock v0.7.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.2.1-0.20190109072247-347cf4a86c1c // indirect
 	github.com/google/gousb v0.0.0-20181005115310-15d2fa288b98
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
@@ -42,4 +41,5 @@ require (
 	google.golang.org/genproto v0.0.0-20190123001331-8819c946db44 // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4
+	k8s.io/klog/v2 v2.3.0
 )

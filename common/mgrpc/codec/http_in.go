@@ -26,9 +26,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
+	glog "k8s.io/klog/v2"
 )
 
 type inboundHttpCodec struct {

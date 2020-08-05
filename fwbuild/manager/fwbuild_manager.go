@@ -35,10 +35,10 @@ import (
 	"time"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	goji "goji.io"
 	"goji.io/pat"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/common/docker"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"

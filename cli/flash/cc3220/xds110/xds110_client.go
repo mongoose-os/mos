@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/gousb"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/flash/common"
+	glog "k8s.io/klog/v2"
 )
 
 const (

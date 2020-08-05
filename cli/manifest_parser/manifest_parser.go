@@ -35,10 +35,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"

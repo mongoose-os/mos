@@ -17,9 +17,9 @@
 package esp32
 
 import (
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/flash/esp"
+	glog "k8s.io/klog/v2"
 )
 
 type fakeFuseController struct {

@@ -32,11 +32,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/kardianos/osext"
 	goversion "github.com/mcuadros/go-version"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"

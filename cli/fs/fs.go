@@ -27,12 +27,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 )
 
 var (

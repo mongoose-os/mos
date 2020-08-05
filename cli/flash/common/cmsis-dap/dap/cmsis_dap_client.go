@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/cesanta/hid"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 type cmd uint8

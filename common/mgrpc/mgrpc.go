@@ -32,10 +32,10 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
+	glog "k8s.io/klog/v2"
 )
 
 const (
@@ -343,7 +343,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 			continue
 		}
 
-		if glog.V(2) {
+		if glog.V(2).Enabled() {
 			s := fmt.Sprintf("%+v", f)
 			if len(s) > 1024 {
 				s = fmt.Sprintf("%s... (%d)", s[:1024], len(s))

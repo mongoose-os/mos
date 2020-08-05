@@ -21,7 +21,6 @@ package main
 import (
 	"context"
 	cRand "crypto/rand"
-	goflag "flag"
 	"fmt"
 	"log"
 	"math/big"
@@ -30,9 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/cli/aws"
 	"github.com/mongoose-os/mos/cli/azure"
@@ -236,16 +235,11 @@ func main() {
 		return
 	}
 
-	defer glog.Flush()
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		glog.Flush()
-	}()
-
 	consoleMsgs = make(chan []byte, 10)
 
+	glog.LogToStderr(false) // Can be enabled with --logtostderr/--alsologtostderr.
+
 	initFlags()
-	flag.Parse()
 
 	if *chdir != "" {
 		if err := os.Chdir(*chdir); err != nil {
@@ -253,9 +247,14 @@ func main() {
 		}
 	}
 
+	defer glog.Flush()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		glog.Flush()
+	}()
+
 	osSpecificInit()
 
-	goflag.CommandLine.Parse([]string{}) // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
 
 	glog.Infof("Version: %s", version.Version)

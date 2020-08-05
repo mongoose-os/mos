@@ -31,9 +31,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
+	glog "k8s.io/klog/v2"
 )
 
 // Note: As of today (2018-04-16), there is no official Go SDK for Azure IoT Devices API,

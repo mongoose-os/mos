@@ -21,11 +21,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
+	glog "k8s.io/klog/v2"
 )
 
 var (

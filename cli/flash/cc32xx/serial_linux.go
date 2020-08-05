@@ -20,8 +20,8 @@ import (
 	"os/exec"
 	"regexp"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
 )
 
 func GetUSBSerialNumberForPort(port string) (string, error) {

@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 	"golang.org/x/net/websocket"
+	glog "k8s.io/klog/v2"
 )
 
 const (

@@ -26,9 +26,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
 
-	"github.com/mongoose-os/mos/common/multierror"
 	"github.com/mongoose-os/mos/cli/update"
+	"github.com/mongoose-os/mos/common/multierror"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -46,9 +47,11 @@ var (
 )
 
 func initFlags() {
+	glog.InitFlags(nil)
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	hideFlags()
 	flag.Usage = usage
+	flag.Parse()
 }
 
 func hideFlags() {

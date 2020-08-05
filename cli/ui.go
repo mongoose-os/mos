@@ -34,12 +34,12 @@ import (
 	"time"
 
 	"github.com/elazarl/go-bindata-assetfs"
-	"github.com/golang/glog"
 	"github.com/juju/errors"
 	shellwords "github.com/mattn/go-shellwords"
 	"github.com/skratchdot/open-golang/open"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/websocket"
+	glog "k8s.io/klog/v2"
 
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/devutil"
