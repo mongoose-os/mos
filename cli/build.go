@@ -573,14 +573,16 @@ func (lpr *compProviderReal) GetLibLocalPath(
 			return "", errors.Annotatef(err, "%s: preparing local copy", name)
 		}
 
-		if m.GetType() == build.SWModuleTypeGit {
+		if m.GetType() == build.SWModuleTypeGit && updateIntvl != 0 {
 			if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
 				freportf(logWriter, "%s: Hash is updated: %s -> %s", name, curHash, newHash)
 				// The current repo hash has changed after the pull, so we need to
 				// vanish binary lib(s) we might have downloaded before
 				bLibs, _ := filepath.Glob(moscommon.GetBinaryLibFilePath(moscommon.GetBuildDir(appDir), name, "*", "*"))
 				for _, bl := range bLibs {
-					os.Remove(bl)
+					if os.Remove(bl) == nil {
+						freportf(logWriterStderr, "%s: Removed %s because the repo has been updated", name, bl)
+					}
 				}
 			} else {
 				freportf(logWriter, "%s: Hash unchanged at %s (dir %q)", name, curHash, libDirAbs)
