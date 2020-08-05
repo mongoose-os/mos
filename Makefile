@@ -151,6 +151,7 @@ clean: clean-tools
 	rm -rf mos mos.exe mos/mos fwbuild-instance fwbuild-manager downloads/mos/{dmg,mac,linux,win} *.gz
 
 clean-tools:
+	rm -rf vendor
 	rm -rf $(GOBIN)
 
 clean-version: clean
