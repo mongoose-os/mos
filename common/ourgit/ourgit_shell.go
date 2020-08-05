@@ -237,24 +237,23 @@ func (m *ourGitShell) HashesEqual(hash1, hash2 string) bool {
 }
 
 func (m *ourGitShell) shellGit(localDir string, subcmd string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{subcmd}, args...)...)
+	var cmdArgs []string
 
-	// If the user provided their own password helper, do nothing.
-	// Otherwise, insert ourselves as auth provider.
-	if os.Getenv(GitAskPassEnv) == "" {
-		var user, pass string
-		if m.creds != nil {
-			user = m.creds.User
-			pass = m.creds.Pass
-		}
+	// If the user provided credentials, insert ourserves as auth helper.
+	if m.creds != nil {
 		if myPath, err := os.Executable(); err == nil {
-			cmd.Env = append(os.Environ(),
-				fmt.Sprintf("%s=%s", GitAskPassEnv, myPath),
-				fmt.Sprintf("%s=%s", gitCredsUserEnv, user),
-				fmt.Sprintf("%s=%s", gitCredsPassEnv, pass),
-			)
+			myPath = strings.Replace(myPath, `\`, `\\`, -1)
+			myPath = strings.Replace(myPath, ` `, `\ `, -1)
+			cmdArgs = append(cmdArgs,
+				"-c", fmt.Sprintf("credential.helper=%s --log_file=/dev/null git-credentials --gh-token=:%s:%s",
+					myPath, m.creds.User, m.creds.Pass))
 		}
 	}
+
+	cmdArgs = append(cmdArgs, subcmd)
+	cmdArgs = append(cmdArgs, args...)
+
+	cmd := exec.Command("git", cmdArgs...)
 
 	var b bytes.Buffer
 	var berr bytes.Buffer
@@ -267,23 +266,6 @@ func (m *ourGitShell) shellGit(localDir string, subcmd string, args ...string) (
 	}
 	resp := b.String()
 	return strings.TrimRight(resp, "\r\n"), nil
-}
-
-func RunAskPassHelper() {
-	// Helper is invoked twice, once for username and once for password, the only difference is in the prompt text.
-	// We try to guess what to output but it will fail if Git is localized, so we revert to spitting out password
-	// since in practice username is ignored most of the time (GitHub, GitLab).
-	// If necessary, this can be improved with some additional effort (such as keeping a flag file).
-	prompt := os.Args[1]
-	if os.Getenv(gitCredsUserEnv) == "" && os.Getenv(gitCredsPassEnv) == "" {
-		fmt.Fprintf(os.Stderr, "Git credentials required but none were provided. Supply --gh-token.\n")
-		os.Exit(1)
-	}
-	if strings.Contains(strings.ToLower(prompt), "username") {
-		os.Stdout.WriteString(os.Getenv(gitCredsUserEnv))
-	} else {
-		os.Stdout.WriteString(os.Getenv(gitCredsPassEnv))
-	}
 }
 
 // HaveShellGit checks if "git" command is available.

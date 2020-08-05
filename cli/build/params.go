@@ -26,17 +26,21 @@ type Credentials struct {
 	Pass string
 }
 
-func (bp *BuildParams) GetCredentialsForHost(host string) *Credentials {
-	if bp.Credentials == nil {
+func GetCredentialsForHost(credsMap map[string]Credentials, host string) *Credentials {
+	if len(credsMap) == 0 {
 		return nil
 	}
-	creds, ok := bp.Credentials[host]
+	creds, ok := credsMap[host]
 	if ok {
 		return &creds
 	}
-	creds, ok = bp.Credentials[""]
+	creds, ok = credsMap[""]
 	if ok {
 		return &creds
 	}
 	return nil
+}
+
+func (bp *BuildParams) GetCredentialsForHost(host string) *Credentials {
+	return GetCredentialsForHost(bp.Credentials, host)
 }

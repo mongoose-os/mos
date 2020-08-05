@@ -22,6 +22,7 @@ import (
 	"context"
 	cRand "crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/big"
 	mRand "math/rand"
@@ -51,7 +52,6 @@ import (
 	"github.com/mongoose-os/mos/cli/ota"
 	"github.com/mongoose-os/mos/cli/update"
 	"github.com/mongoose-os/mos/cli/watson"
-	"github.com/mongoose-os/mos/common/ourgit"
 	"github.com/mongoose-os/mos/common/pflagenv"
 	"github.com/mongoose-os/mos/version"
 )
@@ -162,6 +162,7 @@ func init() {
 		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, No, true},
 		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, No, true},
 		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, No, true},
+		{"git-credentials", gitCredentials, `Git credentials helper mode`, nil, nil, No, true},
 		{"ports", showPorts, `Show serial ports`, nil, nil, No, true},
 	}
 }
@@ -229,17 +230,17 @@ func main() {
 	seed2, _ := cRand.Int(cRand.Reader, big.NewInt(4000000000))
 	mRand.Seed(seed1 ^ seed2.Int64())
 
-	// We are being invoked as a Git askpass helper. Spit out
-	if os.Getenv(ourgit.GitAskPassEnv) != "" {
-		ourgit.RunAskPassHelper()
-		return
-	}
-
 	consoleMsgs = make(chan []byte, 10)
 
 	glog.LogToStderr(false) // Can be enabled with --logtostderr/--alsologtostderr.
 
 	initFlags()
+
+	if logFile, err := flag.CommandLine.GetString("log_file"); err == nil {
+		if logFile == "/dev/null" || strings.ToLower(logFile) == "nul" {
+			glog.SetOutput(ioutil.Discard)
+		}
+	}
 
 	if *chdir != "" {
 		if err := os.Chdir(*chdir); err != nil {
