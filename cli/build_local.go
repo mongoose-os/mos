@@ -143,7 +143,7 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider},
 		true /* requireArch */, *preferPrebuiltLibs, libsUpdateIntvl)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "error parsing manifest")
 	}
 
 	// Write final manifest to build dir

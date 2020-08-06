@@ -650,10 +650,6 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 	if pc.appManifest == nil {
 		pc.appManifest = manifest
 
-		// Also, remove any build vars from adjustments, so that they won't be set on
-		// deps' manifest we're going to read as well
-		pc.adjustments.BuildVars = nil
-
 		if !manifest.NoImplInitDeps {
 			found := false
 			for _, l := range manifest.Libs {
@@ -1156,7 +1152,7 @@ func expandManifestLibsAndConds(
 					skipSources: true,
 				},
 			); err != nil {
-				return errors.Annotatef(err, `expanding %q`, lcur.Lib.Name)
+				return errors.Annotatef(err, "expanding %q", lcur.Lib.Name)
 			}
 
 			commonManifest = &curManifest

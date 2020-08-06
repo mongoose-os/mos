@@ -1,7 +1,7 @@
 build_vars:
   # Override LIB4_VAR2 which *is* defined by the app as well
-  LIB4_VAR2: ${build_vars.LIB4_VAR2} from_cli
-
-  # Define FOO which uses LIB4_VAR1, which *is NOT* defined by the app, so it
-  # should be finally expanded later.
-  FOO: ${build_vars.LIB4_VAR1} foo_from_cli
+  LIB4_VAR2: lib4_var2_from_cli
+  # This one is not defined anywhere.
+  NEW_VAR_FROM_CLI: new_from_cli
+  # This one has default value but is overridden.
+  OVERRIDE_FROM_CLI: overridden_from_cli

@@ -38,9 +38,8 @@ config_schema:
   - title: Myapp settings
 build_vars:
   BOARD: ""
-  FOO: lib4_var1 lib3_var1 foo_from_cli
   LIB4_VAR1: lib4_var1 lib3_var1
-  LIB4_VAR2: lib4_var2 lib3_var2 app from_cli
+  LIB4_VAR2: lib4_var2_from_cli
   LIB4_VAR3: lib4_var3 app
   MGOS: "1"
   MGOS_HAVE_CORE: "1"
@@ -48,6 +47,8 @@ build_vars:
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
   MGOS_HAVE_MYLIB4: "1"
+  NEW_VAR_FROM_CLI: new_from_cli
+  OVERRIDE_FROM_CLI: overridden_from_cli
 cdefs:
   MGOS: "1"
   MGOS_HAVE_CORE: "1"
@@ -55,6 +56,14 @@ cdefs:
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
   MGOS_HAVE_MYLIB4: "1"
+  NEW_VAR_FROM_CLI_WORKS_IN_CONDS: "1"
+  NEW_VAR_FROM_CLI_WORKS_IN_LIB_CONDS: "1"
+  OVERRIDE_FROM_CLI_WORKS_IN_CONDS: "1"
+  OVERRIDE_FROM_CLI_WORKS_IN_LIB_CONDS: "1"
+  V1: v1 lib4_var1 lib3_var1
+  V2: v2 lib4_var2_from_cli
+  V3: v3 new_from_cli
+  V4: v4 overridden_from_cli
 libs_version: "0.01"
 modules_version: "0.01"
 mongoose_os_version: "0.01"

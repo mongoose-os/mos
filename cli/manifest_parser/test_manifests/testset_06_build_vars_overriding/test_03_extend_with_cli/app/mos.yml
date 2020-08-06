@@ -19,5 +19,23 @@ config_schema:
 build_vars:
   LIB4_VAR2: ${build_vars.LIB4_VAR2} app
   LIB4_VAR3: ${build_vars.LIB4_VAR3} app
+  OVERRIDE_FROM_CLI: default  # This one will be overriddedn from CLI
+
+cdefs:
+  V1: "v1 ${build_vars.LIB4_VAR1}"
+  V2: "v2 ${build_vars.LIB4_VAR2}"
+  V3: "v3 ${build_vars.NEW_VAR_FROM_CLI}"
+  V4: "v4 ${build_vars.OVERRIDE_FROM_CLI}"
+
+conds:
+  - when: build_vars.NEW_VAR_FROM_CLI == "new_from_cli"
+    apply:
+      cdefs:
+        NEW_VAR_FROM_CLI_WORKS_IN_CONDS: 1
+
+  - when: build_vars.OVERRIDE_FROM_CLI == "overridden_from_cli"
+    apply:
+      cdefs:
+        OVERRIDE_FROM_CLI_WORKS_IN_CONDS: 1
 
 manifest_version: 2017-09-29

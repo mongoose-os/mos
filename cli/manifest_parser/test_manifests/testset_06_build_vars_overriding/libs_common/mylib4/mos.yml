@@ -18,4 +18,15 @@ build_vars:
   LIB4_VAR2: lib4_var2
   LIB4_VAR3: lib4_var3
 
+conds:
+  - when: defined(build_vars.NEW_VAR_FROM_CLI)
+    apply:
+      cdefs:
+        NEW_VAR_FROM_CLI_WORKS_IN_LIB_CONDS: 1
+
+  - when: build_vars.LIB4_VAR2 == "lib4_var2_from_cli"
+    apply:
+      cdefs:
+        OVERRIDE_FROM_CLI_WORKS_IN_LIB_CONDS: 1
+
 manifest_version: 2017-09-29
