@@ -67,6 +67,8 @@ var (
 )
 
 func main() {
+	glog.InitFlags(nil)
+	glog.LogToStderr(false) // Can be enabled with --logtostderr/--alsologtostderr.
 	flag.Parse()
 
 	glog.Infof("fwbuild-manager %s (%s)", version.Version, version.BuildId)

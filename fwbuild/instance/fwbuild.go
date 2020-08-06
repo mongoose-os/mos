@@ -562,6 +562,8 @@ func usage() {
 }
 
 func main() {
+	glog.InitFlags(nil)
+	glog.LogToStderr(false) // Can be enabled with --logtostderr/--alsologtostderr.
 	flag.Parse()
 
 	if err := os.MkdirAll(*volumesDir, 0775); err != nil {
