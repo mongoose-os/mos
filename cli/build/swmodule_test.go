@@ -62,6 +62,12 @@ func TestParseGitLocation(t *testing.T) {
 			rh: "github.com", rp: "foo/bar", rn: "bar", ln: "baz", url: "https://github.com/foo/bar", path: "baz"},
 		{loc: "https://github.com/foo/bar/tree/master/baz/boo",
 			rh: "github.com", rp: "foo/bar", rn: "bar", ln: "boo", url: "https://github.com/foo/bar", path: "baz/boo"},
+		{loc: "https://gitlab.example.org/foo/-/tree/master/bar",
+			rh: "gitlab.example.org", rp: "foo", rn: "foo", ln: "bar", url: "https://gitlab.example.org/foo", path: "bar"},
+		{loc: "https://gitlab.example.org/foo/bar/-/tree/master/baz",
+			rh: "gitlab.example.org", rp: "foo/bar", rn: "bar", ln: "baz", url: "https://gitlab.example.org/foo/bar", path: "baz"},
+		{loc: "https://gitlab.example.org/foo/-/tree/master/bar/baz",
+			rh: "gitlab.example.org", rp: "foo", rn: "foo", ln: "baz", url: "https://gitlab.example.org/foo", path: "bar/baz"},
 	}
 
 	for _, c := range cases {

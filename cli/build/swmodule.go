@@ -121,13 +121,29 @@ func parseGitLocation(loc string) (string, string, string, string, string, strin
 		libName = libName[:len(libName)-4]
 	}
 	// Now find where repo name ends and path within repo begins.
-	// For GitHub HTTP URLs we expect tree/*/, for all other we find first component that ends in ".git".
-	if u.Scheme == "https" && u.Host == "github.com" && len(parts) > 4 {
-		repoPath = strings.Join(parts[1:3], "/")
-		repoName = parts[2]
-		u.Path = strings.Join(parts[:3], "/")
-		pathWithinRepo = filepath.Join(parts[5:]...)
-	} else {
+	if u.Scheme == "https" {
+		// For GitHub HTTP URLs we expect {repoPath}/tree/{branch}/{pathWithinRepo}
+		if u.Host == "github.com" {
+			if len(parts) > 4 {
+				repoPath = strings.Join(parts[1:3], "/")
+				repoName = parts[2]
+				u.Path = strings.Join(parts[:3], "/")
+				pathWithinRepo = filepath.Join(parts[5:]...)
+			}
+		} else {
+			// GitLab HTTP URLs have {repoPath}/-/tree/{branch}/{pathWithinRepo}
+			for i, p := range parts {
+				if i > 2 && p == "tree" && parts[i-1] == "-" && i < len(parts)-2 {
+					repoPath = strings.Join(parts[1:i-1], "/")
+					repoName = parts[i-2]
+					u.Path = strings.Join(parts[:i-1], "/")
+					pathWithinRepo = filepath.Join(parts[i+2:]...)
+				}
+			}
+		}
+	}
+	// For everything else we look for the first component that ends in ".git".
+	if repoName == "" {
 		pathParts := []string{}
 		for i, part := range parts {
 			if strings.HasSuffix(part, ".git") {
