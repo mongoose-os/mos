@@ -98,7 +98,11 @@ func init() {
 // Build {{{
 
 func getCredentialsFromCLI() (map[string]build.Credentials, error) {
-	credsStr := *flags.GHToken
+	credsStr := *flags.Credentials
+	if credsStr == "" && *flags.GHToken != "" {
+		credsStr = *flags.GHToken
+		glog.Errorf("--gh-token is deprecated, please use --credentials")
+	}
 	if credsStr == "" {
 		return nil, nil
 	}
