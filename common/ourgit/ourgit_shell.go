@@ -114,7 +114,7 @@ func (m *ourGitShell) IsClean(localDir, version string, excludeGlobs []string) (
 
 	if resp != "" {
 		// Working dir is dirty
-		glog.Errorf("%s: dirty: %s", localDir, resp)
+		glog.Errorf("%s: dirty (uncommited changes present)", localDir)
 		return false, nil
 	}
 
@@ -137,7 +137,7 @@ scan:
 				continue scan
 			}
 		}
-		glog.Errorf("%s: dirty 2: %s", localDir, resp)
+		glog.Errorf("%s: dirty (untracked files or uncommitted changes)", localDir)
 		return false, nil
 	}
 
@@ -173,7 +173,7 @@ scan:
 
 	if resp != "" {
 		// Some commits need to be pushed to upstream
-		glog.Errorf("%s: dirty 3", localDir)
+		glog.Errorf("%s: dirty (unpushed commits present)", localDir)
 		return false, nil
 	}
 
