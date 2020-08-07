@@ -19,7 +19,7 @@ func gitCredentials(ctx context.Context, devConn dev.DevConn) error {
 		return err
 	}
 	if len(creds) == 0 {
-		return errors.Errorf("git-credential requires --gh-token")
+		return errors.Errorf("git-credential requires --credentials")
 	}
 	// The protocol is documented in git-credential(1):
 	// https://git-scm.com/docs/git-credential

@@ -245,7 +245,7 @@ func (m *ourGitShell) shellGit(localDir string, subcmd string, args ...string) (
 			myPath = strings.Replace(myPath, `\`, `\\`, -1)
 			myPath = strings.Replace(myPath, ` `, `\ `, -1)
 			cmdArgs = append(cmdArgs,
-				"-c", fmt.Sprintf("credential.helper=%s --log_file=/dev/null git-credentials --gh-token=:%s:%s",
+				"-c", fmt.Sprintf("credential.helper=%s --log_file=/dev/null git-credentials --credentials=:%s:%s",
 					myPath, m.creds.User, m.creds.Pass))
 		}
 	}

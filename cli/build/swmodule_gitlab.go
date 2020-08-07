@@ -46,7 +46,7 @@ func fetchGitLabAsset(host, repoPath, tag, assetName, token string) ([]byte, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --gh-token)", resp.StatusCode, relMetaURL)
+		return nil, errors.Errorf("got %d status code when fetching %s (note: private repos may need --credentials)", resp.StatusCode, relMetaURL)
 	}
 	relMetaData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

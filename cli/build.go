@@ -190,7 +190,7 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 
 		credentials, err := getCredentialsFromCLI()
 		if err != nil {
-			return errors.Annotatef(err, "error parsing --gh-token")
+			return errors.Annotatef(err, "error parsing --credentials")
 		}
 
 		bParams = build.BuildParams{
