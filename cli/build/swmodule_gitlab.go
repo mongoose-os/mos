@@ -63,8 +63,8 @@ func fetchGitLabAsset(host, repoPath, tag, assetName, token string) ([]byte, err
 				Name     string `json:"name"`
 				URL      string `json:"url"`
 				LinkType string `json:"link_type"`
-			} `json:"assets"`
-		}
+			} `json:"links"`
+		} `json:"assets"`
 	}
 	if err = json.Unmarshal(relMetaData, &relMeta); err != nil {
 		return nil, errors.Annotatef(err, "failed to parse GitLab release info")
@@ -78,7 +78,7 @@ func fetchGitLabAsset(host, repoPath, tag, assetName, token string) ([]byte, err
 	// 1. Check link assets. Name must match and type must be "package".
 	assetURL := ""
 	for _, a := range relMeta.Assets.Links {
-		if a.Name == assetName && a.LinkType == "package" {
+		if a.Name == assetName {
 			assetURL = a.URL
 			break
 		}
