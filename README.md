@@ -24,21 +24,28 @@ Use PKGBUILD:
 
 ```bash
 $ git clone https://github.com/mongoose-os/mos
-$ cd mos/mos/archlinux_pkgbuild/mos-release/
+$ cd mos/tools/archlinux_pkgbuild/mos-release
+$ sudo pacman -Sy gcc go git jshon make pkgconf python3
 $ makepkg
 $ pacman -U ./mos-*.tar.xz
 ```
 
 Note: to use the very latest version from the git repo, instead of the released
-one, invoke `makepkg` from `mos-tool/mos/archlinux_pkgbuild/mos-latest`.
+one, invoke `makepkg` from `mos/tools/archlinux_pkgbuild/mos-latest`.
 
-## Installing Mac OS
+## Installing on Mac OS
 
-Use homebrew:
+Using [Homebrew][https://brew.sh/]:
 
 ```bash
 $ brew tap cesanta/mos
 $ brew install mos
+```
+
+To use latest:
+
+```
+$ brew install mos-latest
 ```
 
 ## Building manually
@@ -50,6 +57,8 @@ You will need:
  * Python 3
  * libftdi + headers
  * libusb 1.0 + headers
+ * GCC
+ * pkg-config
  * Docker - optional, only for building Windows binaries on Mac or Linux.
 
 Commands to install all the build dependencies:
@@ -64,16 +73,10 @@ $ git clone https://github.com/mongoose-os/mos
 $ cd mos
 ```
 
-Fetch dependencies (only needed for the first build):
-
-```
-$ make deps
-```
-
 Build the binary:
 
 ```
 $ make
 ```
 
-It will produce `mos/mos` (or `mos/mos.exe` on Windows).
+It will produce `mos` (or `mos.exe` on Windows).

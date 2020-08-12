@@ -1,0 +1,32 @@
+MOS_TAG=2.17.0
+
+pkgname=mos
+pkgver=${MOS_TAG}
+pkgrel=1
+pkgdesc="Mongoose-OS build tool (release)"
+arch=('i686' 'x86_64')
+license=('Apache')
+url="https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md"
+depends=('libftdi-compat' 'libusb')
+makedepends=(
+    'gcc'
+    'go'
+    'git'
+    'jshon'
+    'make'
+    'pkgconf'
+    'python3'
+)
+conflicts=('mos-latest')
+
+source=(git+https://github.com/mongoose-os/mos#tag=${MOS_TAG})
+
+md5sums=('SKIP')
+
+build() {
+  make -C "$srcdir/mos" mos
+}
+
+package() {
+  install -D "$srcdir/mos/mos" "$pkgdir/usr/bin/mos"
+}
