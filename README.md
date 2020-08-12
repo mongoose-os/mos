@@ -25,7 +25,7 @@ Use PKGBUILD:
 ```bash
 $ git clone https://github.com/mongoose-os/mos
 $ cd mos/tools/archlinux_pkgbuild/mos-release
-$ sudo pacman -Sy gcc go git jshon make pkgconf python3
+$ sudo pacman -Sy gcc go git jq make pkgconf python3
 $ makepkg
 $ pacman -U ./mos-*.tar.xz
 ```

@@ -76,6 +76,9 @@ version/version.go version/version.json:
 
 version: version/version.go
 
+get-version: version/version.json
+	jq -r .build_version version/version.json
+
 build-%: version vendor/modules.txt
 	@go version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \

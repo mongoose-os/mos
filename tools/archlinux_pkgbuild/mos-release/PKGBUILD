@@ -12,7 +12,6 @@ makedepends=(
     'gcc'
     'go'
     'git'
-    'jshon'
     'make'
     'pkgconf'
     'python3'

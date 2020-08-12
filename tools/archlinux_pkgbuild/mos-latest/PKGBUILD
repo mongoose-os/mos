@@ -10,7 +10,7 @@ makedepends=(
     'gcc'
     'go'
     'git'
-    'jshon'
+    'jq'
     'make'
     'pkgconf'
     'python3'
@@ -22,8 +22,7 @@ source=(git+https://github.com/mongoose-os/mos.git#branch=master)
 md5sums=('SKIP')
 
 pkgver() {
-  make -C "$srcdir/mos" clean-version version/version.json > /dev/null 2>&1
-  jshon -F "$srcdir/mos/version/version.json" -e build_version -u
+  make -C "$srcdir/mos" clean-version get-version
 }
 
 build() {
