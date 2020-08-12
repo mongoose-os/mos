@@ -23,7 +23,7 @@ package cc3200
 /*
 #include <ftdi.h>
 
-#cgo LDFLAGS: -lftdi -lusb -pthread
+#cgo pkg-config: libftdi1
 */
 import "C"
 
