@@ -84,7 +84,7 @@ build-%: version vendor/modules.txt
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
 	  go build -mod=vendor -tags $(GOBUILD_TAGS) -ldflags '-s -w '$(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
 
-build-docker-%:
+docker-build-%:
 	docker run -i --rm \
 	  -v $(CURDIR):/src \
 	  --user $(shell id -u):$(shell id -g) \
@@ -93,10 +93,7 @@ build-docker-%:
 	  -e GOCACHE=/src/go/.cache \
 	  --entrypoint /usr/bin/make \
 	  docker.io/mgos/ubuntu-golang:bionic \
-	    -C /src $* OUT=$*
-
-docker-build-%: build-docker-%
-	  mv $* tools/docker/$*/$*
+	    -C /src $* OUT=tools/docker/$*/$*
 	  $(MAKE) -C tools/docker/$* docker-build NOBUILD=1 TAG=$(TAG)
 
 docker-push-%:
