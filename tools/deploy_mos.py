@@ -197,7 +197,7 @@ if __name__ == "__main__":
     print("Checking GPG signing key passphrase...")
     RunSubprocess([
         "docker", "run", "-it", "--rm",
-        "-v", "%s:/root/.gnupg" % GPG_KEY_PATH,
+        "-v", "%s:/home/.gnupg" % GPG_KEY_PATH,
         "docker.io/mgos/ubuntu-golang:xenial",
         "gpg", "--sign", "--no-use-agent", "-o", "/dev/null", "/dev/null"],
         communicator=UploaderComm)

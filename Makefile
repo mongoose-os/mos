@@ -91,9 +91,8 @@ docker-build-%:
 	  -e HOME=/tmp \
 	  -e GOBIN=/src/go/bin/$* \
 	  -e GOCACHE=/src/go/.cache \
-	  --entrypoint /usr/bin/make \
 	  docker.io/mgos/ubuntu-golang:bionic \
-	    -C /src $* OUT=tools/docker/$*/$*
+	    make -C /src $* OUT=tools/docker/$*/$*
 	  $(MAKE) -C tools/docker/$* docker-build NOBUILD=1 TAG=$(TAG)
 
 docker-push-%:
@@ -108,9 +107,10 @@ downloads-linux:
 	  -v $(CURDIR):/src \
 	  --user $(shell id -u):$(shell id -g) \
 	  -e GOBIN=/src/go/bin/linux \
-	  --entrypoint /usr/bin/make \
-	  docker.io/mgos/gobuild32 \
-	    -C /src mos OUT=downloads/mos/linux/mos GOBUILD_TAGS='"netgo no_libudev"' GOBUILD_LDFLAGS='-extldflags=-static'
+	  docker.io/mgos/ubuntu32-golang:bionic \
+	    make -C /src mos OUT=downloads/mos/linux/mos \
+	    GOBUILD_TAGS='"netgo no_libudev old_libftdi"' \
+	    GOBUILD_LDFLAGS='-extldflags=-static'
 
 deps-mac:
 	brew install coreutils libftdi libusb-compat pkg-config || true
@@ -125,9 +125,8 @@ downloads-win:
 	  --user $(shell id -u):$(shell id -g) \
 	  -e CGO_ENABLED=1 \
 	  -e GOBIN=/src/go/bin/win \
-	  --entrypoint /usr/bin/make \
-	docker.io/mgos/gobuild-mingw \
-	  -C /src mos OUT=downloads/mos/win/mos.exe \
+	docker.io/mgos/golang-mingw \
+	  make -C /src mos OUT=downloads/mos/win/mos.exe \
 	    GOBUILD_GOOS=windows \
 	    GOBUILD_GOARCH=386 \
 	    GOBUILD_CC=i686-w64-mingw32-gcc \

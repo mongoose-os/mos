@@ -1,9 +1,0 @@
-FROM docker.io/mgos/ubuntu-golang:bionic
-
-RUN mkdir /out /src
-WORKDIR /src
-
-VOLUME ["/out", "/src", "/go/src", "/go/pkg"]
-
-CMD ["."]
-ENTRYPOINT ["go", "build", "-i", "-ldflags", "-s"]

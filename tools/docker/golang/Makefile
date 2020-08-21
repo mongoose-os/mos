@@ -1,7 +1,12 @@
 all: build-all
 
-pull-all:  docker-pull-ubuntu-golang-xenial docker-pull-ubuntu-golang-bionic docker-pull-ubuntu-golang-focal docker-pull-ubuntu-golang-groovy \
-           docker-pull-gobuild docker-pull-gobuild32 docker-pull-gobuild-mingw
+UBUNTU_DISTRS := xenial bionic focal groovy
+
+build-all: $(foreach u,$(UBUNTU_DISTRS),docker-build-ubuntu-golang-$(u)) docker-build-ubuntu32-golang-bionic docker-build-golang-mingw
+
+push-all: $(foreach u,$(UBUNTU_DISTRS),docker-push-ubuntu-golang-$(u)) docker-push-ubuntu32-golang-bionic docker-push-golang-mingw
+
+pull-all: $(foreach u,$(UBUNTU_DISTRS),docker-pull-ubuntu-golang-$(u)) docker-pull-ubuntu32-golang-bionic docker-pull-golang-mingw
 
 docker-build-ubuntu-golang-%: Dockerfile.ubuntu-golang
 	docker build -t docker.io/mgos/ubuntu-golang:$* -f Dockerfile.ubuntu-golang --build-arg base=ubuntu:$* .

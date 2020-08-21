@@ -14,11 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build linux
+// +build old_libftdi
+
 package cc3200
 
-// Implements FTDI chip bit-bang pin access using libftdi
+// Implements FTDI chip bit-bang pin access using libftdi.
 // Linux (Debian/Ubuntu): apt-get install libftdi-dev
-// Note: Linux and Mac OS differ only in build flags.
 
 /*
 #include <ftdi.h>

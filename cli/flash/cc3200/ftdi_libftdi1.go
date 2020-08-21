@@ -14,21 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build linux darwin
+// +build !old_libftdi
+
 package cc3200
 
-// Implements FTDI chip bit-bang pin access using libftdi
-// Mac OS X: brew install libftdi
-// Note: Linux and Mac OS differ only in build flags.
+// Implements FTDI chip bit-bang pin access using libftdi.
+// Linux (Debian/Ubuntu): apt-get install libftdi1-dev
 
 /*
 #include <ftdi.h>
 
-#cgo CFLAGS: -I/usr/local/include/libftdi1
-#cgo LDFLAGS: -L/usr/local/lib -lftdi1 -pthread
+#cgo pkg-config: libftdi1
 */
 import "C"
 
 import (
+	"unsafe"
+
 	"github.com/juju/errors"
 )
 
@@ -52,8 +55,15 @@ func openFTDI(vendor, product int, serial string) (FTDI, error) {
 		return nil, errors.Errorf("failed to set interface: %d", e)
 	}
 
-	// TODO(rojer): Find the right device corresponding to port.
-	if e := C.ftdi_usb_open(f.ctx, C.int(vendor), C.int(product)); e < 0 {
+	var snb []byte // To keep the slice snPtr points to alive.
+	var snPtr *C.char
+	if serial != "" {
+		snb = []byte(serial)
+		snb = append(snb, 0) // NUL-terminate
+		snPtr = (*C.char)(unsafe.Pointer(&snb[0]))
+	}
+	if e := C.ftdi_usb_open_desc(
+		f.ctx, C.int(vendor), C.int(product), (*C.char)(nil) /* description */, snPtr); e < 0 {
 		return nil, errors.Errorf("failed to open: %d", e)
 	}
 	if e := C.ftdi_write_data_set_chunksize(f.ctx, C.uint(1)); e < 0 {

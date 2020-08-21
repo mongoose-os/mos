@@ -14,7 +14,7 @@ set -x -e
 
 # Note: always using Xenial because Zesty has problem with passphrase entry.
 docker run -it --rm \
-    -v ${GNUPGHOME}:/root/.gnupg \
+    -v ${GNUPGHOME}:/home/.gnupg \
     -v ${OUTDIR}:/work \
     docker.io/mgos/ubuntu-golang:xenial \
     /bin/bash -l -c "\
