@@ -109,7 +109,7 @@ downloads-linux:
 	  -e GOBIN=/src/go/bin/linux \
 	  docker.io/mgos/ubuntu32-golang:bionic \
 	    make -C /src mos OUT=downloads/mos/linux/mos \
-	    GOBUILD_TAGS='"netgo no_libudev old_libftdi"' \
+	    GOBUILD_TAGS='"osusergo netgo no_libudev old_libftdi"' \
 	    GOBUILD_LDFLAGS='-extldflags=-static'
 
 deps-mac:
