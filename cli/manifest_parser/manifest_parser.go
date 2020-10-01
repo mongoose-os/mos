@@ -151,18 +151,27 @@ func ReadManifestFinal(
 	}
 
 	// Prepare local copies of all sw modules {{{
-	for _, m := range manifest.Modules {
+	// Modules are collected from the bottom of the dependency chain,
+	// we go backwards to ensure overrides are handled first.
+	modulesHandled := map[string]bool{}
+	for i := len(manifest.Modules) - 1; i >= 0; i-- {
+		m := &manifest.Modules[i]
 		name, err := m.GetName()
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
 
-		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(&m, dir, manifest.ModulesVersion, manifest.Platform)
+		if modulesHandled[name] {
+			continue
+		}
+
+		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(m, dir, manifest.ModulesVersion, manifest.Platform)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
 
 		interpreter.SetModuleVars(interp.MVars, name, moduleDir)
+		modulesHandled[name] = true
 	}
 	// }}}
 
