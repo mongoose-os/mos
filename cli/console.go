@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -52,6 +53,7 @@ var (
 	noInputFlag        bool
 	tsfSpecFlag        string
 	catchCoreDumpsFlag bool
+	hexdumpFlag        int
 )
 
 var (
@@ -69,8 +71,10 @@ func init() {
 			"format, as described in https://golang.org/pkg/time/, including the constants "+
 			"(so --timestamp=UnixDate will work, as will --timestamp=Stamp); the strftime(3) format "+
 			"(see http://strftime.org/)")
-
 	flag.Lookup("timestamp").NoOptDefVal = "true" // support just passing --timestamp
+
+	flag.IntVar(&hexdumpFlag, "hexdump", 0, "Output console as hexdump")
+	flag.Lookup("hexdump").NoOptDefVal = "16" // --hexdump -> --hexdump=16
 
 	for _, f := range []string{"no-input", "timestamp"} {
 		hiddenFlags = append(hiddenFlags, f)
@@ -83,19 +87,19 @@ func consoleInit() {
 	}
 }
 
-func FormatTimestampNow() string {
-	ts := ""
+func FormatTimestamp(ts time.Time) string {
+	tss := ""
 	if tsFormat != "" {
-		ts = fmt.Sprintf("[%s] ", timestamp.FormatTimestamp(time.Now(), tsFormat))
+		tss = fmt.Sprintf("[%s] ", timestamp.FormatTimestamp(ts, tsFormat))
 	}
-	return ts
+	return tss
 }
 
-func printConsoleLine(out io.Writer, addTS bool, line []byte) {
-	if tsfSpecFlag != "" && addTS {
-		fmt.Printf("%s", FormatTimestampNow())
+func printConsoleLine(out io.Writer, ts time.Time, line []byte) {
+	if tsfSpecFlag != "" && !ts.IsZero() {
+		fmt.Printf("%s", FormatTimestamp(ts))
 	}
-	removeNonText(line)
+	removeNonText(line, ' ')
 	out.Write(line)
 }
 
@@ -106,10 +110,11 @@ func analyzeCoreDump(out io.Writer, cd []byte) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed open core dump file")
 	}
+	now := time.Now()
 	tfn := tf.Name()
 	tf.Write([]byte(debug_core_dump.CoreDumpStart))
 	tf.Write([]byte("\r\n"))
-	printConsoleLine(out, true, []byte(fmt.Sprintf("mos: wrote to %s (%d bytes)\n", tfn, len(cd))))
+	printConsoleLine(out, now, []byte(fmt.Sprintf("mos: wrote to %s (%d bytes)\n", tfn, len(cd))))
 	if _, err := tf.Write(cd); err != nil {
 		tf.Close()
 		return errors.Annotatef(err, "failed to write core dump to %s", tfn)
@@ -117,7 +122,7 @@ func analyzeCoreDump(out io.Writer, cd []byte) error {
 	tf.Write([]byte("\r\n"))
 	tf.Write([]byte(debug_core_dump.CoreDumpEnd))
 	tf.Close()
-	printConsoleLine(out, true, []byte("mos: analyzing core dump\n"))
+	printConsoleLine(out, now, []byte("mos: analyzing core dump\n"))
 	return debug_core_dump.DebugCoreDumpF(tfn, "", true)
 }
 
@@ -311,7 +316,39 @@ func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 			if n <= 0 {
 				continue
 			}
+			now := time.Now()
 			buf = buf[:n]
+			if hexdumpFlag > 0 {
+				for off := 0; off < n; {
+					left := n - off
+					chunkSize := int(math.Min(float64(left), float64(hexdumpFlag)))
+					chunk := buf[off : off+chunkSize]
+					hexLine := fmt.Sprintf("%08x  ", off)
+					for i := 0; i < hexdumpFlag; i++ {
+						if i < chunkSize {
+							hexLine += fmt.Sprintf("%02x ", chunk[i])
+						} else {
+							hexLine += "   "
+						}
+						if i%8 == 7 {
+							hexLine += " "
+						}
+					}
+					hexLine += " |"
+					for i := 0; i < chunkSize; i++ {
+						c := chunk[i]
+						if !isNonText(c) && c != 0x0a && c != 0x0d && c != 0x1b {
+							hexLine += string(c)
+						} else {
+							hexLine += "."
+						}
+					}
+					hexLine += "|\n"
+					printConsoleLine(out, now, []byte(hexLine))
+					off += chunkSize
+				}
+				continue
+			}
 			for {
 				lf := bytes.IndexAny(buf, "\n")
 				if lf < 0 {
@@ -322,34 +359,42 @@ func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 				if catchCoreDumpsFlag {
 					tsl := bytes.TrimSpace(curLine)
 					if !coreDumping && bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpStart)) == 0 {
-						printConsoleLine(out, !cont, chunk)
-						printConsoleLine(out, true, []byte("mos: catching core dump\n"))
+						var addTS time.Time
+						if !cont {
+							addTS = now
+						}
+						printConsoleLine(out, addTS, chunk)
+						printConsoleLine(out, now, []byte("mos: catching core dump\n"))
 						coreDumping = true
 						coreDump = nil
 					} else if coreDumping {
 						if bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpEnd)) == 0 {
 							if lastCDProgress > 0 {
-								printConsoleLine(out, false, []byte("\n"))
+								printConsoleLine(out, time.Time{}, []byte("\n"))
 							}
-							printConsoleLine(out, true, curLine)
+							printConsoleLine(out, now, curLine)
 							coreDumping = false
 							lastCDProgress = 0
 							curLine = nil
 							if err := analyzeCoreDump(out, coreDump); err != nil {
-								printConsoleLine(out, true, []byte(fmt.Sprintf("mos: %s\n", err)))
+								printConsoleLine(out, now, []byte(fmt.Sprintf("mos: %s\n", err)))
 							}
 						} else {
 							// There should be no empty lines in the CD body.
 							// If we encounter an empty line, this means device rebooted without finishing the CD.
 							if len(tsl) == 0 {
-								printConsoleLine(out, true, []byte("mos: core dump aborted\n"))
+								printConsoleLine(out, now, []byte("mos: core dump aborted\n"))
 								coreDumping = false
 								lastCDProgress = 0
 								coreDump = nil
 							} else {
 								coreDump = append(coreDump, curLine...)
+								var addTS time.Time
+								if lastCDProgress == 0 {
+									addTS = now
+								}
 								if len(coreDump) > lastCDProgress+32*1024 {
-									printConsoleLine(out, lastCDProgress == 0, []byte("."))
+									printConsoleLine(out, addTS, []byte("."))
 									lastCDProgress = len(coreDump)
 								}
 							}
@@ -357,14 +402,22 @@ func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 					}
 				}
 				if !coreDumping && curLine != nil {
-					printConsoleLine(out, !cont, chunk)
+					var addTS time.Time
+					if !cont {
+						addTS = now
+					}
+					printConsoleLine(out, addTS, chunk)
 				}
 				curLine = nil
 				buf = buf[lf+1:]
 				cont = false
 			}
 			if !coreDumping && len(buf) > 0 {
-				printConsoleLine(out, !cont, buf)
+				var addTS time.Time
+				if !cont {
+					addTS = now
+				}
+				printConsoleLine(out, addTS, buf)
 				cont = true
 			}
 			curLine = append(curLine, buf...)
@@ -389,10 +442,14 @@ func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 	return nil
 }
 
-func removeNonText(data []byte) {
+func isNonText(c byte) bool {
+	return ((c < 0x20 && c != 0x0a && c != 0x0d && c != 0x1b /* Esc */) || c >= 0x7f)
+}
+
+func removeNonText(data []byte, c byte) {
 	for i, c := range data {
-		if (c < 0x20 && c != 0x0a && c != 0x0d && c != 0x1b /* Esc */) || c >= 0x80 {
-			data[i] = 0x20
+		if isNonText(c) {
+			data[i] = c
 		}
 	}
 }

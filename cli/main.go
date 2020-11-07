@@ -217,7 +217,7 @@ func getCommand(str string) *command {
 }
 
 func consoleJunkHandler(data []byte) {
-	removeNonText(data)
+	removeNonText(data, ' ')
 	select {
 	case consoleMsgs <- data:
 	default:
