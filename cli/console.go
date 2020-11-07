@@ -32,14 +32,14 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	"github.com/mongoose-os/mos/common/mgrpc"
-	"github.com/mongoose-os/mos/common/mgrpc/codec"
-	"github.com/mongoose-os/mos/common/mgrpc/frame"
 	"github.com/mongoose-os/mos/cli/debug_core_dump"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/devutil"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/timestamp"
+	"github.com/mongoose-os/mos/common/mgrpc"
+	"github.com/mongoose-os/mos/common/mgrpc/codec"
+	"github.com/mongoose-os/mos/common/mgrpc/frame"
 
 	"github.com/cesanta/go-serial/serial"
 	"github.com/juju/errors"
@@ -48,12 +48,10 @@ import (
 
 // console specific flags
 var (
-	baudRateFlag    uint
-	noInput         bool
-	hwFCFlag        bool
-	setControlLines bool
-	tsfSpec         string
-	catchCoreDumps  bool
+	baudRateFlag       uint
+	noInputFlag        bool
+	tsfSpecFlag        string
+	catchCoreDumpsFlag bool
 )
 
 var (
@@ -61,11 +59,11 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&noInput, "no-input", false,
+	flag.BoolVar(&noInputFlag, "no-input", false,
 		"Do not read from stdin, only print device's output to stdout")
-	flag.BoolVar(&catchCoreDumps, "catch-core-dumps", true, "Catch and save core dumps")
+	flag.BoolVar(&catchCoreDumpsFlag, "catch-core-dumps", true, "Catch and save core dumps")
 
-	flag.StringVar(&tsfSpec, "timestamp", "StampMilli",
+	flag.StringVar(&tsfSpecFlag, "timestamp", "StampMilli",
 		"Prepend each line with a timestamp in the specified format. A number of specifications are supported:"+
 			"simple 'yes' or 'true' will use UNIX Epoch + .microseconds; the Go way of specifying date/time "+
 			"format, as described in https://golang.org/pkg/time/, including the constants "+
@@ -80,8 +78,8 @@ func init() {
 }
 
 func consoleInit() {
-	if tsfSpec != "" {
-		tsFormat = timestamp.ParseTimeStampFormatSpec(tsfSpec)
+	if tsfSpecFlag != "" {
+		tsFormat = timestamp.ParseTimeStampFormatSpec(tsfSpecFlag)
 	}
 }
 
@@ -94,7 +92,7 @@ func FormatTimestampNow() string {
 }
 
 func printConsoleLine(out io.Writer, addTS bool, line []byte) {
-	if tsfSpec != "" && addTS {
+	if tsfSpecFlag != "" && addTS {
 		fmt.Printf("%s", FormatTimestampNow())
 	}
 	removeNonText(line)
@@ -321,7 +319,7 @@ func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 				}
 				chunk := buf[:lf+1]
 				curLine = append(curLine, chunk...)
-				if catchCoreDumps {
+				if catchCoreDumpsFlag {
 					tsl := bytes.TrimSpace(curLine)
 					if !coreDumping && bytes.Compare(tsl, []byte(debug_core_dump.CoreDumpStart)) == 0 {
 						printConsoleLine(out, !cont, chunk)
@@ -372,7 +370,7 @@ func consoleReadWrite(ctx context.Context, r io.Reader, w io.Writer) error {
 			curLine = append(curLine, buf...)
 		}
 	}()
-	if w != nil && !noInput {
+	if w != nil && !noInputFlag {
 		go func() { // Stdin -> Serial
 			for {
 				buf := make([]byte, 1)
