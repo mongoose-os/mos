@@ -150,6 +150,31 @@ func ReadManifestFinal(
 		return nil, nil, errors.Trace(err)
 	}
 
+	manifest.Name, err = interpreter.ExpandVars(interp, manifest.Name, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding name")
+	}
+
+	manifest.Author, err = interpreter.ExpandVars(interp, manifest.Author, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding name")
+	}
+
+	manifest.Version, err = interpreter.ExpandVars(interp, manifest.Version, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding version")
+	}
+
+	manifest.Summary, err = interpreter.ExpandVars(interp, manifest.Summary, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding summary")
+	}
+
+	manifest.Description, err = interpreter.ExpandVars(interp, manifest.Description, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding description")
+	}
+
 	// Prepare local copies of all sw modules {{{
 	// Modules are collected from the bottom of the dependency chain,
 	// we go backwards to ensure overrides are handled first.

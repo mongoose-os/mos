@@ -1,6 +1,7 @@
-author: mongoose-os
-description: My test app
-version: 1.0
+author: mongoose-os ${build_vars.EXT_VAR}
+summary: Hello ${build_vars.LIB4_VAR2}
+description: My test app ${build_vars.LIB4_VAR2}
+version: 1.0-${build_vars.EXT_VAR}
 
 sources:
   - src

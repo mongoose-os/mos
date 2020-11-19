@@ -115,6 +115,8 @@ func compareFiles(actualFilename, expectedFilename string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	expectedFilename, _ = filepath.Abs(expectedFilename)
+	actualFilename, _ = filepath.Abs(actualFilename)
 	if bytes.Compare(expectedData, actualData) != 0 {
 		return errors.Errorf("expected file %s doesn't match actual %s", expectedFilename, actualFilename)
 	}

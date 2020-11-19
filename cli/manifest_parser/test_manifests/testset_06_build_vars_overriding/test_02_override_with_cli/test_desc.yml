@@ -1,2 +1,3 @@
 build_vars:
   LIB4_VAR2: from_cli
+  EXT_VAR: hello
