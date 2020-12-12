@@ -35,11 +35,15 @@ import (
 )
 
 const (
-	flashSectorSize   = 0x1000
-	flashBlockSize    = 0x10000
+	flashSectorSize = 0x1000
+	flashBlockSize  = 0x10000
+	// Pre-3.0 SDK, location of sys_params is hard-coded.
 	sysParamsPartType = "sys_params"
-	sysParamsAreaSize = 4 * flashSectorSize
-	espImageMagicByte = 0xe9
+	// 3.0+ SDK control placement of sys_params through partition table,
+	// no need for special handling.
+	sysParams3PartType = "sys_params3"
+	sysParamsAreaSize  = 4 * flashSectorSize
+	espImageMagicByte  = 0xe9
 )
 
 type image struct {
@@ -295,6 +299,13 @@ func adjustSysParamsLocation(fw *fwbundle.FirmwareBundle, flashSize int) {
 func sanityCheckImages(ct esp.ChipType, images []*image, flashSize, flashSectorSize int) error {
 	// Note: we require that images are sorted by address.
 	sort.Sort(imagesByAddr(images))
+	esp8266CheckSysParams := true
+	for _, im := range images {
+		if im.Type == sysParams3PartType {
+			// No need to check, firmware controls palcement of sys_params.
+			esp8266CheckSysParams = false
+		}
+	}
 	for i, im := range images {
 		imageBegin := int(im.Addr)
 		imageEnd := imageBegin + len(im.Data)
@@ -312,7 +323,7 @@ func sanityCheckImages(ct esp.ChipType, images []*image, flashSize, flashSectorS
 				return errors.Errorf("Invalid magic byte in the first image")
 			}
 		}
-		if ct == esp.ChipESP8266 {
+		if ct == esp.ChipESP8266 && esp8266CheckSysParams {
 			sysParamsBegin := flashSize - sysParamsAreaSize
 			if imageBegin == sysParamsBegin && im.Type == sysParamsPartType {
 				// Ok, a sys_params image.
