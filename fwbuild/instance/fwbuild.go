@@ -42,7 +42,7 @@ import (
 	"github.com/mongoose-os/mos/common/ourio"
 	fwbuildcommon "github.com/mongoose-os/mos/fwbuild/common"
 	"github.com/mongoose-os/mos/fwbuild/common/reqpar"
-	flock "github.com/theckman/go-flock"
+	"github.com/gofrs/flock"
 	yaml "gopkg.in/yaml.v2"
 	glog "k8s.io/klog/v2"
 )

@@ -15,6 +15,7 @@ require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/go-ini/ini v1.39.0
+	github.com/gofrs/flock v0.7.0
 	github.com/gofrs/flock v0.7.1 // indirect
 	github.com/golang/protobuf v1.2.1-0.20190109072247-347cf4a86c1c // indirect
 	github.com/google/gousb v0.0.0-20181005115310-15d2fa288b98
@@ -29,7 +30,6 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/theckman/go-flock v0.7.0
 	github.com/zserge/webview v0.0.0-20191103184548-1a9ebffc2601
 	go.opencensus.io v0.19.0 // indirect
 	goji.io v2.0.0+incompatible
