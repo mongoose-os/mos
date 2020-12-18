@@ -23,21 +23,35 @@ import subprocess
 import tempfile
 import time
 
-import git       # apt-get install python3-git || pip3 install GitPython
-import requests  # apt-get install python3-requests || pip3 install requests
-
+import git  # apt-get install python3-git || pip3 install GitPython
 import github_api
+import requests  # apt-get install python3-requests || pip3 install requests
 
 token = ""
 
-parser = argparse.ArgumentParser(description='')
-parser.add_argument('--release-tag', required=True, default = "", help="Release tag, like 2.8.0")
-parser.add_argument('--token_filepath', type=str, default='/secrets/github/cesantabot/github_token')
-parser.add_argument('--tmpdir', type=str, default=os.path.expanduser('~/mos_release_tmp'))
-parser.add_argument('--no-cleanup-drafts', action="store_true", default=False,
-                    help="Clean up all existing drafts when creating new release")
-parser.add_argument('--parallelism', type=int, default=32)
-parser.add_argument('repo', type=str, nargs='*', help='Run on specific repos. If not specified, runs on all repos.')
+parser = argparse.ArgumentParser(description="")
+parser.add_argument(
+    "--release-tag", required=True, default="", help="Release tag, like 2.8.0"
+)
+parser.add_argument(
+    "--token_filepath", type=str, default="/secrets/github/cesantabot/github_token"
+)
+parser.add_argument(
+    "--tmpdir", type=str, default=os.path.expanduser("~/mos_release_tmp")
+)
+parser.add_argument(
+    "--no-cleanup-drafts",
+    action="store_true",
+    default=False,
+    help="Clean up all existing drafts when creating new release",
+)
+parser.add_argument("--parallelism", type=int, default=32)
+parser.add_argument(
+    "repo",
+    type=str,
+    nargs="*",
+    help="Run on specific repos. If not specified, runs on all repos.",
+)
 
 args = parser.parse_args()
 
@@ -108,31 +122,40 @@ def del_repo_tag(repo_name, tag):
 
 
 def del_release(repo_name, tag):
-    r, ok = github_api.CallReleasesAPI(repo_name, TOKEN, releases_url = "/tags/%s" % tag)
+    r, ok = github_api.CallReleasesAPI(repo_name, TOKEN, releases_url="/tags/%s" % tag)
     if ok:
         print("%s: Deleting existing %s release %d" % (repo_name, tag, r["id"]))
         r, ok = github_api.CallReleasesAPI(
-            repo_name, TOKEN,
-            releases_url = "/%d" % r["id"],
-            method = "DELETE",
-            decode_json = False
-            )
+            repo_name,
+            TOKEN,
+            releases_url="/%d" % r["id"],
+            method="DELETE",
+            decode_json=False,
+        )
+
 
 # handle_repo {{{
 def handle_repo(repo_name, from_tag, to_tag):
     if not args.no_cleanup_drafts:
-        rr, ok = github_api.CallReleasesAPI(repo_name, TOKEN, method="GET", releases_url="")
+        rr, ok = github_api.CallReleasesAPI(
+            repo_name, TOKEN, method="GET", releases_url=""
+        )
         if not ok:
             raise Exception("Failed to list releases: %s" % r)
         for r in rr:
             if not r["draft"]:
                 continue
-            print("%s: Cleaning up draft release %d (%s)" % (repo_name, r["id"], r["name"]))
+            print(
+                "%s: Cleaning up draft release %d (%s)"
+                % (repo_name, r["id"], r["name"])
+            )
             github_api.CallReleasesAPI(
-                repo_name, TOKEN,
-                releases_url = "/%d" % r["id"],
-                method = "DELETE",
-                decode_json = False)
+                repo_name,
+                TOKEN,
+                releases_url="/%d" % r["id"],
+                method="DELETE",
+                decode_json=False,
+            )
 
     # Delete existing release, if any.
     del_release(repo_name, to_tag)
@@ -148,11 +171,17 @@ def handle_repo(repo_name, from_tag, to_tag):
 
     # Create a release draft {{{
     print("%s: Creating a new draft of %s" % (repo_name, to_tag))
-    r, ok = github_api.CallReleasesAPI(repo_name, TOKEN, method = "POST", releases_url = "", json_data = {
-        "tag_name": to_tag,
-        "name": to_tag,
-        "draft": True,
-    })
+    r, ok = github_api.CallReleasesAPI(
+        repo_name,
+        TOKEN,
+        method="POST",
+        releases_url="",
+        json_data={
+            "tag_name": to_tag,
+            "name": to_tag,
+            "draft": True,
+        },
+    )
     if not ok:
         raise Exception("Failed to create a draft: %s" % r)
 
@@ -164,20 +193,21 @@ def handle_repo(repo_name, from_tag, to_tag):
     for asset in res["assets"]:
         asset_url = asset["url"]
         print("%s: Downloading %s (%s)" % (repo_name, asset["name"], asset_url))
-        r = requests.get(asset_url, auth=(token, ""), headers={"Accept": "application/octet-stream"})
+        r = requests.get(
+            asset_url, auth=(token, ""), headers={"Accept": "application/octet-stream"}
+        )
         if r.status_code == 200:
             print("%s: Uploading a new asset %s" % (repo_name, asset["name"]))
             r, ok = github_api.CallReleasesAPI(
-                repo_name, TOKEN,
-                method = "POST", subdomain = "uploads", data = r.content,
-                releases_url = "/%d/assets" % new_rel_id,
-                headers = {
-                    "Content-Type": asset["content_type"]
-                },
-                params = {
-                    "name": asset["name"]
-                }
-              )
+                repo_name,
+                TOKEN,
+                method="POST",
+                subdomain="uploads",
+                data=r.content,
+                releases_url="/%d/assets" % new_rel_id,
+                headers={"Content-Type": asset["content_type"]},
+                params={"name": asset["name"]},
+            )
             if not ok:
                 raise Exception("Failed to upload %s: %s" % (asset["name"], r))
 
@@ -187,14 +217,19 @@ def handle_repo(repo_name, from_tag, to_tag):
     # Undraft the release {{{
     print("%s: Undraft the %s release" % (repo_name, to_tag))
     r, ok = github_api.CallReleasesAPI(
-            repo_name, TOKEN,
-            method = "PATCH", releases_url = "/%d" % new_rel_id,
-            json_data = {
-                "draft": False,
-            })
+        repo_name,
+        TOKEN,
+        method="PATCH",
+        releases_url="/%d" % new_rel_id,
+        json_data={
+            "draft": False,
+        },
+    )
     if not ok:
         raise Exception("Failed to undraft the release: %s" % r)
     # }}}
+
+
 # }}}
 
 # Wrappers which return an error instead of throwing it, this is for
@@ -206,6 +241,7 @@ def handle_repo_noexc(repo_name, from_tag, to_tag):
     except Exception as e:
         return (repo_name, str(e))
 
+
 repo_root = os.path.realpath(os.path.join(__file__, "..", ".."))
 
 repos = args.repo
@@ -215,14 +251,23 @@ if not repos:
     # Get libs and apps repos
     repos = get_repo_names("mongoose-os-libs") + get_repo_names("mongoose-os-apps")
     # Add a few more
-    repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-libs", "mongoose-os/mos"])
+    repos.extend(
+        ["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-libs", "mongoose-os/mos"]
+    )
 
 pool = multiprocessing.Pool(processes=args.parallelism)
 tasks = []
 
 # Enqueue repos which need a release to be copied, with all assets etc
 for repo_name in repos:
-    tasks.append((repo_name, pool.apply_async(handle_repo_noexc, [repo_name, "latest", args.release_tag])))
+    tasks.append(
+        (
+            repo_name,
+            pool.apply_async(
+                handle_repo_noexc, [repo_name, "latest", args.release_tag]
+            ),
+        )
+    )
 
 # Wait for all tasks to complete, and collect errors {{{
 errs = []
@@ -239,10 +284,14 @@ while True:
     if len(new_tasks) == 0:
         break
     else:
-        print("%d active (%s%s)" % (
-            len(new_tasks),
-            " ".join(r[0] for r in new_tasks[:5]),
-            " ..." if len(new_tasks) > 5 else ""))
+        print(
+            "%d active (%s%s)"
+            % (
+                len(new_tasks),
+                " ".join(r[0] for r in new_tasks[:5]),
+                " ..." if len(new_tasks) > 5 else "",
+            )
+        )
         if errs:
             print("%d errors (%s)" % (len(errs), " ".join(err[0] for err in errs)))
         tasks = new_tasks
@@ -254,7 +303,7 @@ if len(errs) == 0:
 else:
     print("------------------------------------------------------")
     print("Errors: %d" % len(errs))
-    for err in errs: # Replace `None` as you need.
+    for err in errs:  # Replace `None` as you need.
         print("ERROR in %s: %s" % (err[0], err[1]))
         print("---")
     exit(1)

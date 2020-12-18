@@ -21,8 +21,8 @@ import (
 	"os/exec"
 
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
 )
 
 func checkSTFlashPath(path string) string {

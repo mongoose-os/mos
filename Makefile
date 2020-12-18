@@ -115,6 +115,9 @@ downloads-linux:
 deps-mac:
 	brew install coreutils libftdi libusb-compat pkg-config || true
 
+dev-mac: deps-mac
+	brew install black || true
+
 downloads-mac: deps-mac mos
 	mkdir -p downloads/mos/mac
 	mv mos downloads/mos/mac/mos
@@ -161,7 +164,13 @@ clean-vendor:
 clean-version: clean
 	rm -f version/version.*
 
+format:
+	black .
+	go mod tidy
+	go fmt ./...
+
 test:
-	go test github.com/mongoose-os/mos/cli/...
-	go test github.com/mongoose-os/mos/common/...
-	go test github.com/mongoose-os/mos/fwbuild/...
+	go test ./...
+	# version.go is auto-generated
+	go fmt ./... | grep -v "version/version.go" && exit 1 || echo 'Files formatted'
+	black --check .

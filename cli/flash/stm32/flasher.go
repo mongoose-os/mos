@@ -19,8 +19,8 @@ package stm32
 import (
 	"time"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
 )
 
 type FlashOpts struct {

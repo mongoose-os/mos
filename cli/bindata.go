@@ -14,14 +14,15 @@
 package main
 
 import (
-	"github.com/elazarl/go-bindata-assetfs"
 	"fmt"
+	"github.com/elazarl/go-bindata-assetfs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
 type asset struct {
 	bytes []byte
 	info  os.FileInfo
@@ -343,7 +344,7 @@ var runCommand = function(cmd, nohistory) {
     app.ls.mos_history = hist.join(',');
   }
 
-  // Update `+"`"+`mos build`+"`"+` command, by adding arch-specific flags
+  // Update ` + "`" + `mos build` + "`" + ` command, by adding arch-specific flags
   if (cmd.match(/^mos\s+build/i) && !cmd.match(/--platform/) &&
       app.state.board) {
     cmd += ' ' + boards[app.state.board];

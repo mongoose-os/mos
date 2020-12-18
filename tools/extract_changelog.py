@@ -28,18 +28,32 @@ import github_api
 token = ""
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument("--from", required=True, help = "Starting point (hash-like)")
-parser.add_argument("--to", default="HEAD", help = "End point (hash-like)")
-parser.add_argument("--no-pull", action="store_true", default=False,
-                    help="Do not pull repos if exist, useful for repeated runs")
-parser.add_argument("--tmpdir", type=str, default=os.path.expanduser("~/mos_release_tmp"))
+parser.add_argument("--from", required=True, help="Starting point (hash-like)")
+parser.add_argument("--to", default="HEAD", help="End point (hash-like)")
+parser.add_argument(
+    "--no-pull",
+    action="store_true",
+    default=False,
+    help="Do not pull repos if exist, useful for repeated runs",
+)
+parser.add_argument(
+    "--tmpdir", type=str, default=os.path.expanduser("~/mos_release_tmp")
+)
 parser.add_argument("--parallelism", type=int, default=32)
-parser.add_argument("--token_filepath", type=str, default="/secrets/github/cesantabot/github_token")
-parser.add_argument("repo", type=str, nargs="*", help="Run on specific repos. If not specified, runs on all repos.")
+parser.add_argument(
+    "--token_filepath", type=str, default="/secrets/github/cesantabot/github_token"
+)
+parser.add_argument(
+    "repo",
+    type=str,
+    nargs="*",
+    help="Run on specific repos. If not specified, runs on all repos.",
+)
 
 args = parser.parse_args()
 
 TOKEN = "file:%s" % args.token_filepath
+
 
 def get_repos(org):
     repos = []
@@ -71,15 +85,28 @@ def handle_repo(repo_name, from_tag, to_tag):
     local_path = os.path.join(args.tmpdir, repo_name)
     if not os.path.isdir(local_path):
         print("%s: Cloning to %s" % (repo_name, local_path), file=sys.stderr)
-        subprocess.check_call(["git", "clone", "git@github.com:%s" % repo_name, local_path])
+        subprocess.check_call(
+            ["git", "clone", "git@github.com:%s" % repo_name, local_path]
+        )
     elif not args.no_pull:
         print("%s: Pulling %s" % (repo_name, local_path), file=sys.stderr)
         subprocess.check_call(["git", "-C", local_path, "pull", "-q"])
 
-    cmd = ["git", "-C", local_path, "log", "--reverse", "--pretty=format:%H %ct%n%s%n%b%n---CUT---"]
+    cmd = [
+        "git",
+        "-C",
+        local_path,
+        "log",
+        "--reverse",
+        "--pretty=format:%H %ct%n%s%n%b%n---CUT---",
+    ]
 
     # See if "from" exists at all
-    diff_res = subprocess.run(["git", "-C", local_path, "diff", from_tag], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    diff_res = subprocess.run(
+        ["git", "-C", local_path, "diff", from_tag],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     # If the starting point exists, restrict the range, otherwise
     # we assume taht the repo was created after from was created, so get the entire log.
     if diff_res.returncode == 0:
@@ -94,7 +121,14 @@ def handle_repo(repo_name, from_tag, to_tag):
         line = str(line, "utf-8")
         if line == "---CUT---":
             if cl and cl != "none":
-                res.append((ts, "[%s@%s](https://github.com/%s/commit/%s)" % (repo_name, ch[:7], repo_name, ch), cl))
+                res.append(
+                    (
+                        ts,
+                        "[%s@%s](https://github.com/%s/commit/%s)"
+                        % (repo_name, ch[:7], repo_name, ch),
+                        cl,
+                    )
+                )
             ph, ch, ts, cl = 0, None, 0, ""
             continue
         if ph == 0:
@@ -123,6 +157,7 @@ def handle_repo_noexc(repo_name, from_tag, to_tag):
     except Exception as e:
         return (repo_name, str(e))
 
+
 repos = args.repo
 
 if not repos:
@@ -138,7 +173,14 @@ pool = multiprocessing.Pool(processes=args.parallelism)
 results = []
 
 for repo_name in repos:
-    results.append((repo_name, pool.apply_async(handle_repo_noexc, [repo_name, getattr(args, "from"), args.to])))
+    results.append(
+        (
+            repo_name,
+            pool.apply_async(
+                handle_repo_noexc, [repo_name, getattr(args, "from"), args.to]
+            ),
+        )
+    )
 
 # Wait for all tasks to complete, and collect errors
 global_cl, errs = [], []
@@ -161,12 +203,14 @@ for repo, ts, ch, cl in sorted(global_cl, key=lambda e: e[0]):
 
 for e in sorted(cl_map.values(), key=lambda e: (e[0], e[1])):
     repo_short = e[0].split("/")[-1]
-    print(" * %s: %s (%s)" % (repo_short, "\n   ".join(e[2].splitlines()), " ".join(e[3])))
+    print(
+        " * %s: %s (%s)" % (repo_short, "\n   ".join(e[2].splitlines()), " ".join(e[3]))
+    )
 
 if len(errs) != 0:
     print("------------------------------------------------------")
     print("Errors: %d" % len(errs))
-    for err in errs: # Replace `None` as you need.
+    for err in errs:  # Replace `None` as you need.
         print("ERROR in %s: %s" % (err[0], err[1]))
         print("---")
     exit(1)

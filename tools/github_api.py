@@ -19,6 +19,7 @@ import json
 
 import requests  # apt-get install python3-requests || pip3 install requests
 
+
 # call_api: Calls github API with the provided args. {{{
 #
 # url is an url like "https://api.github.com/repos/foo/bar/releases".
@@ -33,38 +34,64 @@ import requests  # apt-get install python3-requests || pip3 install requests
 # case, the first returned value is the response returned right from
 # requests.request().
 def call_api(
-        token, url,
-        params = {}, method = "GET", json_data = None,
-        data = None, headers = {}, decode_json = True
-        ):
+    token,
+    url,
+    params={},
+    method="GET",
+    json_data=None,
+    data=None,
+    headers={},
+    decode_json=True,
+):
 
     if token.startswith("file:"):
         with open(token[5:], "r") as f:
             token = f.read().strip()
 
-    headers.update({
-      "Authorization": "token %s" % token,
-    })
+    headers.update(
+        {
+            "Authorization": "token %s" % token,
+        }
+    )
 
     resp = requests.request(
         method, url=url, params=params, json=json_data, headers=headers, data=data
-        )
+    )
 
     if decode_json:
         resp_data = json.loads(resp.text)
         return (resp_data, resp.ok)
     else:
         return (resp, resp.ok)
+
+
 # }}}
 
 
 def CallRefsAPI(
-        repo_name, token, uri,
-        subdomain="api",
-        params={}, method="GET", json_data=None,
-        data=None, headers={}, decode_json=True):
-    url = 'https://%s.github.com/repos/%s/git/refs%s' % (subdomain, repo_name, uri)
-    return call_api(token, url, params=params, method=method, json_data=json_data, data=data, headers=headers, decode_json=decode_json)
+    repo_name,
+    token,
+    uri,
+    subdomain="api",
+    params={},
+    method="GET",
+    json_data=None,
+    data=None,
+    headers={},
+    decode_json=True,
+):
+    url = "https://%s.github.com/repos/%s/git/refs%s" % (subdomain, repo_name, uri)
+    return call_api(
+        token,
+        url,
+        params=params,
+        method=method,
+        json_data=json_data,
+        data=data,
+        headers=headers,
+        decode_json=decode_json,
+    )
+
 
 # CallReleasesAPI: a wrapper for call_api which constructs the
 # releases-related url.
@@ -74,18 +101,54 @@ def CallRefsAPI(
 # releases_url should be either be empty or start with a slash.
 # The rest of the arguments are the same as call_api has.
 def CallReleasesAPI(
-        repo_name, token, releases_url,
-        subdomain = "api",
-        params = {}, method = "GET", json_data = None,
-        data = None, headers = {}, decode_json = True
-        ):
-    url = 'https://%s.github.com/repos/%s/releases%s' % (subdomain, repo_name, releases_url)
-    return call_api(token, url, params=params, method=method, json_data=json_data, data=data, headers=headers, decode_json=decode_json)
+    repo_name,
+    token,
+    releases_url,
+    subdomain="api",
+    params={},
+    method="GET",
+    json_data=None,
+    data=None,
+    headers={},
+    decode_json=True,
+):
+    url = "https://%s.github.com/repos/%s/releases%s" % (
+        subdomain,
+        repo_name,
+        releases_url,
+    )
+    return call_api(
+        token,
+        url,
+        params=params,
+        method=method,
+        json_data=json_data,
+        data=data,
+        headers=headers,
+        decode_json=decode_json,
+    )
 
 
 def CallUsersAPI(
-        org, token, users_url, params = {}, method = "GET", json_data = None, subdomain = "api",
-        data = None, headers = {}, decode_json = True
-        ):
-    url = 'https://%s.github.com/users/%s%s' % (subdomain, org, users_url)
-    return call_api(token, url, params=params, method=method, json_data=json_data, data=data, headers=headers, decode_json=decode_json)
+    org,
+    token,
+    users_url,
+    params={},
+    method="GET",
+    json_data=None,
+    subdomain="api",
+    data=None,
+    headers={},
+    decode_json=True,
+):
+    url = "https://%s.github.com/users/%s%s" % (subdomain, org, users_url)
+    return call_api(
+        token,
+        url,
+        params=params,
+        method=method,
+        json_data=json_data,
+        data=data,
+        headers=headers,
+        decode_json=decode_json,
+    )

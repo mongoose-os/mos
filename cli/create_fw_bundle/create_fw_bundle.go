@@ -27,11 +27,11 @@ import (
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/version"
 )
 

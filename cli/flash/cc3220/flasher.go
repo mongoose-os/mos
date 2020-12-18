@@ -10,9 +10,9 @@ package cc3220
 import (
 	"github.com/cesanta/go-serial/serial"
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/cli/flash/cc32xx"
 	"github.com/mongoose-os/mos/cli/flash/common"
+	"github.com/mongoose-os/mos/common/fwbundle"
 )
 
 type FlashOpts struct {

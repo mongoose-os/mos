@@ -17,8 +17,8 @@
 
 import argparse
 import hashlib
-import os
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -49,7 +49,11 @@ if __name__ == "__main__":
     parser.add_argument("--commit", action="store_true")
     parser.add_argument("--push", action="store_true")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="[%(asctime)s %(levelno)d] %(message)s", datefmt="%Y/%m/%d %H:%M:%S")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s %(levelno)d] %(message)s",
+        datefmt="%Y/%m/%d %H:%M:%S",
+    )
     blob_sha256 = args.blob_sha256
     if not blob_sha256:
         logging.info("Computing SHA256 of %s...", args.blob_url)
@@ -131,10 +135,18 @@ if __name__ == "__main__":
                     in_bottle = False
                     for mac_os_version in sorted(bottles.keys()):
                         bottle_fname, bottle_base_name, sha256 = bottles[mac_os_version]
-                        new_lines.append('    sha256 "%s" => :%s # %s' % (sha256, mac_os_version, args.version))
+                        new_lines.append(
+                            '    sha256 "%s" => :%s # %s'
+                            % (sha256, mac_os_version, args.version)
+                        )
                         if bottle_fname and args.bottle_upload_dest:
-                            upload_dst = "%s/%s" % (args.bottle_upload_dest, bottle_base_name)
-                            logging.info("Uploading %s to %s...", bottle_fname, upload_dst)
+                            upload_dst = "%s/%s" % (
+                                args.bottle_upload_dest,
+                                bottle_base_name,
+                            )
+                            logging.info(
+                                "Uploading %s to %s...", bottle_fname, upload_dst
+                            )
                             subprocess.check_call(["scp", bottle_fname, upload_dst])
         if copy:
             new_lines.append(l)
@@ -146,14 +158,21 @@ if __name__ == "__main__":
     if args.commit:
         diff = subprocess.check_output(["git", "--no-pager", "diff"])
         if diff:
-            subprocess.check_call([
-                "git", "commit", "-a",
-                "-m", "update_hb: %s %s" % (args.formula, args.version),
-            ])
+            subprocess.check_call(
+                [
+                    "git",
+                    "commit",
+                    "-a",
+                    "-m",
+                    "update_hb: %s %s" % (args.formula, args.version),
+                ]
+            )
         else:
             logging.info("Nothing changed")
     if args.push:
         logging.info("Pushing...")
         subprocess.check_call(["git", "push", "origin", "master"])
     else:
-        logging.info("This is a dry run, not pushing. You can examine %s now.", hb_repo_dir)
+        logging.info(
+            "This is a dry run, not pushing. You can examine %s now.", hb_repo_dir
+        )

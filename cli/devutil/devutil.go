@@ -24,10 +24,10 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/watson"
+	"github.com/mongoose-os/mos/common/mgrpc/codec"
 )
 
 func createDevConnWithJunkHandler(ctx context.Context, junkHandler func(junk []byte)) (dev.DevConn, error) {

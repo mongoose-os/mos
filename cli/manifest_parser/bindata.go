@@ -5,14 +5,15 @@
 package manifest_parser
 
 import (
-	"github.com/elazarl/go-bindata-assetfs"
 	"fmt"
+	"github.com/elazarl/go-bindata-assetfs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
 type asset struct {
 	bytes []byte
 	info  os.FileInfo
