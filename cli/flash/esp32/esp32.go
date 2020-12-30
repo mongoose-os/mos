@@ -45,32 +45,75 @@ var (
 func GetChipDescr(rrw esp.RegReaderWriter) (string, error) {
 	_, _, fusesByName, err := ReadFuses(rrw)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", errors.Annotatef(err, "failed to read eFuses")
 	}
-	cver, err := fusesByName["chip_package"].Value(false)
+	cpkg02, err := fusesByName["chip_pkg02"].Value(false)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", errors.Annotatef(err, "failed to get chip_pkg02")
 	}
-	chip_ver := ""
-	switch cver.Uint64() {
+	cpkg3, err := fusesByName["chip_pkg3"].Value(false)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to get chip_pkg3")
+	}
+	disable_app_cpu, err := fusesByName["disable_app_cpu"].Value(false)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to get disable_app_cpu")
+	}
+	cpkg := (cpkg3.Uint64() << 3) | cpkg02.Uint64()
+	single_core := (disable_app_cpu.Uint64() == 1)
+
+	crev1, err := fusesByName["chip_rev1"].Value(false)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to get chip_rev0")
+	}
+	crev2, err := fusesByName["chip_rev2"].Value(false)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to get chip_rev1")
+	}
+	apb_ctl_date, err := rrw.ReadReg(0x3ff6607c)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to read apb_ctl_date")
+	}
+	chip_rev := 0
+	if crev1.Uint64() != 0 {
+		chip_rev++
+		if crev2.Uint64() != 0 {
+			chip_rev++
+			if (apb_ctl_date & (1 << 31)) != 0 {
+				chip_rev++
+			}
+		}
+	}
+
+	chip_pkg := ""
+	switch cpkg {
 	case 0:
-		chip_ver = "ESP32D0WDQ6"
+		if single_core {
+			chip_pkg = "ESP32-S0WDQ6"
+		} else {
+			chip_pkg = "ESP32D0WDQ6"
+			if chip_rev == 3 {
+				chip_pkg += "-V3"
+			}
+		}
 	case 1:
-		chip_ver = "ESP32D0WDQ5"
+		if single_core {
+			chip_pkg = "ESP32S0WD"
+		} else {
+			chip_pkg = "ESP32D0WD"
+			if chip_rev == 3 {
+				chip_pkg += "-V3"
+			}
+		}
 	case 2:
-		chip_ver = "ESP32D2WDQ5"
+		chip_pkg = "ESP32D2WD"
 	case 4:
-		chip_ver = "ESP32-PICO-D2"
+		chip_pkg = "ESP32-U4WDH"
 	case 5:
-		chip_ver = "ESP32-PICO-D4"
+		chip_pkg = "ESP32-PICO-D4"
 	default:
-		chip_ver = fmt.Sprintf("ESP32?%d", cver.Uint64())
+		chip_pkg = fmt.Sprintf("ESP32?%d", cpkg)
 	}
 
-	crev, err := fusesByName["chip_ver_rev1"].Value(false)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return fmt.Sprintf("%s R%d", chip_ver, crev), nil
+	return fmt.Sprintf("%s R%d", chip_pkg, chip_rev), nil
 }

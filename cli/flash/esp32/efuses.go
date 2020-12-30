@@ -93,14 +93,16 @@ var (
 		{name: FlashCryptCntFuseName, block: 0, fields: []bitField{{0, 27, 20}}, wdBit: 2, rdBit: -1},
 		// 0, 31, 28 - ?
 		{name: MACAddressFuseName, block: 0, fields: []bitField{{1, 31, 0}, {2, 23, 0}}, wdBit: 3, rdBit: -1},
-		// 2, 31, 24 - ?
-		// 3, 3, 0 - ?
+		{name: "disable_app_cpu", block: 0, fields: []bitField{{3, 0, 0}}, wdBit: 3, rdBit: -1},
+		{name: "disable_bt", block: 0, fields: []bitField{{3, 1, 1}}, wdBit: 3, rdBit: -1},
+		{name: "chip_pkg3", block: 0, fields: []bitField{{3, 2, 2}}, wdBit: 3, rdBit: -1},
+		{name: "disable_cache", block: 0, fields: []bitField{{3, 3, 3}}, wdBit: 3, rdBit: -1},
 		{name: "SPI_pad_config_hd", block: 0, fields: []bitField{{3, 8, 4}}, wdBit: 3, rdBit: -1},
-		{name: "chip_package", block: 0, fields: []bitField{{3, 11, 9}}, wdBit: 3, rdBit: -1},
+		{name: "chip_pkg02", block: 0, fields: []bitField{{3, 11, 9}}, wdBit: 3, rdBit: -1},
 		{name: "cpu_freq_low", block: 0, fields: []bitField{{3, 12, 12}}, wdBit: 3, rdBit: -1},
 		{name: "cpu_freq_rated", block: 0, fields: []bitField{{3, 13, 13}}, wdBit: 3, rdBit: -1},
 		{name: "blk3_part_reserve", block: 0, fields: []bitField{{3, 14, 14}}, wdBit: 3, rdBit: -1},
-		{name: "chip_ver_rev1", block: 0, fields: []bitField{{3, 15, 15}}, wdBit: 3, rdBit: -1},
+		{name: "chip_rev1", block: 0, fields: []bitField{{3, 15, 15}}, wdBit: 3, rdBit: -1},
 		// 3, 31, 15 - ?
 		// 4, 13, 0 - ?
 		{name: "XPD_SDIO_REG", block: 0, fields: []bitField{{4, 14, 14}}, wdBit: 5, rdBit: -1},
@@ -111,6 +113,7 @@ var (
 		{name: "SPI_pad_config_q", block: 0, fields: []bitField{{5, 9, 5}}, wdBit: 6, rdBit: -1},
 		{name: "SPI_pad_config_d", block: 0, fields: []bitField{{5, 14, 10}}, wdBit: 6, rdBit: -1},
 		{name: "SPI_pad_config_cs0", block: 0, fields: []bitField{{5, 19, 15}}, wdBit: 6, rdBit: -1},
+		{name: "chip_rev2", block: 0, fields: []bitField{{5, 20, 20}}, wdBit: 3, rdBit: -1},
 		{name: "flash_crypt_config", block: 0, fields: []bitField{{5, 31, 28}}, wdBit: 10, rdBit: 3},
 		keyCodingSchemeFuseDescriptor,
 		{name: "console_debug_disable", block: 0, fields: []bitField{{6, 2, 2}}, wdBit: 15, rdBit: -1},
