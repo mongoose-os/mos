@@ -212,8 +212,10 @@ repos = args.repo
 
 if not repos:
     print("Getting list of repos...")
-    # Get libs and apps repos
-    repos = get_repo_names("mongoose-os-libs") + get_repo_names("mongoose-os-apps")
+    # Get libs
+    repos = get_repo_names("mongoose-os-libs")
+    # Add a few apps
+    repos.extend(["mongoose-os-apps/demo-c", "mongoose-os-apps/demo-js"])
     # Add a few more
     repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "cesanta/mos-libs", "mongoose-os/mos"])
 
