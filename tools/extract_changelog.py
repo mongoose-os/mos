@@ -126,8 +126,10 @@ def handle_repo_noexc(repo_name, from_tag, to_tag):
 repos = args.repo
 
 if not repos:
-    # Get libs and apps repos
-    repos = get_repo_names("mongoose-os-libs") + get_repo_names("mongoose-os-apps")
+    # Get libs
+    repos = get_repo_names("mongoose-os-libs")
+    # Add a few apps
+    repos.extend(["mongoose-os-apps/demo-c", "mongoose-os-apps/demo-js"])
     # Add a few more
     repos.extend(["cesanta/mongoose-os", "cesanta/mjs", "mongoose-os/mos"])
     repos.sort()
