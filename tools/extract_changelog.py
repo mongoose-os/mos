@@ -147,7 +147,7 @@ global_cl, errs = [], []
 for res in results:
     repo, r = res[1].get()
     if type(r) is str:
-        errs.append(r)
+        errs.append((repo, r))
     else:
         for e in r:
             global_cl.append((repo,) + e)
@@ -168,7 +168,7 @@ for e in sorted(cl_map.values(), key=lambda e: (e[0], e[1])):
 if len(errs) != 0:
     print("------------------------------------------------------")
     print("Errors: %d" % len(errs))
-    for err in errs: # Replace `None` as you need.
-        print("ERROR in %s: %s" % (err[0], err[1]))
+    for repo, err in errs: # Replace `None` as you need.
+        print("ERROR in %s: %s" % (repo, err))
         print("---")
     exit(1)
