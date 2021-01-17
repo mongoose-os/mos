@@ -157,7 +157,7 @@ func ReadManifestFinal(
 
 	manifest.Author, err = interpreter.ExpandVars(interp, manifest.Author, false)
 	if err != nil {
-		return nil, nil, errors.Annotatef(err, "while expanding name")
+		return nil, nil, errors.Annotatef(err, "while expanding author")
 	}
 
 	manifest.Version, err = interpreter.ExpandVars(interp, manifest.Version, false)
