@@ -157,7 +157,7 @@ func ReadManifestFinal(
 
 	manifest.Author, err = interpreter.ExpandVars(interp, manifest.Author, false)
 	if err != nil {
-		return nil, nil, errors.Annotatef(err, "while expanding name")
+		return nil, nil, errors.Annotatef(err, "while expanding author")
 	}
 
 	manifest.Version, err = interpreter.ExpandVars(interp, manifest.Version, false)
@@ -259,6 +259,16 @@ func ReadManifestFinal(
 	manifest.BinaryLibs = prependPaths(manifest.BinaryLibs, dir)
 
 	manifest.Tests = prependPaths(manifest.Tests, dir)
+
+	manifest.CFlags, err = interpreter.ExpandVarsSlice(interp, manifest.CFlags, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding cflags")
+	}
+
+	manifest.CXXFlags, err = interpreter.ExpandVarsSlice(interp, manifest.CXXFlags, false)
+	if err != nil {
+		return nil, nil, errors.Annotatef(err, "while expanding cxxflags")
+	}
 	// }}}
 
 	if manifest.Type == build.AppTypeApp {

@@ -49,6 +49,10 @@ build_vars:
   MGOS_HAVE_MYLIB2: "1"
   MGOS_HAVE_MYLIB3: "1"
   MGOS_HAVE_MYLIB4: "1"
+cflags:
+- -Ifrom_cli/include
+cxxflags:
+- -Ilib4_var3 app/include/c++
 cdefs:
   MGOS: "1"
   MGOS_HAVE_CORE: "1"

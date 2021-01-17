@@ -6,6 +6,12 @@ version: 1.0-${build_vars.EXT_VAR}
 sources:
   - src
 
+cflags:
+  - -I${build_vars.LIB4_VAR2}/include
+
+cxxflags:
+  - -I${build_vars.LIB4_VAR3}/include/c++
+
 filesystem:
   - fs
 
