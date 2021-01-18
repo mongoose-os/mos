@@ -175,19 +175,6 @@ func ReadManifestFinal(
 		return nil, nil, errors.Annotatef(err, "while expanding description")
 	}
 
-	for i := len(manifest.Libs) - 1; i >= 0; i-- {
-		l := &manifest.Libs[i]
-		name, err := l.GetName()
-		if err != nil {
-			return nil, nil, errors.Trace(err)
-		}
-		libDir, err := cbs.ComponentProvider.GetLibLocalPath(l, dir, manifest.LibsVersion, manifest.Platform)
-		if err != nil {
-			return nil, nil, errors.Trace(err)
-		}
-		interpreter.SetLibVars(interp.MVars, name, libDir)
-	}
-
 	// Prepare local copies of all sw modules {{{
 	// Modules are collected from the bottom of the dependency chain,
 	// we go backwards to ensure overrides are handled first.
