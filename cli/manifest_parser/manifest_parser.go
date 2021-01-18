@@ -223,6 +223,11 @@ func ReadManifestFinal(
 	}
 
 	for k, v := range manifest.LibsHandled {
+		name, err := v.Lib.GetName()
+		if err != nil {
+			return nil, nil, errors.Trace(err)
+		}
+		interpreter.SetLibVars(interp.MVars, name, v.Path)
 		manifest.LibsHandled[k].Sources, err = interpreter.ExpandVarsSlice(interp, v.Sources, false)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
