@@ -54,6 +54,11 @@ func (mv *MosVars) GetVar(name string) (interface{}, bool) {
 	return mv.data.Get(name)
 }
 
+// SetLibVars populates "mos.libs.<libName>".
+func SetLibVars(mVars *MosVars, libName, path string) {
+	mVars.SetVar(GetMVarNameLibPath(libName), path)
+}
+
 // SetModuleVars populates "mos.modules.<moduleName>".
 func SetModuleVars(mVars *MosVars, moduleName, path string) {
 	mVars.SetVar(GetMVarNameModulePath(moduleName), path)
@@ -132,6 +137,16 @@ func GetMVarNameMos() string {
 // GetMVarNameManifest returns "manifest"
 func GetMVarNameManifest() string {
 	return GetMVarName("manifest")
+}
+
+// GetMVarNameLib returns a string like "mos.libs.foo"
+func GetMVarNameLib(libName string) string {
+	return GetMVarName(GetMVarNameMos(), "libs", ourutil.IdentifierFromString(libName))
+}
+
+// GetMVarNameLibPath returns a string like "mos.libs.foo.path"
+func GetMVarNameLibPath(libName string) string {
+	return GetMVarName(GetMVarNameLib(libName), "path")
 }
 
 // GetMVarNameModule returns a string like "mos.modules.foo"
