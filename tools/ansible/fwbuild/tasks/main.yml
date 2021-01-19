@@ -5,8 +5,8 @@
   vars:
     email: webmaster@cesanta.com
     domains: |
-      -d mongoose.cloud \
-      -d www.mongoose.cloud
+      -d build.mongoose-os.com \
+      -d build.mongoose-os.com
     renew_time: 'Mon *-*-* 01:23:45'
 
 - name: Pull fwbuild-manager image:{{ fwbuild_manager_tag }}
@@ -31,8 +31,8 @@
       --volumes-dir={{ fwbuild_volumes_dir }}
       --port=80
       --port-tls=443
-      --cert-file=/data/letsencrypt/live/mongoose.cloud/fullchain.pem
-      --key-file=/data/letsencrypt/live/mongoose.cloud/privkey.pem
+      --cert-file=/data/letsencrypt/live/build.mongoose-os.com/fullchain.pem
+      --key-file=/data/letsencrypt/live/build.mongoose-os.com/privkey.pem
       --acme-challenge-dir=/data/letsencrypt/www/.well-known/acme-challenge
     volumes:
       - "{{ fwbuild_volumes_dir }}:{{ fwbuild_volumes_dir }}"

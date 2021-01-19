@@ -238,7 +238,7 @@ if __name__ == "__main__":
     if args.resume <= 45:
         print("(45) Pushing Docker images...")
         RunSubprocess(["make", "docker-push-mos", "docker-push-fwbuild-instance", "TAG=%s" % tag_effective])
-        r = requests.get("https://mongoose.cloud/api/fwbuild/%s/pull" % tag_effective)
+        r = requests.get("https://build.mongoose-os.com/api/fwbuild/%s/pull" % tag_effective)
         if r.status_code != 200:
             print("Error pulling image: %d %s" % (r.status_code, r.text))
             exit(2)

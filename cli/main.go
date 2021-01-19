@@ -66,7 +66,7 @@ const (
 var (
 	user       = flag.String("user", "", "Cloud username")
 	pass       = flag.String("pass", "", "Cloud password or token")
-	server     = flag.String("server", "https://mongoose.cloud", "FWBuild server")
+	server     = flag.String("server", "https://build.mongoose-os.com", "FWBuild server")
 	local      = flag.Bool("local", false, "Local build.")
 	mosRepo    = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")
 	deviceID   = flag.String("device-id", "", "Device ID")
