@@ -1,0 +1,12 @@
+author: mongoose-os
+description: Mylib2a
+type: lib
+version: 2.0
+
+config_schema:
+  - ["mylib2", "o", {title: "mylib2a settings"}]
+
+cdefs:
+  BAR: 1
+
+manifest_version: 2017-09-29

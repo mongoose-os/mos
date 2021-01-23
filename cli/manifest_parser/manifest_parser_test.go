@@ -155,7 +155,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 		logWriter := &bytes.Buffer{}
 		interp := interpreter.NewInterpreter(newMosVars())
 
-		t.Logf("testing %q for %q %s descrFilename", appPath, platform, descrFilename)
+		t.Logf("testing %q for %q", appPath, platform)
 
 		manifest, _, err := ReadManifestFinal(
 			filepath.Join(appPath, appDir), &build.ManifestAdjustments{
@@ -229,23 +229,15 @@ type compProviderTest struct{}
 func (lpt *compProviderTest) GetLibLocalPath(
 	m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 ) (string, error) {
-	appName, err := m.GetName()
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return filepath.Join(rootAppDir, "..", "libs", appName), nil
+	parts := strings.Split(m.Location, "/")
+	return filepath.Join(rootAppDir, "..", "libs", parts[len(parts)-1]), nil
 }
 
 func (lpt *compProviderTest) GetModuleLocalPath(
 	m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 ) (string, error) {
-	appName, err := m.GetName()
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return filepath.Join(rootAppDir, "..", "modules", appName), nil
+	parts := strings.Split(m.Location, "/")
+	return filepath.Join(rootAppDir, "..", "modules", parts[len(parts)-1]), nil
 }
 
 func (lpt *compProviderTest) GetMongooseOSLocalPath(

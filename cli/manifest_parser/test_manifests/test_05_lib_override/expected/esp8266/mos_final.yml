@@ -1,0 +1,63 @@
+type: app
+version: "1.0"
+platform: esp8266
+platforms:
+__ALL_PLATFORMS__
+author: mongoose-os
+description: My test app
+sources:
+- __APP_ROOT__/app/build/gen/mgos_deps_init.c
+config_schema:
+- - mylib2
+  - o
+  - title: mylib2a settings
+- - mylib1
+  - o
+  - title: mylib1 settings
+- - myapp
+  - o
+  - title: Myapp settings
+build_vars:
+  BOARD: ""
+  MGOS: "1"
+  MGOS_HAVE_CORE: "1"
+  MGOS_HAVE_MYLIB1: "1"
+  MGOS_HAVE_MYLIB2: "1"
+cdefs:
+  BAR: "1"
+  MGOS: "1"
+  MGOS_HAVE_CORE: "1"
+  MGOS_HAVE_MYLIB1: "1"
+  MGOS_HAVE_MYLIB2: "1"
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: "2017-09-29"
+libs_handled:
+- lib:
+    origin: https://github.com/mongoose-os-libs/core
+    location: https://github.com/mongoose-os-libs/core
+    name: core
+  path: __APP_ROOT__/libs/core
+  version: "1.0"
+- lib:
+    origin: libs/mylib2a
+    location: libs/mylib2a
+    name: mylib2
+  path: __APP_ROOT__/libs/mylib2a
+  init_deps:
+  - core
+  version: "2.0"
+- lib:
+    origin: libs/mylib1
+    location: libs/mylib1
+    name: mylib1
+  path: __APP_ROOT__/libs/mylib1
+  init_deps:
+  - core
+  - mylib2
+  version: "1.0"
+init_deps:
+- core
+- mylib2
+- mylib1
