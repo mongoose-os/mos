@@ -18,6 +18,7 @@ package manifest_parser
 
 import (
 	"sync"
+
 	"github.com/mongoose-os/mos/cli/build"
 )
 
@@ -31,16 +32,9 @@ type libByLocMap struct {
 	mtx sync.Mutex
 }
 
-func newLibByLocStr() *libByLoc {
-	return &libByLoc{
-		mtx: sync.Mutex{},
-	}
-}
-
 func newLibByLocMap() *libByLocMap {
 	return &libByLocMap{
 		m:   map[string]*libByLoc{},
-		mtx: sync.Mutex{},
 	}
 }
 
@@ -53,7 +47,7 @@ func (lm *libByLocMap) AddOrFetchAndLock(loc string) *libByLoc {
 
 	ls, ok := lm.m[loc]
 	if !ok {
-	  ls = newLibByLocStr()
+	  ls = &libByLoc{}
 	  lm.m[loc] = ls
 	}
 
