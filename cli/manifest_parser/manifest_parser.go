@@ -791,16 +791,38 @@ func prepareLibs(parentNodeName string, manifest *build.FWAppManifest, pc *manif
 	return mtime, nil
 }
 
-// An encounter with a library already handled while processing another location
-// in the manifest tree, potentially in a different goroutine.  Two distinct
-// scenarios are possible.
-//  - A repeated library reference (typical):
-//  	Location is the same for libHad and libNow;
-//  	NB! libHad.Name is reliable, libNow.Name is NOT (isn't yet read from the
+// Met a library already handled while traversing the manifest tree.
+//
+// Two distinct scenarios are possible:
+//  - A repeated library reference (typical and frequent):
+//    -	Location is the same for libHad and libNow;
+//    -	NB! libHad.Name is reliable, libNow.Name is NOT (isn't yet read from the
 //  	library manifest).
 //  - A library override (presumed relatively rare):
-//	Location is different between libHad and libNow;
-//	Name is the same for both.
+//    -	Location is different between libHad and libNow;
+//    -	Name is the same for both.
+//
+// The library override scenario is currently somewhat fickle.  The location
+// that will be used for a build is essentially the one processed earlier on.
+// The processing order is only partially deterministic, however:
+// - Distinct `passes' in readManifestWithLibs() split all unconditional library
+//   references between sequential calls of prepareLibs(): first only those of
+//   the top manifest, then those referenced additionally during the first pass
+//   only, then those referenced additionally during the second pass only and so
+//   on.  IOW, the library reference tree is handled top-down, level by level.
+// - Within each such batch pass (i.e., each library tree level and each call to
+//   prepareLibs()), however, calls of prepareLib() for each single library
+//   reference are processed in parallel, and no strong ordering applies.
+//   Therefore, to reliably override a library, one must do it from higher up
+//   the manifest tree.
+//
+// Furthermore, library references from the top manifest file can override the
+// variant setting of an already handled library.  Given the aforementioned pass
+// ordering, that can't happen while handling unconditional library references.
+// However, that can happen during the later condition expansion stage; as a
+// matter of fact, the initial implementation of the variant overriding was
+// targeting exactly that use case.  That obeys different ordering, see
+// readManifestWithLibs() and commentary in expandManifestLibsAndConds().
 func prepareLibReencounter(
 	parentNodeName string, manifest *build.FWAppManifest,
 	pc *manifestParseContext, libHad, libNow *build.SWModule,
