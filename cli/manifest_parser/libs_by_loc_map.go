@@ -33,9 +33,7 @@ type libByLocMap struct {
 }
 
 func newLibByLocMap() *libByLocMap {
-	return &libByLocMap{
-		m:   map[string]*libByLoc{},
-	}
+	return &libByLocMap{m: map[string]*libByLoc{}}
 }
 
 // AddOrFetchAndLock() tries to add a new location key to the set.  If
@@ -47,8 +45,8 @@ func (lm *libByLocMap) AddOrFetchAndLock(loc string) *libByLoc {
 
 	ls, ok := lm.m[loc]
 	if !ok {
-	  ls = &libByLoc{}
-	  lm.m[loc] = ls
+		ls = &libByLoc{}
+		lm.m[loc] = ls
 	}
 
 	ls.mtx.Lock()

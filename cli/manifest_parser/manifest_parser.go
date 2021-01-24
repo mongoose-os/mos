@@ -486,7 +486,7 @@ type manifestParseContext struct {
 
 	prepareLibs []*prepareLibsEntry
 
-	mtx     *sync.Mutex
+	mtx       *sync.Mutex
 	libsByLoc *libByLocMap
 }
 
@@ -526,8 +526,8 @@ func readManifestWithLibs(
 
 		cbs: cbs,
 
-		mtx:     &sync.Mutex{},
-		libsByLoc:   newLibByLocMap(),
+		mtx:       &sync.Mutex{},
+		libsByLoc: newLibByLocMap(),
 	}
 
 	manifest, mtime, err := readManifestWithLibs2(dir, pc)
@@ -842,9 +842,7 @@ func prepareLib(
 	// m.Name can change before its original value may need to be examined.
 	libRefName := m.Name
 	if err := m.Normalize(); err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
@@ -861,17 +859,13 @@ func prepareLib(
 		m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
 	)
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
 	libLocalDir, err = filepath.Abs(libLocalDir)
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
@@ -886,9 +880,7 @@ func prepareLib(
 
 	libManifest, libMtime, err := readManifestWithLibs2(libLocalDir, pc)
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
@@ -911,9 +903,7 @@ func prepareLib(
 	}
 	name, err := m.GetName()
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
@@ -967,9 +957,7 @@ func prepareLib(
 	}
 	pc.mtx.Unlock()
 
-	lpres <- libPrepareResult{
-		mtime: libMtime,
-	}
+	lpres <- libPrepareResult{mtime: libMtime}
 }
 
 // ReadManifest reads manifest file(s) from the specific directory; if the
