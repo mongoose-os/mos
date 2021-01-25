@@ -1,0 +1,7 @@
+type: lib
+manifest_version: 2020-08-02
+
+libs:
+  - origin: libs/mylib1
+    name: lib1
+    version: 1.0-from-mylib2

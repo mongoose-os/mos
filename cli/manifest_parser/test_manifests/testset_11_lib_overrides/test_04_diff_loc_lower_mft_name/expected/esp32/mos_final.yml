@@ -1,0 +1,55 @@
+type: app
+platform: esp32
+platforms:
+__ALL_PLATFORMS__
+sources:
+- __APP_ROOT__/app/build/gen/mgos_deps_init.c
+- __APP_ROOT__/libs/core/src/lib.c
+- __APP_ROOT__/libs/lib1/src/lib.c
+build_vars:
+  BOARD: ""
+  ESP_IDF_EXTRA_COMPONENTS: ""
+  ESP_IDF_SDKCONFIG_OPTS: ""
+  MGOS: "1"
+  MGOS_HAVE_CORE: "1"
+  MGOS_HAVE_LIB1: "1"
+  MGOS_HAVE_MYLIB2: "1"
+cdefs:
+  MGOS: "1"
+  MGOS_HAVE_CORE: "1"
+  MGOS_HAVE_LIB1: "1"
+  MGOS_HAVE_MYLIB2: "1"
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: "2020-08-02"
+libs_handled:
+- lib:
+    origin: https://github.com/mongoose-os-libs/core
+    location: https://github.com/mongoose-os-libs/core
+    name: core
+  path: __APP_ROOT__/libs/core
+  sources:
+  - __APP_ROOT__/libs/core/src/lib.c
+- lib:
+    origin: libs/lib1
+    location: libs/lib1
+    version: 2.0-from-app
+    name: lib1
+  path: __APP_ROOT__/libs/lib1
+  init_deps:
+  - core
+  sources:
+  - __APP_ROOT__/libs/lib1/src/lib.c
+- lib:
+    origin: libs/mylib2
+    location: libs/mylib2
+    name: mylib2
+  path: __APP_ROOT__/libs/mylib2
+  init_deps:
+  - core
+  - lib1
+init_deps:
+- core
+- lib1
+- mylib2

@@ -1,0 +1,11 @@
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/mylib1
+    version: 2.0-from-app
+  - location: libs/mylib2
+
+# The mylib1 library is referenced both directly and indirectly via mylib2 using
+# the same location and no explicitly set names.  Check that the generated
+# manifest file has no duplicates and that the actually handled reference is
+# that from the higher level of the manifest tree.
