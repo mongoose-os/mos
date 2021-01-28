@@ -142,9 +142,6 @@ func init() {
 
 	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
 	hiddenFlags = append(hiddenFlags, "start-browser")
-
-	flag.BoolVar(&startWebview, "start-webview", startWebview, "Automatically start WebView")
-	hiddenFlags = append(hiddenFlags, "start-webview")
 }
 
 type wsWriter struct{}
@@ -348,19 +345,14 @@ func startUI(ctx context.Context, devConn dev.DevConn) error {
 		os.Stdout, os.Stderr = origStdout, origStderr
 		return errors.Trace(err)
 	}
-	if startWebview && runtime.GOOS != "linux" {
-		ourutil.Reportf("Starting Web UI in a webview..")
-		go http.Serve(listener, nil)
-		webview(url)
-	} else {
-		ourutil.Reportf("Starting Web UI. If the browser does not start, navigate to %s", url)
-		if startBrowser {
-			open.Start(url)
-		}
-		if err := http.Serve(listener, nil); err != nil {
-			os.Stdout, os.Stderr = origStdout, origStderr
-			return errors.Trace(err)
-		}
+
+	ourutil.Reportf("Starting Web UI. If the browser does not start, navigate to %s", url)
+	if startBrowser {
+		open.Start(url)
+	}
+	if err := http.Serve(listener, nil); err != nil {
+		os.Stdout, os.Stderr = origStdout, origStderr
+		return errors.Trace(err)
 	}
 
 	// Unreacahble

@@ -28,7 +28,6 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/zserge/webview v0.0.0-20191103184548-1a9ebffc2601
 	go.opencensus.io v0.19.0 // indirect
 	goji.io v2.0.0+incompatible
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a

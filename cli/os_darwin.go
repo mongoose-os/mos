@@ -23,8 +23,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	zwebview "github.com/zserge/webview"
 )
 
 func enumerateSerialPorts() []string {
@@ -52,8 +50,4 @@ func osSpecificInit() {
 		cmd := fmt.Sprintf(`grep %s ~/.profile || echo 'PATH=$PATH:%s' >> ~/.profile`, dirname, dirname)
 		exec.Command("/bin/bash", "-c", cmd)
 	}
-}
-
-func webview(url string) {
-	zwebview.Open("mos tool", url, 1200, 600, true)
 }
