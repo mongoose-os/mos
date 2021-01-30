@@ -16,9 +16,5 @@
 //
 package main
 
-import (
-	"fmt"
-)
-
 func osSpecificInit() {
 }
