@@ -499,7 +499,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 		return libDirAbs, nil
 	}
 
-	// If --libs-dir is set, this is where all the libs are.
+	// Check --libs-dir.
 	if len(paths.LibsDirFlag) > 0 {
 		name2, _ := m.GetName2()
 		for _, libsDir := range paths.LibsDirFlag {
@@ -510,10 +510,9 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				return libDir, nil
 			}
 		}
-		return "", errors.Errorf("%s not found in --libs-dir", name2)
 	}
 
-	// Try to fetch
+	// Try to fetch into --deps-dir.
 	depsDir := paths.GetDepsDir(appDir)
 	for {
 		localDir, err := m.GetLocalDir(depsDir, libsDefVersion)
