@@ -566,7 +566,11 @@ func prepareLocalCopyGitLocked(
 				return nil
 			}
 		}
-	} else if !os.IsNotExist(err) {
+	} else if os.IsNotExist(err) {
+		if pullInterval == 0 {
+			return fmt.Errorf("%s: Local copy in %q does not exist and fetching is not allowed", name, targetDir)
+		}
+	} else {
 		// Some error other than non-existing dir
 		return errors.Trace(err)
 	}
