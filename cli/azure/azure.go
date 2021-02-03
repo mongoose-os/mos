@@ -74,10 +74,10 @@ func AzureIoTSetup(ctx context.Context, devConn dev.DevConn) error {
 			return errors.Annotatef(err, "Failed to run Azure CLI utility. Make sure it is installed - https://docs.microsoft.com/en-us/cli/azure/install-azure-cli")
 		}
 		// Check that IoT extension is installed
-		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "az", "extension", "show", "--name", "azure-cli-iot-ext"); err != nil {
+		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "az", "extension", "show", "--name", "azure-iot"); err != nil {
 			ourutil.Reportf("Installing azure-cli-iot extension...")
-			if err := ourutil.RunCmd(ourutil.CmdOutOnError, "az", "extension", "add", "--name", "azure-cli-iot-ext", "--yes"); err != nil {
-				return errors.Annotatef(err, "azure-cli-iot-ext was not found and could not be installed. Please do it manually")
+			if err := ourutil.RunCmd(ourutil.CmdOutOnError, "az", "extension", "add", "--name", "azure-iot", "--yes"); err != nil {
+				return errors.Annotatef(err, "azure-iot was not found and could not be installed. Please do it manually")
 			}
 		}
 		if err := ourutil.RunCmd(ourutil.CmdOutOnError, "az", "account", "show"); err != nil {
