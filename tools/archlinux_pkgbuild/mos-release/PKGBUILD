@@ -1,31 +1,36 @@
-MOS_TAG=2.17.0
+# Maintainer: Deomid Ryabkov <https://github.com/rojer>
+# Contributor: Daniel Pereira <https://github.com/kriansa>
 
 pkgname=mos
-pkgver=${MOS_TAG}
+pkgver=2.19.0
 pkgrel=1
 pkgdesc="Mongoose-OS build tool (release)"
-arch=('i686' 'x86_64')
-license=('Apache')
 url="https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md"
-depends=('libftdi-compat' 'libusb')
+arch=(x86_64)
+license=(Apache)
+depends=(libftdi libusb)
 makedepends=(
-    'gcc'
-    'go'
-    'git'
-    'make'
-    'pkgconf'
-    'python3'
+  gcc
+  go
+  git
+  make
+  pkgconf
+  python3
+  libftdi
+  libftdi-compat
 )
-conflicts=('mos-latest')
-
-source=(git+https://github.com/mongoose-os/mos#tag=${MOS_TAG})
-
-md5sums=('SKIP')
+conflicts=(mos-latest)
+source=("https://github.com/mongoose-os/mos/archive/${pkgver}.tar.gz")
+sha256sums=(0798ad17803e1c18afdce35f3ee29ac8b5bcdf8f902bd72d20b2568da6af76b9)
 
 build() {
-  make -C "$srcdir/mos" mos
+  cd "$pkgname-$pkgver" || exit 1
+  make mos
 }
 
 package() {
-  install -D "$srcdir/mos/mos" "$pkgdir/usr/bin/mos"
+  cd "$pkgname-$pkgver" || exit 1
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -D mos "$pkgdir/usr/bin/mos"
 }
