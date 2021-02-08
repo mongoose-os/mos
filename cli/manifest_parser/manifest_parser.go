@@ -486,8 +486,8 @@ type manifestParseContext struct {
 
 	prepareLibs []*prepareLibsEntry
 
-	mtx     *sync.Mutex
-	flagSet *stringFlagSet
+	mtx       *sync.Mutex
+	libsByLoc *libByLocMap
 }
 
 // readManifestWithLibs reads manifest from the provided dir, "expands" all
@@ -526,14 +526,19 @@ func readManifestWithLibs(
 
 		cbs: cbs,
 
-		mtx:     &sync.Mutex{},
-		flagSet: newStringFlagSet(),
+		mtx:       &sync.Mutex{},
+		libsByLoc: newLibByLocMap(),
 	}
 
-	manifest, mtime, err := readManifestWithLibs2(depsApp, dir, pc)
+	manifest, mtime, err := readManifestWithLibs2(dir, pc)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
+
+	pc.prepareLibs = append(pc.prepareLibs, &prepareLibsEntry{
+		parentNodeName: depsApp,
+		manifest:       manifest,
+	})
 
 	// Set the mos.platform variable
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
@@ -681,7 +686,7 @@ func readManifestWithLibs(
 	return manifest, mtime, nil
 }
 
-func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext) (*build.FWAppManifest, time.Time, error) {
+func readManifestWithLibs2(dir string, pc *manifestParseContext) (*build.FWAppManifest, time.Time, error) {
 	manifest, mtime, err := ReadManifest(dir, &pc.adjustments, pc.interp)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -748,11 +753,6 @@ func readManifestWithLibs2(parentNodeName, dir string, pc *manifestParseContext)
 		interpreter.SetManifestVars(pc.interp.MVars, manifest)
 	}
 
-	pc.prepareLibs = append(pc.prepareLibs, &prepareLibsEntry{
-		parentNodeName: parentNodeName,
-		manifest:       manifest,
-	})
-
 	return manifest, mtime, err
 }
 
@@ -791,6 +791,66 @@ func prepareLibs(parentNodeName string, manifest *build.FWAppManifest, pc *manif
 	return mtime, nil
 }
 
+// Met a library already handled while traversing the manifest tree.
+//
+// Two distinct scenarios are possible:
+//  - A repeated library reference (typical and frequent):
+//    -	Location is the same for libHad and libNow;
+//    -	NB! libHad.Name is reliable, libNow.Name is NOT (isn't yet read from the
+//  	library manifest).
+//  - A library override (presumed relatively rare):
+//    -	Location is different between libHad and libNow;
+//    -	Name is the same for both.
+//
+// The library override scenario is currently somewhat fickle.  The location
+// that will be used for a build is essentially the one processed earlier on.
+// The processing order is only partially deterministic, however:
+// - Distinct `passes' in readManifestWithLibs() split all unconditional library
+//   references between sequential calls of prepareLibs(): first only those of
+//   the top manifest, then those referenced additionally during the first pass
+//   only, then those referenced additionally during the second pass only and so
+//   on.  IOW, the library reference tree is handled top-down, level by level.
+// - Within each such batch pass (i.e., each library tree level and each call to
+//   prepareLibs()), however, calls of prepareLib() for each single library
+//   reference are processed in parallel, and no strong ordering applies.
+//   Therefore, to reliably override a library, one must do it from higher up
+//   the manifest tree.
+//
+// Furthermore, library references from the top manifest file can override the
+// variant setting of an already handled library.  Given the aforementioned pass
+// ordering, that can't happen while handling unconditional library references.
+// However, that can happen during the later condition expansion stage; as a
+// matter of fact, the initial implementation of the variant overriding was
+// targeting exactly that use case.  That obeys different ordering, see
+// readManifestWithLibs() and commentary in expandManifestLibsAndConds().
+func prepareLibReencounter(
+	parentNodeName string, manifest *build.FWAppManifest,
+	pc *manifestParseContext, libHad, libNow *build.SWModule,
+) {
+	if libHad.Location == libNow.Location {
+		ourutil.Freportf(pc.logWriter, "Lib %q at %q: already handled...",
+			libHad.Name, libHad.Location)
+	} else {
+		ourutil.Freportf(pc.logWriter, "Lib %q at %q: overridden by same at %q...",
+			libHad.Name, libNow.Location, libHad.Location)
+	}
+
+	// Note the dependency.
+	pc.mtx.Lock()
+	pc.deps.AddDep(parentNodeName, libHad.Name)
+	if !manifest.NoImplInitDeps {
+		pc.initDeps.AddDep(parentNodeName, libHad.Name)
+	}
+	pc.mtx.Unlock()
+
+	// App manifest can override library variants (in conds).
+	if libNow.Variant != "" && parentNodeName == depsApp {
+		glog.V(1).Infof("%s variant: %q -> %q", libHad.Name,
+			libHad.Variant, libNow.Variant)
+		libHad.Variant = libNow.Variant
+	}
+}
+
 func prepareLib(
 	parentNodeName string, m *build.SWModule,
 	manifest *build.FWAppManifest,
@@ -800,70 +860,38 @@ func prepareLib(
 ) {
 	defer wg.Done()
 
+	// Stash the name explicitly set in the referring manifest, if any.
+	// m.Name can change before its original value may need to be examined.
+	libRefName := m.Name
 	if err := m.Normalize(); err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
-	name, err := m.GetName()
-	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+	ls := pc.libsByLoc.AddOrFetchAndLock(m.Location)
+	defer ls.mtx.Unlock()
+	if ls.Lib != nil {
+		prepareLibReencounter(parentNodeName, manifest, pc, ls.Lib, m)
 		return
 	}
 
-	pc.mtx.Lock()
-	pc.deps.AddDep(parentNodeName, name)
-	if !manifest.NoImplInitDeps {
-		pc.initDeps.AddDep(parentNodeName, name) // Implicit init dep
-	}
-
-	if !pc.flagSet.Add(name) {
-		if pc.libsHandled[name] != nil {
-			// That library is already handled by someone else
-			// App manifest can override library variants (in conds).
-			lm := &pc.libsHandled[name].Lib
-			if m.Variant != "" && parentNodeName == depsApp {
-				glog.V(1).Infof("%s variant: %q -> %q", name, lm.Variant, m.Variant)
-				lm.Variant = m.Variant
-			}
-		} else {
-			lpres <- libPrepareResult{
-				err: fmt.Errorf("duplicate library %q in %s", name, manifest.Origin),
-			}
-		}
-		pc.mtx.Unlock()
-		return
-	}
-	pc.mtx.Unlock()
-
-	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
+	ourutil.Freportf(pc.logWriter, "Reading lib at %q...", m.Location)
 
 	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
 		m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
 	)
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
 	libLocalDir, err = filepath.Abs(libLocalDir)
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
-	// Now that we know we need to handle current lib, add a node for it
 	pc.mtx.Lock()
-	pc.deps.AddNode(name)
-	pc.initDeps.AddNode(name)
 	// If platform is empty, we need to set it from the outer manifest,
 	// because arch is used in libs to handle arch-dependent submanifests, like
 	// mos_esp8266.yml.
@@ -872,20 +900,63 @@ func prepareLib(
 	}
 	pc.mtx.Unlock()
 
-	libManifest, libMtime, err := readManifestWithLibs2(name, libLocalDir, pc)
+	libManifest, libMtime, err := readManifestWithLibs2(libLocalDir, pc)
 	if err != nil {
-		lpres <- libPrepareResult{
-			err: errors.Trace(err),
-		}
+		lpres <- libPrepareResult{err: errors.Trace(err)}
 		return
 	}
 
-	// Add a build var and C macro MGOS_HAVE_<lib_name>
+	// The library can explicitly set its name in its manifest.  Also its
+	// name can be explicitly set in the referring manifest.  Either
+	// separately is fine.  None is fine too (the name defaults to the
+	// location basename).  However if both are used, treat a mismatch as an
+	// error (building without one of the two names in place is guaranteed
+	// to fail, and is likely with both too).
+	if libManifest.Name != "" {
+		if libRefName != "" && libRefName != libManifest.Name {
+			lpres <- libPrepareResult{
+				err: fmt.Errorf("Library %q at %q is referred to as %q from %q",
+					libManifest.Name, m.Location,
+					libRefName, manifest.Origin),
+			}
+			return
+		}
+		m.Name = libManifest.Name
+	}
+	name, err := m.GetName()
+	if err != nil {
+		lpres <- libPrepareResult{err: errors.Trace(err)}
+		return
+	}
+
+	ourutil.Freportf(pc.logWriter, "Handling lib %q at %q...", name, m.Location)
+
+	// Prep a build var and C macro MGOS_HAVE_<lib_name>
 	haveName := fmt.Sprintf(
 		"MGOS_HAVE_%s", strings.ToUpper(ourutil.IdentifierFromString(name)),
 	)
 
 	pc.mtx.Lock()
+	if pc.libsHandled[name] != nil {
+		pc.mtx.Unlock()
+		prepareLibReencounter(parentNodeName, manifest, pc,
+			&pc.libsHandled[name].Lib, m)
+		return
+	}
+
+	pc.prepareLibs = append(pc.prepareLibs, &prepareLibsEntry{
+		parentNodeName: name,
+		manifest:       libManifest,
+	})
+
+	// Now that we know we need to handle current lib, add a node for it
+	pc.deps.AddNode(name)
+	pc.initDeps.AddNode(name)
+	pc.deps.AddDep(parentNodeName, name)
+	if !manifest.NoImplInitDeps {
+		pc.initDeps.AddDep(parentNodeName, name)
+	}
+
 	manifest.BuildVars[haveName] = "1"
 	manifest.CDefs[haveName] = "1"
 
@@ -896,8 +967,8 @@ func prepareLib(
 		Version:  libManifest.Version,
 		Manifest: libManifest,
 	}
-	lh.Lib.Name = name
 	pc.libsHandled[name] = lh
+	ls.Lib = &lh.Lib
 	pc.initDeps.AddNodeWithDeps(name, libManifest.InitAfter)
 	if !libManifest.NoImplInitDeps && name != coreLibName {
 		// Implicit dep on "core"
@@ -908,9 +979,7 @@ func prepareLib(
 	}
 	pc.mtx.Unlock()
 
-	lpres <- libPrepareResult{
-		mtime: libMtime,
-	}
+	lpres <- libPrepareResult{mtime: libMtime}
 }
 
 // ReadManifest reads manifest file(s) from the specific directory; if the

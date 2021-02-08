@@ -16,31 +16,39 @@
 //
 package manifest_parser
 
-import "sync"
+import (
+	"sync"
 
-type stringFlagSet struct {
-	m   map[string]struct{}
+	"github.com/mongoose-os/mos/cli/build"
+)
+
+type libByLoc struct {
+	Lib *build.SWModule
 	mtx sync.Mutex
 }
 
-func newStringFlagSet() *stringFlagSet {
-	return &stringFlagSet{
-		m:   map[string]struct{}{},
-		mtx: sync.Mutex{},
-	}
+type libByLocMap struct {
+	m   map[string]*libByLoc
+	mtx sync.Mutex
 }
 
-// Add tries to add a new key to the set. If key was added, returns true;
-// otherwise (key already exists) returns false.
-func (fs *stringFlagSet) Add(key string) bool {
-	fs.mtx.Lock()
-	defer fs.mtx.Unlock()
+func newLibByLocMap() *libByLocMap {
+	return &libByLocMap{m: map[string]*libByLoc{}}
+}
 
-	_, ok := fs.m[key]
+// AddOrFetchAndLock() tries to add a new location key to the set.  If
+// successful, the new entry (Lib: nil) is locked and returned; otherwise (the
+// location key already exists) the pre-existing entry is locked and returned.
+func (lm *libByLocMap) AddOrFetchAndLock(loc string) *libByLoc {
+	lm.mtx.Lock()
+	defer lm.mtx.Unlock()
+
+	ls, ok := lm.m[loc]
 	if !ok {
-		fs.m[key] = struct{}{}
-		return true
+		ls = &libByLoc{}
+		lm.m[loc] = ls
 	}
 
-	return false
+	ls.mtx.Lock()
+	return ls
 }

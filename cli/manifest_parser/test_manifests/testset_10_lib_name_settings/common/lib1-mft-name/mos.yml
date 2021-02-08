@@ -1,0 +1,4 @@
+name: lib1
+type: lib
+sources: [src]
+manifest_version: 2020-08-02
