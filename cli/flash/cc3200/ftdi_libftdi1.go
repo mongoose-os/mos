@@ -26,6 +26,7 @@ package cc3200
 #include <ftdi.h>
 
 #cgo pkg-config: libftdi1
+#cgo CFLAGS: -I/usr/local/Cellar/libftdi/1.5_1/include/libftdi1
 */
 import "C"
 
