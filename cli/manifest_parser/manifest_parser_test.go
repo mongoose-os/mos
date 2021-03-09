@@ -185,7 +185,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			}
 		}
 
-		depsInitData, err := getDepsInitCCode(manifest)
+		depsInitData, err := getDepsInitCCode(manifest, "xxx")
 		if err != nil {
 			return errors.Trace(err)
 		}

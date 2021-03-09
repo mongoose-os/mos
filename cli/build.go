@@ -577,7 +577,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 		}
 
 		if m.GetType() == build.SWModuleTypeGit && updateIntvl != 0 {
-			if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
+			if newHash, err := m.GetLocalVersion(); err == nil && newHash != curHash {
 				freportf(logWriter, "%s: Hash is updated: %s -> %s", name, curHash, newHash)
 				// The current repo hash has changed after the pull, so we need to
 				// vanish binary lib(s) we might have downloaded before

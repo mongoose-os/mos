@@ -7,8 +7,8 @@
 
 #include "mgos_app.h"
 
-{{range .Libs}}
-extern bool mgos_{{.Ident}}_init(void);{{end}}
+{{range .Libs}}{{if .HaveInit}}extern bool {{.InitFunc}}(void);
+{{end}}{{end}}
 
 #ifndef MGOS_LIB_INFO_VERSION
 struct mgos_lib_info {
@@ -17,11 +17,25 @@ struct mgos_lib_info {
   bool (*init)(void);
 };
 #endif
+#ifndef MGOS_MODULE_INFO_VERSION
+struct mgos_module_info {
+  const char *name;
+  const char *version;
+};
+#endif
 
 const struct mgos_lib_info mgos_libs_info[] = {
 {{range .Libs}}
     // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
-    {.name = "{{.Name}}", .version = "{{.Version}}", .init = mgos_{{.Ident}}_init},
+    {.name = "{{.Name}}", .version = "{{.Version}}", .init = {{.InitFunc}}},
+{{end}}
+    // Last entry.
+    {.name = NULL},
+};
+
+const struct mgos_module_info mgos_modules_info[] = {
+{{range .Modules}}
+    {.name = "{{.Name}}", .version = "{{.Version}}"},
 {{end}}
     // Last entry.
     {.name = NULL},
@@ -30,10 +44,13 @@ const struct mgos_lib_info mgos_libs_info[] = {
 bool mgos_deps_init(void) {
   for (const struct mgos_lib_info *l = mgos_libs_info; l->name != NULL; l++) {
     LOG(LL_DEBUG, ("Init %s %s...", l->name, l->version));
-    if (!l->init()) {
+    if (l->init != NULL && !l->init()) {
       LOG(LL_ERROR, ("%s init failed", l->name));
       return false;
     }
+  }
+  for (const struct mgos_module_info *m = mgos_modules_info; m->name != NULL; m++) {
+    LOG(LL_DEBUG, ("Module %s %s", m->name, m->version));
   }
   return true;
 }

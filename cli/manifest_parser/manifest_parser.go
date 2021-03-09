@@ -43,6 +43,7 @@ import (
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/interpreter"
+	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"github.com/mongoose-os/mos/version"
 )
@@ -276,10 +277,13 @@ func ReadManifestFinal(
 	}
 	// }}}
 
+	gitinst := mosgit.NewOurGit(nil)
+	mosHash, _ := gitinst.GetCurrentHash(fp.MosDirEffective)
+
 	if manifest.Type == build.AppTypeApp {
 		// Generate deps_init C code, and if it's not empty, write it to the temp
 		// file and add to sources
-		depsCCode, err := getDepsInitCCode(manifest)
+		depsCCode, err := getDepsInitCCode(manifest, mosHash)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -1647,40 +1651,66 @@ func mergeSupportedPlatforms(p1, p2 []string) []string {
 	}
 }
 
-type libsInitDataItem struct {
+type libInfo struct {
+	Name     string
+	Version  string
+	HaveInit bool
+	InitFunc string
+	Deps     []string
+}
+
+type moduleInfo struct {
 	Name    string
-	Ident   string
 	Version string
-	Deps    []string
 }
 
 type libsInitData struct {
-	Libs []libsInitDataItem
+	Libs    []libInfo
+	Modules []moduleInfo
 }
 
-func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
+func getDepsInitCCode(manifest *build.FWAppManifest, mosHash string) ([]byte, error) {
 	if len(manifest.LibsHandled) == 0 {
 		return nil, nil
 	}
 
 	tplData := libsInitData{}
 	for _, n := range manifest.InitDeps {
-		var v *build.FWAppManifestLibHandled
-		for _, lv := range manifest.LibsHandled {
-			if lv.Lib.Name == n {
-				v = &lv
+		var lh *build.FWAppManifestLibHandled
+		for _, lh1 := range manifest.LibsHandled {
+			if lh1.Lib.Name == n {
+				lh = &lh1
 				break
 			}
 		}
-		if len(v.Sources) == 0 {
-			// This library has no sources, nothing to init.
-			continue
+		lv := lh.Version
+		if llv, err := lh.Lib.GetLocalVersion(); err == nil {
+			lv = fmt.Sprintf("%s/%s", lv, llv)
 		}
-		tplData.Libs = append(tplData.Libs, libsInitDataItem{
-			Name:    v.Lib.Name,
-			Ident:   ourutil.IdentifierFromString(v.Lib.Name),
-			Version: v.Version,
-			Deps:    v.InitDeps,
+		initFunc := "NULL"
+		if len(lh.Sources) > 0 {
+			initFunc = fmt.Sprintf("mgos_%s_init", ourutil.IdentifierFromString(lh.Lib.Name))
+		}
+		tplData.Libs = append(tplData.Libs, libInfo{
+			Name:     lh.Lib.Name,
+			Version:  lv,
+			HaveInit: initFunc != "NULL",
+			InitFunc: initFunc,
+			Deps:     lh.InitDeps,
+		})
+	}
+
+	tplData.Modules = []moduleInfo{
+		moduleInfo{Name: "mongoose-os", Version: mosHash},
+	}
+	for _, m := range manifest.Modules {
+		mv := ""
+		if lmv, err := m.GetLocalVersion(); err == nil {
+			mv = lmv
+		}
+		tplData.Modules = append(tplData.Modules, moduleInfo{
+			Name:    m.Name,
+			Version: mv,
 		})
 	}
 

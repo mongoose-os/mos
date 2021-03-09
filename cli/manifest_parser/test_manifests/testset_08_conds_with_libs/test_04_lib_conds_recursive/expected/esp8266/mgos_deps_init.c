@@ -7,9 +7,9 @@
 
 #include "mgos_app.h"
 
-
 extern bool mgos_mylib1_init(void);
 extern bool mgos_mylib2_init(void);
+
 
 #ifndef MGOS_LIB_INFO_VERSION
 struct mgos_lib_info {
@@ -18,14 +18,34 @@ struct mgos_lib_info {
   bool (*init)(void);
 };
 #endif
+#ifndef MGOS_MODULE_INFO_VERSION
+struct mgos_module_info {
+  const char *name;
+  const char *version;
+};
+#endif
 
 const struct mgos_lib_info mgos_libs_info[] = {
+
+    // "core". deps: [ ]
+    {.name = "core", .version = "1.0", .init = NULL},
 
     // "mylib1". deps: [ "core" ]
     {.name = "mylib1", .version = "1.0", .init = mgos_mylib1_init},
 
     // "mylib2". deps: [ "core" "mylib1" ]
     {.name = "mylib2", .version = "1.0", .init = mgos_mylib2_init},
+
+    // "mylib3". deps: [ "core" "mylib2" ]
+    {.name = "mylib3", .version = "1.0", .init = NULL},
+
+    // Last entry.
+    {.name = NULL},
+};
+
+const struct mgos_module_info mgos_modules_info[] = {
+
+    {.name = "mongoose-os", .version = "xxx"},
 
     // Last entry.
     {.name = NULL},
@@ -34,10 +54,13 @@ const struct mgos_lib_info mgos_libs_info[] = {
 bool mgos_deps_init(void) {
   for (const struct mgos_lib_info *l = mgos_libs_info; l->name != NULL; l++) {
     LOG(LL_DEBUG, ("Init %s %s...", l->name, l->version));
-    if (!l->init()) {
+    if (l->init != NULL && !l->init()) {
       LOG(LL_ERROR, ("%s init failed", l->name));
       return false;
     }
+  }
+  for (const struct mgos_module_info *m = mgos_modules_info; m->name != NULL; m++) {
+    LOG(LL_DEBUG, ("Module %s %s", m->name, m->version));
   }
   return true;
 }
