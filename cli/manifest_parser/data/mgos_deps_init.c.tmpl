@@ -14,20 +14,29 @@
 struct mgos_lib_info {
   const char *name;
   const char *version;
+  const char *repo_version;
+  const char *binary_libs;
   bool (*init)(void);
 };
+#define MGOS_LIB_INFO_VERSION 2
 #endif
+
 #ifndef MGOS_MODULE_INFO_VERSION
 struct mgos_module_info {
   const char *name;
   const char *version;
 };
+#define MGOS_MODULE_INFO_VERSION 1
 #endif
 
 const struct mgos_lib_info mgos_libs_info[] = {
 {{range .Libs}}
-    // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
-    {.name = "{{.Name}}", .version = "{{.Version}}", .init = {{.InitFunc}}},
+    // {{.Name}}. deps: [ {{range .Deps}}"{{.}}" {{end}}]
+#if MGOS_LIB_INFO_VERSION == 1
+    {.name = {{.Name}}, .version = {{.Version}}, .init = {{.InitFunc}}},
+#else
+    {.name = {{.Name}}, .version = {{.Version}}, .repo_version = {{.RepoVersion}}, .binary_libs = {{.BinaryLibs}}, .init = {{.InitFunc}}},
+#endif
 {{end}}
     // Last entry.
     {.name = NULL},
@@ -35,7 +44,7 @@ const struct mgos_lib_info mgos_libs_info[] = {
 
 const struct mgos_module_info mgos_modules_info[] = {
 {{range .Modules}}
-    {.name = "{{.Name}}", .version = "{{.Version}}"},
+    {.name = {{.Name}}, .repo_version = {{.RepoVersion}}},
 {{end}}
     // Last entry.
     {.name = NULL},
@@ -43,14 +52,21 @@ const struct mgos_module_info mgos_modules_info[] = {
 
 bool mgos_deps_init(void) {
   for (const struct mgos_lib_info *l = mgos_libs_info; l->name != NULL; l++) {
-    LOG(LL_DEBUG, ("Init %s %s...", l->name, l->version));
+#if MGOS_LIB_INFO_VERSION == 1
+    LOG(LL_DEBUG, ("Init %s %s...", l->name, (l->version ? l->version : "")));
+#else
+    LOG(LL_DEBUG, ("Init %s %s (%s)...",
+          l->name,
+          (l->version ? l->version : ""),
+          (l->repo_version ? l->repo_version : "")));
+#endif
     if (l->init != NULL && !l->init()) {
       LOG(LL_ERROR, ("%s init failed", l->name));
       return false;
     }
   }
   for (const struct mgos_module_info *m = mgos_modules_info; m->name != NULL; m++) {
-    LOG(LL_DEBUG, ("Module %s %s", m->name, m->version));
+    LOG(LL_DEBUG, ("Module %s %s", m->name, (m->repo_version ? m->repo_version : "")));
   }
   return true;
 }

@@ -17,32 +17,57 @@ extern bool mgos_mylib3_init(void);
 struct mgos_lib_info {
   const char *name;
   const char *version;
+  const char *repo_version;
+  const char *binary_libs;
   bool (*init)(void);
 };
+#define MGOS_LIB_INFO_VERSION 2
 #endif
+
 #ifndef MGOS_MODULE_INFO_VERSION
 struct mgos_module_info {
   const char *name;
   const char *version;
 };
+#define MGOS_MODULE_INFO_VERSION 1
 #endif
 
 const struct mgos_lib_info mgos_libs_info[] = {
 
     // "core". deps: [ ]
+#if MGOS_LIB_INFO_VERSION == 1
     {.name = "core", .version = "1.0", .init = NULL},
+#else
+    {.name = "core", .version = "1.0", .repo_version = NULL, .binary_libs = NULL, .init = NULL},
+#endif
 
     // "mylib4". deps: [ "core" ]
+#if MGOS_LIB_INFO_VERSION == 1
     {.name = "mylib4", .version = "1.0", .init = mgos_mylib4_init},
+#else
+    {.name = "mylib4", .version = "1.0", .repo_version = NULL, .binary_libs = NULL, .init = mgos_mylib4_init},
+#endif
 
     // "mylib2". deps: [ "core" "mylib4" ]
-    {.name = "mylib2", .version = "", .init = mgos_mylib2_init},
+#if MGOS_LIB_INFO_VERSION == 1
+    {.name = "mylib2", .version = NULL, .init = mgos_mylib2_init},
+#else
+    {.name = "mylib2", .version = NULL, .repo_version = NULL, .binary_libs = NULL, .init = mgos_mylib2_init},
+#endif
 
     // "mylib1". deps: [ "core" "mylib2" ]
+#if MGOS_LIB_INFO_VERSION == 1
     {.name = "mylib1", .version = "1.2.3", .init = mgos_mylib1_init},
+#else
+    {.name = "mylib1", .version = "1.2.3", .repo_version = NULL, .binary_libs = NULL, .init = mgos_mylib1_init},
+#endif
 
     // "mylib3". deps: [ "core" "mylib4" ]
+#if MGOS_LIB_INFO_VERSION == 1
     {.name = "mylib3", .version = "1.0", .init = mgos_mylib3_init},
+#else
+    {.name = "mylib3", .version = "1.0", .repo_version = NULL, .binary_libs = NULL, .init = mgos_mylib3_init},
+#endif
 
     // Last entry.
     {.name = NULL},
@@ -50,7 +75,7 @@ const struct mgos_lib_info mgos_libs_info[] = {
 
 const struct mgos_module_info mgos_modules_info[] = {
 
-    {.name = "mongoose-os", .version = "xxx"},
+    {.name = "mongoose-os", .repo_version = "xxx"},
 
     // Last entry.
     {.name = NULL},
@@ -58,14 +83,21 @@ const struct mgos_module_info mgos_modules_info[] = {
 
 bool mgos_deps_init(void) {
   for (const struct mgos_lib_info *l = mgos_libs_info; l->name != NULL; l++) {
-    LOG(LL_DEBUG, ("Init %s %s...", l->name, l->version));
+#if MGOS_LIB_INFO_VERSION == 1
+    LOG(LL_DEBUG, ("Init %s %s...", l->name, (l->version ? l->version : "")));
+#else
+    LOG(LL_DEBUG, ("Init %s %s (%s)...",
+          l->name,
+          (l->version ? l->version : ""),
+          (l->repo_version ? l->repo_version : "")));
+#endif
     if (l->init != NULL && !l->init()) {
       LOG(LL_ERROR, ("%s init failed", l->name));
       return false;
     }
   }
   for (const struct mgos_module_info *m = mgos_modules_info; m->name != NULL; m++) {
-    LOG(LL_DEBUG, ("Module %s %s", m->name, m->version));
+    LOG(LL_DEBUG, ("Module %s %s", m->name, (m->repo_version ? m->repo_version : "")));
   }
   return true;
 }

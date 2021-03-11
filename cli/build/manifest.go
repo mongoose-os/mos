@@ -55,6 +55,7 @@ type FWAppManifestLibHandled struct {
 	Deps        []string       `yaml:"deps,omitempty" json:"deps"`
 	InitDeps    []string       `yaml:"init_deps,omitempty" json:"init_deps"`
 	Sources     []string       `yaml:"sources,omitempty" json:"sources"`
+	BinaryLibs  []string       `yaml:"binary_libs,omitempty" json:"binary_libs"`
 	Version     string         `yaml:"version,omitempty" json:"version"`
 	RepoVersion string         `yaml:"repo_version,omitempty" json:"version"`
 	Manifest    *FWAppManifest `yaml:"-" json:"-"`
