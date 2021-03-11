@@ -50,13 +50,14 @@ type AppManifest struct {
 }
 
 type FWAppManifestLibHandled struct {
-	Lib      SWModule       `yaml:"lib,omitempty" json:"name"`
-	Path     string         `yaml:"path,omitempty" json:"path"`
-	Deps     []string       `yaml:"deps,omitempty" json:"deps"`
-	InitDeps []string       `yaml:"init_deps,omitempty" json:"init_deps"`
-	Sources  []string       `yaml:"sources,omitempty" json:"sources"`
-	Version  string         `yaml:"version,omitempty" json:"version"`
-	Manifest *FWAppManifest `yaml:"-" json:"-"`
+	Lib         SWModule       `yaml:"lib,omitempty" json:"name"`
+	Path        string         `yaml:"path,omitempty" json:"path"`
+	Deps        []string       `yaml:"deps,omitempty" json:"deps"`
+	InitDeps    []string       `yaml:"init_deps,omitempty" json:"init_deps"`
+	Sources     []string       `yaml:"sources,omitempty" json:"sources"`
+	Version     string         `yaml:"version,omitempty" json:"version"`
+	RepoVersion string         `yaml:"repo_version,omitempty" json:"version"`
+	Manifest    *FWAppManifest `yaml:"-" json:"-"`
 }
 
 // FWAppManifest is the app manifest for firmware apps

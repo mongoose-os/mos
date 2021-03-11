@@ -79,7 +79,7 @@ libs_handled:
   - core
   sources:
   - __APP_ROOT__/libs/mylib1/src/mylib1_src1.c
-  version: "1.0"
+  version: "2.0"
 - lib:
     origin: https://github.com/mongoose-os-libs/mylib2
     location: https://github.com/mongoose-os-libs/mylib2

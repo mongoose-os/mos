@@ -14,9 +14,8 @@ config_schema:
 conds:
   - when: '"1" == "1"'
     apply:
-      # Top-level attributes can only be overriden in app's conds
+      # Name can only be overriden in app's conds
       name: Does not
-      description: work
-      version: from here
+      version: 2.0
 
 manifest_version: 2017-09-29

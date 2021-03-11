@@ -223,16 +223,18 @@ func ReadManifestFinal(
 		return nil, nil, errors.Trace(err)
 	}
 
-	for k, v := range manifest.LibsHandled {
+	for i, v := range manifest.LibsHandled {
 		name, err := v.Lib.GetName()
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
 		interpreter.SetLibVars(interp.MVars, name, v.Path)
-		manifest.LibsHandled[k].Sources, err = interpreter.ExpandVarsSlice(interp, v.Sources, false)
+		manifest.LibsHandled[i].Sources, err = interpreter.ExpandVarsSlice(interp, v.Sources, false)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
+		manifest.LibsHandled[i].Version = v.Manifest.Version
+		manifest.LibsHandled[i].RepoVersion, _ = v.Lib.GetLocalVersion()
 	}
 
 	manifest.Includes, err = interpreter.ExpandVarsSlice(interp, manifest.Includes, false)
@@ -968,7 +970,6 @@ func prepareLib(
 		Lib:      *m,
 		Path:     libLocalDir,
 		Deps:     pc.deps.GetDeps(name),
-		Version:  libManifest.Version,
 		Manifest: libManifest,
 	}
 	pc.libsHandled[name] = lh
@@ -1432,17 +1433,14 @@ func ExpandManifestConds(
 			}); err != nil {
 				return errors.Trace(err)
 			}
-			// Conds in app's manifest can override name, description and version.
-			if isAppManifest {
-				if cond.Apply.Name != "" {
-					dstManifest.Name = cond.Apply.Name
-				}
-				if cond.Apply.Description != "" {
-					dstManifest.Description = cond.Apply.Description
-				}
-				if cond.Apply.Version != "" {
-					dstManifest.Version = cond.Apply.Version
-				}
+			if isAppManifest && cond.Apply.Name != "" {
+				dstManifest.Name = cond.Apply.Name
+			}
+			if cond.Apply.Description != "" {
+				dstManifest.Description = cond.Apply.Description
+			}
+			if cond.Apply.Version != "" {
+				dstManifest.Version = cond.Apply.Version
 			}
 		}
 	}
@@ -1684,8 +1682,8 @@ func getDepsInitCCode(manifest *build.FWAppManifest, mosHash string) ([]byte, er
 			}
 		}
 		lv := lh.Version
-		if llv, err := lh.Lib.GetLocalVersion(); err == nil {
-			lv = fmt.Sprintf("%s/%s", lv, llv)
+		if lh.RepoVersion != "" {
+			lv = fmt.Sprintf("%s/%s", lv, lh.RepoVersion)
 		}
 		initFunc := "NULL"
 		if len(lh.Sources) > 0 {
