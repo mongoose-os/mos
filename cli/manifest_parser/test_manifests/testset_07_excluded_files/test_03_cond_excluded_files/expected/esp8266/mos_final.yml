@@ -8,6 +8,7 @@ description: My test app
 sources:
 - __APP_ROOT__/app/src/app_src1.c
 - __APP_ROOT__/app/src/app_src3.c
+- __APP_ROOT__/app/build/gen/mgos_deps_init.c
 modules:
 - location: https://github.com/cesanta/mongoose-os
   version: "0.01"

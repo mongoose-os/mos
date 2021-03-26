@@ -132,6 +132,10 @@ func GetDepsInitCFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "mgos_deps_init.c")
 }
 
+func GetDepsManifestFilePath(buildDir string) string {
+	return filepath.Join(GetGeneratedFilesDir(buildDir), "mgos_deps_manifest.yml")
+}
+
 func GetConfSchemaFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "mos_conf_schema.yml")
 }

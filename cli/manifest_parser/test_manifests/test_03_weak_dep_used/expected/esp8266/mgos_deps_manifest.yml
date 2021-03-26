@@ -1,0 +1,19 @@
+libs:
+- name: core
+  location: https://github.com/mongoose-os-libs/core
+  version: "1.0"
+- name: mylib1
+  location: https://github.com/mongoose-os-libs/mylib1
+  version: 1.2.3
+- name: mylib2
+  location: https://github.com/mongoose-os-libs/mylib2
+- name: mylib3
+  location: https://github.com/mongoose-os-libs/mylib3
+  version: "1.0"
+- name: mylib4
+  location: https://github.com/mongoose-os-libs/mylib4
+  version: "1.0"
+modules:
+- name: mongoose-os
+  location: https://github.com/cesanta/mongoose-os
+manifest_version: "2021-03-26"

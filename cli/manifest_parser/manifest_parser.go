@@ -22,7 +22,6 @@ package manifest_parser
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -226,7 +225,7 @@ func ReadManifestFinal(
 			return nil, nil, errors.Trace(err)
 		}
 		manifest.LibsHandled[i].Version = v.Manifest.Version
-		manifest.LibsHandled[i].RepoVersion, _ = v.Lib.GetLocalVersion()
+		manifest.LibsHandled[i].RepoVersion, manifest.LibsHandled[i].RepoDirty, _ = v.Lib.GetRepoVersion()
 	}
 
 	manifest.Includes, err = interpreter.ExpandVarsSlice(interp, manifest.Includes, false)
@@ -402,19 +401,34 @@ func ReadManifestFinal(
 			fp.AppSourceDirs = append(fp.AppSourceDirs, libSourceDirs...)
 		}
 
+		// Generate deps manifest.
+		dm, err := build.GenerateDepsManifest(manifest)
+		if err != nil {
+			return nil, nil, errors.Annotatef(err, "failed to generate deps manifest")
+		}
+
+		dmData, err := yaml.Marshal(dm)
+		if err != nil {
+			return nil, nil, errors.Trace(err)
+		}
+
+		if err := os.MkdirAll(moscommon.GetGeneratedFilesDir(buildDirAbs), 0777); err != nil {
+			return nil, nil, errors.Trace(err)
+		}
+
+		if err = ioutil.WriteFile(moscommon.GetDepsManifestFilePath(buildDirAbs), dmData, 0666); err != nil {
+			return nil, nil, errors.Trace(err)
+		}
+
 		// Generate deps_init C code, and if it's not empty, write it to the temp
 		// file and add to sources
-		depsCCode, err := getDepsInitCCode(manifest)
+		depsCCode, err := getDepsInitCCode(manifest, dm)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
 
 		if len(depsCCode) != 0 {
 			fname := moscommon.GetDepsInitCFilePath(buildDirAbs)
-
-			if err := os.MkdirAll(moscommon.GetGeneratedFilesDir(buildDirAbs), 0777); err != nil {
-				return nil, nil, errors.Trace(err)
-			}
 
 			if err = ioutil.WriteFile(fname, depsCCode, 0666); err != nil {
 				return nil, nil, errors.Trace(err)
@@ -428,7 +442,6 @@ func ReadManifestFinal(
 
 			manifest.Sources = append(manifest.Sources, fname)
 		}
-
 	}
 
 	manifest.BinaryLibs, fp.AppBinLibDirs, err = resolvePaths(manifest.BinaryLibs, []string{"*.a"})
@@ -1665,11 +1678,7 @@ func quoteOrNULL(s string) string {
 	return fmt.Sprintf("%q", s)
 }
 
-func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
-	if len(manifest.LibsHandled) == 0 {
-		return nil, nil
-	}
-
+func getDepsInitCCode(manifest *build.FWAppManifest, dm *build.DepsManifest) ([]byte, error) {
 	tplData := libsInitData{}
 	for _, n := range manifest.InitDeps {
 		var lh *build.FWAppManifestLibHandled
@@ -1684,18 +1693,23 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 			initFunc = fmt.Sprintf("mgos_%s_init", ourutil.IdentifierFromString(lh.Lib.Name))
 		}
 		var blHashes []string
-		for _, fname := range lh.BinaryLibs {
-			data, err := ioutil.ReadFile(fname)
-			if err != nil {
-				return nil, errors.Annotatef(err, "failed to checksum binary lib file")
+		for _, dl := range dm.Libs {
+			if dl.Name != lh.Lib.Name {
+				continue
 			}
-			dataHash := sha256.Sum256(data)
-			blHashes = append(blHashes, fmt.Sprintf("%s:%x", filepath.Base(fname), dataHash))
+			for _, bl := range dl.Blobs {
+				blHashes = append(blHashes, fmt.Sprintf("%s:%x", bl.Name, bl.SHA256))
+			}
+			break
+		}
+		rv := lh.RepoVersion
+		if rv != "" && lh.RepoDirty {
+			rv = fmt.Sprintf("%s-dirty", lh.RepoVersion)
 		}
 		tplData.Libs = append(tplData.Libs, libInfo{
 			Name:        quoteOrNULL(lh.Lib.Name),
 			Version:     quoteOrNULL(lh.Version),
-			RepoVersion: quoteOrNULL(lh.RepoVersion),
+			RepoVersion: quoteOrNULL(rv),
 			BinaryLibs:  quoteOrNULL(strings.Join(blHashes, ",")),
 			HaveInit:    initFunc != "NULL",
 			InitFunc:    initFunc,
@@ -1704,13 +1718,17 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	}
 
 	for _, m := range manifest.Modules {
-		mv := ""
-		if lmv, err := m.GetLocalVersion(); err == nil {
-			mv = lmv
+		mrv := ""
+		if lmrv, dirty, err := m.GetRepoVersion(); err == nil {
+			if lmrv != "" && dirty {
+				mrv = fmt.Sprintf("%s-dirty", lmrv)
+			} else {
+				mrv = lmrv
+			}
 		}
 		tplData.Modules = append(tplData.Modules, moduleInfo{
 			Name:        quoteOrNULL(m.Name),
-			RepoVersion: quoteOrNULL(mv),
+			RepoVersion: quoteOrNULL(mrv),
 		})
 	}
 

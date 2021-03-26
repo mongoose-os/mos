@@ -44,6 +44,7 @@ libs_handled:
     name: core
   path: __APP_ROOT__/libs/core
   version: "1.0"
+  repo_version: deadbeef
 - lib:
     origin: libs/mylib2a
     location: libs/mylib2a

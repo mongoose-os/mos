@@ -49,8 +49,9 @@ type SWModule struct {
 	// API used to download binary assets. If not specified, will take a guess based on location.
 	AssetAPI SWModuleAssetAPIType `yaml:"asset_api,omitempty" json:"asset_api,omitempty"`
 
-	localPath    string // Path where the lib resides locally. Valid after successful PrepareLocalDir.
-	localVersion string // Specific version (hash, commit) of the library at the localPath.
+	localPath   string // Path where the lib resides locally. Valid after successful PrepareLocalDir.
+	repoVersion string // Specific version (hash, commit) of the library at the localPath.
+	isDirty     bool   // Local repo is "dirty" - i.e., has local changes.
 
 	// Credential must be provided externally and never serialized in a manifest.
 	credentials *Credentials
@@ -195,44 +196,6 @@ func (m *SWModule) Normalize() error {
 	return nil
 }
 
-// IsClean returns whether the local library repo is clean. Non-existing
-// dir is considered clean.
-func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
-	switch m.GetType() {
-	case SWModuleTypeGit:
-		rp, err := m.getLocalGitRepoDir(libsDir, defaultVersion)
-		if err != nil {
-			return false, errors.Trace(err)
-		}
-		if _, err := os.Stat(rp); err != nil {
-			if os.IsNotExist(err) {
-				// Dir does not exist: we treat it as "dirty", just in order to fetch
-				// all libs locally, so that it's more obvious for people that they can
-				// edit those libs
-				return false, nil
-			}
-
-			// Some error other than non-existing dir
-			return false, errors.Trace(err)
-		}
-
-		// Dir exists, check if the repo is clean
-		gitinst := mosgit.NewOurGit(BuildCredsToGitCreds(m.credentials))
-		isClean, err := mosgit.IsClean(gitinst, rp, m.getVersionGit(defaultVersion))
-		if err != nil {
-			return false, errors.Trace(err)
-		}
-		return isClean, nil
-	case SWModuleTypeLocal:
-		// Local libs can't be "clean", because there's no way for remote builder
-		// to get them on its own
-		return false, nil
-	default:
-		return false, errors.Errorf("wrong type: %v", m.GetType())
-	}
-
-}
-
 // PrepareLocalDir prepares local directory, if that preparation is needed
 // in the first place, and returns the path to it. If defaultVersion is an
 // empty string or "latest", then the default will depend on the kind of lib
@@ -246,7 +209,7 @@ func (m *SWModule) PrepareLocalDir(
 	}
 
 	var err error
-	localPath, localVersion := "", ""
+	localPath, repoVersion, isDirty := "", "", false
 	switch m.GetType() {
 	case SWModuleTypeGit:
 		localRepoPath, err := m.getLocalGitRepoDir(libsDir, defaultVersion)
@@ -259,7 +222,7 @@ func (m *SWModule) PrepareLocalDir(
 		}
 		_, _, _, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
-		if localVersion, err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth, m.credentials); err != nil {
+		if repoVersion, isDirty, err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth, m.credentials); err != nil {
 			return "", errors.Trace(err)
 		}
 
@@ -285,7 +248,8 @@ func (m *SWModule) PrepareLocalDir(
 
 	// Everything went fine, so remember local path (and return it later)
 	m.localPath = localPath
-	m.localVersion = localVersion
+	m.repoVersion = repoVersion
+	m.isDirty = isDirty
 
 	return localPath, nil
 }
@@ -408,11 +372,18 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 	}
 }
 
-func (m *SWModule) GetLocalVersion() (string, error) {
+func (m *SWModule) GetRepoVersion() (string, bool, error) {
 	if m.localPath == "" {
-		return "", fmt.Errorf("directory has not been prepared yet")
+		return "", false, fmt.Errorf("directory has not been prepared yet")
 	}
-	return m.localVersion, nil
+	return m.repoVersion, m.isDirty, nil
+}
+
+// For testing
+func (m *SWModule) SetLocalPathAndRepoVersion(localPath, repoVersion string, isDirty bool) {
+	m.localPath = localPath
+	m.repoVersion = repoVersion
+	m.isDirty = isDirty
 }
 
 // FetchableFromInternet returns whether the library could be fetched
@@ -527,7 +498,7 @@ func prepareLocalCopyGit(
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
 	creds *Credentials,
-) (string, error) {
+) (string, bool, error) {
 
 	repoLocksLock.Lock()
 	lock := repoLocks[targetDir]
@@ -546,7 +517,7 @@ func prepareLocalCopyGitLocked(
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration, cloneDepth int,
 	creds *Credentials,
-) (string, error) {
+) (string, bool, error) {
 	gitinst := mosgit.NewOurGit(BuildCredsToGitCreds(creds))
 	// version is already converted from "" or "latest" to "master" here.
 
@@ -568,20 +539,20 @@ func prepareLocalCopyGitLocked(
 			// No it's not a git repo; let's see if it's empty; if not, it's an error.
 			files, err := ioutil.ReadDir(targetDir)
 			if err != nil {
-				return "", errors.Trace(err)
+				return "", false, errors.Trace(err)
 			}
 			if len(files) > 0 {
 				freportf(logWriter, "%q is not empty, but is not a git repository either, leaving it intact", targetDir)
-				return "", nil
+				return "", false, nil
 			}
 		}
 	} else if os.IsNotExist(err) {
 		if pullInterval == 0 {
-			return "", fmt.Errorf("%s: Local copy in %q does not exist and fetching is not allowed", name, targetDir)
+			return "", false, fmt.Errorf("%s: Local copy in %q does not exist and fetching is not allowed", name, targetDir)
 		}
 	} else {
 		// Some error other than non-existing dir
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 
 	if !repoExists {
@@ -597,19 +568,19 @@ func prepareLocalCopyGitLocked(
 		}
 		err := gitinst.Clone(origin, targetDir, cloneOpts)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", false, errors.Trace(err)
 		}
 	} else {
 		// Repo exists, let's check if the working dir is clean. If not, we'll
 		// not do anything.
 		isClean, err := mosgit.IsClean(gitinst, targetDir, version)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", false, errors.Trace(err)
 		}
 		curHash, _ := gitinst.GetCurrentHash(targetDir)
 		if !isClean {
 			freportf(logWriter, "%s exists and is dirty, leaving it intact\n", targetDir)
-			return fmt.Sprintf("%s-dirty", curHash), nil
+			return curHash, true, nil
 		}
 	}
 
@@ -627,7 +598,7 @@ func prepareLocalCopyGitLocked(
 	// First of all, get current SHA
 	curHash, err := gitinst.GetCurrentHash(targetDir)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 
 	glog.V(2).Infof("%s: Hash: %q", name, curHash)
@@ -637,7 +608,7 @@ func prepareLocalCopyGitLocked(
 		glog.V(2).Infof("%s: hashes are equal %q, %q", name, curHash, version)
 		// Desired version is a fixed SHA, and it's equal to the
 		// current commit: we're all set.
-		return curHash, nil
+		return curHash, false, nil
 	}
 
 	var branchExists, tagExists bool
@@ -645,7 +616,7 @@ func prepareLocalCopyGitLocked(
 	// Check if version is a known branch name
 	branchExists, err = gitinst.DoesBranchExist(targetDir, version)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 
 	glog.V(2).Infof("%s: branch %q exists=%v", name, version, branchExists)
@@ -653,7 +624,7 @@ func prepareLocalCopyGitLocked(
 	// Check if version is a known tag name
 	tagExists, err = gitinst.DoesTagExist(targetDir, version)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 
 	glog.V(2).Infof("%s: tag %q exists=%v", name, version, tagExists)
@@ -663,20 +634,20 @@ func prepareLocalCopyGitLocked(
 		glog.V(2).Infof("%s: %s is neither a branch nor a tag, fetching...", name, version)
 		err = gitinst.Fetch(targetDir, version, ourgit.FetchOptions{Depth: 1})
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", false, errors.Trace(err)
 		}
 
 		// After fetching, refresh branchExists and tagExists
 		branchExists, err = gitinst.DoesBranchExist(targetDir, version)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", false, errors.Trace(err)
 		}
 		glog.V(2).Infof("%s: branch %q exists=%v", name, version, branchExists)
 
 		// Check if version is a known tag name
 		tagExists, err = gitinst.DoesTagExist(targetDir, version)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", false, errors.Trace(err)
 		}
 		glog.V(2).Infof("%s: tag %q exists=%v", name, version, tagExists)
 	}
@@ -694,7 +665,7 @@ func prepareLocalCopyGitLocked(
 		if _, err := hex.DecodeString(version); err == nil {
 			glog.V(2).Infof("%s: %q is neither a branch nor a tag, assume it's a hash", name, version)
 		} else {
-			return "", errors.Errorf("given version %q is neither a branch nor a tag", version)
+			return "", false, errors.Errorf("given version %q is neither a branch nor a tag", version)
 		}
 	}
 
@@ -702,12 +673,12 @@ func prepareLocalCopyGitLocked(
 	freportf(logWriter, "%s: Checking out %s...", name, version)
 	err = gitinst.Checkout(targetDir, version, refType)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 
 	newHash, err := gitinst.GetCurrentHash(targetDir)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 	glog.V(2).Infof("%s: New hash: %s", name, newHash)
 
@@ -719,7 +690,7 @@ func prepareLocalCopyGitLocked(
 		if !wantPull && pullInterval != 0 {
 			fInfo, err := os.Stat(targetDir)
 			if err != nil {
-				return "", errors.Trace(err)
+				return "", false, errors.Trace(err)
 			}
 			if fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
 				wantPull = true
@@ -730,12 +701,12 @@ func prepareLocalCopyGitLocked(
 			freportf(logWriter, "%s: Pulling...", name)
 			err = gitinst.Pull(targetDir, version)
 			if err != nil {
-				return "", errors.Trace(err)
+				return "", false, errors.Trace(err)
 			}
 
 			// Update modification time
 			if err := os.Chtimes(targetDir, time.Now(), time.Now()); err != nil {
-				return "", errors.Trace(err)
+				return "", false, errors.Trace(err)
 			}
 		} else {
 			glog.Infof("Repository %q is recent enough, not updating", targetDir)
@@ -749,13 +720,13 @@ func prepareLocalCopyGitLocked(
 	glog.V(2).Infof("resetting")
 	err = gitinst.ResetHard(targetDir)
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", false, errors.Trace(err)
 	}
 
 	curHash, _ = gitinst.GetCurrentHash(targetDir)
 	freportf(logWriter, "%s: Done, hash %s", name, curHash)
 
-	return curHash, nil
+	return curHash, false, nil
 }
 
 func BuildCredsToGitCreds(creds *Credentials) *ourgit.Credentials {

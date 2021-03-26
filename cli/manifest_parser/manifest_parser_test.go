@@ -40,6 +40,7 @@ const (
 	expectedDir        = "expected"
 	finalManifestName  = "mos_final.yml"
 	depsInitName       = "mgos_deps_init.c"
+	depsManifestName   = "mgos_deps_manifest.yml"
 	testDescriptorName = "test_desc.yml"
 	errorTextFile      = "error.txt"
 
@@ -57,8 +58,14 @@ var (
 )
 
 type TestDescr struct {
-	PreferBinaryLibs bool              `yaml:"prefer_binary_libs"`
-	BuildVars        map[string]string `yaml:"build_vars"`
+	PreferBinaryLibs bool                 `yaml:"prefer_binary_libs"`
+	BuildVars        map[string]string    `yaml:"build_vars"`
+	RepoInfo         map[string]*RepoInfo `yaml:"repo_info"`
+}
+
+type RepoInfo struct {
+	RepoVersion string `yaml:"repo_version"`
+	RepoDirty   bool   `yaml:"repo_dirty"`
 }
 
 func init() {
@@ -162,7 +169,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 				Platform:  platform,
 				BuildVars: descr.BuildVars,
 			}, logWriter, interp,
-			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{}}, true, descr.PreferBinaryLibs, 0,
+			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{descr: &descr}}, true, descr.PreferBinaryLibs, 0,
 		)
 
 		expectedErrorFilename := filepath.Join(appPath, expectedDir, platform, errorTextFile)
@@ -183,11 +190,6 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			if expectedError != "" {
 				return errors.Errorf("%s: expected parsing to fail but it didn't", appPath)
 			}
-		}
-
-		depsInitData, err := getDepsInitCCode(manifest)
-		if err != nil {
-			return errors.Trace(err)
 		}
 
 		data, err := yaml.Marshal(manifest)
@@ -211,12 +213,21 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			return errors.Trace(err)
 		}
 
-		actualFilename = filepath.Join(buildDir, depsInitName)
-		ioutil.WriteFile(actualFilename, depsInitData, 0644)
-		expectedFilename = filepath.Join(appPath, expectedDir, platform, depsInitName)
-		if _, err := os.Stat(expectedFilename); err == nil {
+		{ // Verify deps_manifest
+			actualFilename = filepath.Join(buildDir, "gen", depsManifestName)
+			expectedFilename = filepath.Join(appPath, expectedDir, platform, depsManifestName)
 			if err = compareFiles(actualFilename, expectedFilename); err != nil {
 				return errors.Trace(err)
+			}
+		}
+
+		{ // Verify deps_init
+			actualFilename = filepath.Join(buildDir, "gen", depsInitName)
+			expectedFilename = filepath.Join(appPath, expectedDir, platform, depsInitName)
+			if _, err := os.Stat(expectedFilename); err == nil {
+				if err = compareFiles(actualFilename, expectedFilename); err != nil {
+					return errors.Trace(err)
+				}
 			}
 		}
 	}
@@ -224,20 +235,32 @@ func singleManifestTest(t *testing.T, appPath string) error {
 	return nil
 }
 
-type compProviderTest struct{}
+type compProviderTest struct {
+	descr *TestDescr
+}
 
 func (lpt *compProviderTest) GetLibLocalPath(
 	m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 ) (string, error) {
 	parts := strings.Split(m.Location, "/")
-	return filepath.Join(rootAppDir, "..", "libs", parts[len(parts)-1]), nil
+	lp := filepath.Join(rootAppDir, "..", "libs", parts[len(parts)-1])
+	ri := lpt.descr.RepoInfo[m.Location]
+	if ri != nil {
+		m.SetLocalPathAndRepoVersion(lp, ri.RepoVersion, ri.RepoDirty)
+	}
+	return lp, nil
 }
 
 func (lpt *compProviderTest) GetModuleLocalPath(
 	m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 ) (string, error) {
 	parts := strings.Split(m.Location, "/")
-	return filepath.Join(rootAppDir, "..", "modules", parts[len(parts)-1]), nil
+	lp := filepath.Join(rootAppDir, "..", "modules", parts[len(parts)-1])
+	ri := lpt.descr.RepoInfo[m.Location]
+	if ri != nil {
+		m.SetLocalPathAndRepoVersion(lp, ri.RepoVersion, ri.RepoDirty)
+	}
+	return lp, nil
 }
 
 func newMosVars() *interpreter.MosVars {

@@ -1,0 +1,17 @@
+libs:
+- name: core
+  location: https://github.com/mongoose-os-libs/core
+  version: "1.0"
+  repo_version: deadbeef
+- name: mylib1
+  location: libs/mylib1
+  version: "1.0"
+- name: mylib2
+  location: libs/mylib2a
+  version: "2.0"
+modules:
+- name: mongoose-os
+  location: https://github.com/cesanta/mongoose-os
+  repo_version: 2a2b2c
+  repo_dirty: true
+manifest_version: "2021-03-26"

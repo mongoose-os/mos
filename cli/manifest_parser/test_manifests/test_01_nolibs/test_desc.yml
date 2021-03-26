@@ -1,0 +1,4 @@
+repo_info:
+  https://github.com/cesanta/mongoose-os:
+    repo_version: 2a2b2c
+    repo_dirty: true

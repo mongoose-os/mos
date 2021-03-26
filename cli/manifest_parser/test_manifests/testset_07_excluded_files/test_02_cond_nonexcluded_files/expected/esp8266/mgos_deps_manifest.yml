@@ -1,0 +1,4 @@
+modules:
+- name: mongoose-os
+  location: https://github.com/cesanta/mongoose-os
+manifest_version: "2021-03-26"

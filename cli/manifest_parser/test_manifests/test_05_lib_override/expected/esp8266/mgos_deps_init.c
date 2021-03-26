@@ -34,7 +34,7 @@ const struct mgos_lib_info mgos_libs_info[] = {
 #if MGOS_LIB_INFO_VERSION == 1
     {.name = "core", .version = "1.0", .init = NULL},
 #else
-    {.name = "core", .version = "1.0", .repo_version = NULL, .binary_libs = NULL, .init = NULL},
+    {.name = "core", .version = "1.0", .repo_version = "deadbeef", .binary_libs = NULL, .init = NULL},
 #endif
 
     // "mylib2". deps: [ "core" ]
@@ -57,7 +57,7 @@ const struct mgos_lib_info mgos_libs_info[] = {
 
 const struct mgos_module_info mgos_modules_info[] = {
 
-    {.name = "mongoose-os", .repo_version = NULL},
+    {.name = "mongoose-os", .repo_version = "2a2b2c-dirty"},
 
     // Last entry.
     {.name = NULL},
