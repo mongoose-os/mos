@@ -185,7 +185,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			}
 		}
 
-		depsInitData, err := getDepsInitCCode(manifest, "xxx")
+		depsInitData, err := getDepsInitCCode(manifest)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -238,12 +238,6 @@ func (lpt *compProviderTest) GetModuleLocalPath(
 ) (string, error) {
 	parts := strings.Split(m.Location, "/")
 	return filepath.Join(rootAppDir, "..", "modules", parts[len(parts)-1]), nil
-}
-
-func (lpt *compProviderTest) GetMongooseOSLocalPath(
-	rootAppDir, modulesDefVersion string,
-) (string, error) {
-	return repoRoot, nil
 }
 
 func newMosVars() *interpreter.MosVars {

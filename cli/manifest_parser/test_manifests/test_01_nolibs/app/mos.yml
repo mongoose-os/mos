@@ -2,6 +2,8 @@ author: mongoose-os
 description: My nolibs app
 version: 1.0
 
+mongoose_os_version: 1.2.3
+
 sources:
   - src
 

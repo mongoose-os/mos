@@ -75,7 +75,7 @@ const struct mgos_lib_info mgos_libs_info[] = {
 
 const struct mgos_module_info mgos_modules_info[] = {
 
-    {.name = "mongoose-os", .repo_version = "xxx"},
+    {.name = "mongoose-os", .repo_version = NULL},
 
     // Last entry.
     {.name = NULL},

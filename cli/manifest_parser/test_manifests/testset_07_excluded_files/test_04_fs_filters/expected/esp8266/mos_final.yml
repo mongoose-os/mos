@@ -12,6 +12,10 @@ sources:
 filesystem:
 - __APP_ROOT__/libs/mylib1/fs/mylib1_file_b1
 - __APP_ROOT__/app/fs/test.txt
+modules:
+- location: https://github.com/cesanta/mongoose-os
+  version: "0.01"
+  name: mongoose-os
 config_schema:
 - - mylib1
   - o

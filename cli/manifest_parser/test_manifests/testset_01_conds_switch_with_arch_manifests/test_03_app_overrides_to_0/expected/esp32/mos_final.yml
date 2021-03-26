@@ -20,6 +20,10 @@ filesystem:
 - __APP_ROOT__/libs/mylib2/fs/mylib2_file1
 - __APP_ROOT__/libs/mylib4/fs/mylib4_file1
 - __APP_ROOT__/libs/mylib3/fs/mylib3_file1
+modules:
+- location: https://github.com/cesanta/mongoose-os
+  version: "0.01"
+  name: mongoose-os
 config_schema:
 - - mylib1
   - o

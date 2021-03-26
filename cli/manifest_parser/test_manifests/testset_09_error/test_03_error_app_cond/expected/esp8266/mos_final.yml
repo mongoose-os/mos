@@ -2,6 +2,10 @@ type: app
 platform: esp8266
 platforms:
 __ALL_PLATFORMS__
+modules:
+- location: https://github.com/cesanta/mongoose-os
+  version: "0.01"
+  name: mongoose-os
 no_implicit_init_deps: true
 build_vars:
   BOARD: ""

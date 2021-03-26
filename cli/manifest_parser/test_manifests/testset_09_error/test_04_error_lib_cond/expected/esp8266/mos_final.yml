@@ -7,6 +7,10 @@ author: mongoose-os
 description: My app
 sources:
 - __APP_ROOT__/app/build/gen/mgos_deps_init.c
+modules:
+- location: https://github.com/cesanta/mongoose-os
+  version: "0.01"
+  name: mongoose-os
 build_vars:
   BOARD: ""
   MGOS: "1"

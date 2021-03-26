@@ -19,6 +19,9 @@ package build
 const (
 	ManifestTypeApp = "app"
 	ManifestTypeLib = "lib"
+
+	MosModuleName  = "mongoose-os"
+	MosDefaultRepo = "https://github.com/cesanta/mongoose-os"
 )
 
 // ManifestCond represents a conditional addition to the manifest.

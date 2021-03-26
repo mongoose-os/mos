@@ -44,7 +44,6 @@ import (
 	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/interpreter"
-	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	"github.com/mongoose-os/mos/version"
 )
@@ -96,8 +95,6 @@ type ComponentProvider interface {
 	GetModuleLocalPath(
 		m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 	) (string, error)
-
-	GetMongooseOSLocalPath(rootAppDir, mongooseOSVersion string) (string, error)
 }
 
 type ReadManifestCallbacks struct {
@@ -177,6 +174,12 @@ func ReadManifestFinal(
 		return nil, nil, errors.Annotatef(err, "while expanding description")
 	}
 
+	manifest.Modules = append(manifest.Modules, build.SWModule{
+		Name:     build.MosModuleName,
+		Location: build.MosDefaultRepo,
+		Version:  manifest.MongooseOsVersion,
+	})
+
 	// Prepare local copies of all sw modules {{{
 	// Modules are collected from the bottom of the dependency chain,
 	// we go backwards to ensure overrides are handled first.
@@ -194,28 +197,16 @@ func ReadManifestFinal(
 
 		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(m, dir, manifest.ModulesVersion, manifest.Platform)
 		if err != nil {
-			return nil, nil, errors.Trace(err)
+			return nil, nil, errors.Annotatef(err, "failed to prepare module %q", name)
 		}
 
 		interpreter.SetModuleVars(interp.MVars, name, moduleDir)
 		modulesHandled[name] = true
-	}
-	// }}}
 
-	// Determine mongoose-os dir (fp.MosDirEffective) {{{
-	fp.MosDirEffective, err = cbs.ComponentProvider.GetMongooseOSLocalPath(
-		dir, manifest.MongooseOsVersion,
-	)
-	if err != nil {
-		return nil, nil, errors.Trace(err)
+		if name == build.MosModuleName {
+			fp.MosDirEffective = moduleDir
+		}
 	}
-
-	fp.MosDirEffective, err = filepath.Abs(fp.MosDirEffective)
-	if err != nil {
-		return nil, nil, errors.Annotatef(err, "getting absolute path of %q", fp.MosDirEffective)
-	}
-
-	interpreter.SetModuleVars(interp.MVars, "mongoose-os", fp.MosDirEffective)
 	// }}}
 
 	// Get sources and filesystem files from the manifest, expanding expressions {{{
@@ -279,9 +270,6 @@ func ReadManifestFinal(
 		return nil, nil, errors.Annotatef(err, "while expanding cxxflags")
 	}
 	// }}}
-
-	gitinst := mosgit.NewOurGit(nil)
-	mosHash, _ := gitinst.GetCurrentHash(fp.MosDirEffective)
 
 	// Convert manifest.Sources into paths to concrete existing source files.
 	manifest.Sources, fp.AppSourceDirs, err = resolvePaths(manifest.Sources, *sourceGlobs)
@@ -416,7 +404,7 @@ func ReadManifestFinal(
 
 		// Generate deps_init C code, and if it's not empty, write it to the temp
 		// file and add to sources
-		depsCCode, err := getDepsInitCCode(manifest, mosHash)
+		depsCCode, err := getDepsInitCCode(manifest)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -1677,7 +1665,7 @@ func quoteOrNULL(s string) string {
 	return fmt.Sprintf("%q", s)
 }
 
-func getDepsInitCCode(manifest *build.FWAppManifest, mosHash string) ([]byte, error) {
+func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	if len(manifest.LibsHandled) == 0 {
 		return nil, nil
 	}
@@ -1715,12 +1703,6 @@ func getDepsInitCCode(manifest *build.FWAppManifest, mosHash string) ([]byte, er
 		})
 	}
 
-	tplData.Modules = []moduleInfo{
-		moduleInfo{
-			Name:        quoteOrNULL("mongoose-os"),
-			RepoVersion: quoteOrNULL(mosHash),
-		},
-	}
 	for _, m := range manifest.Modules {
 		mv := ""
 		if lmv, err := m.GetLocalVersion(); err == nil {

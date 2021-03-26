@@ -161,7 +161,6 @@ func init() {
 		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, No, true},
 		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, No, true},
 		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, No, true},
-		{"get-mos-repo-dir", getMosRepoDir, `Show mongoose-os repo absolute path`, nil, nil, No, true},
 		{"git-credentials", gitCredentials, `Git credentials helper mode`, nil, nil, No, true},
 		{"ports", showPorts, `Show serial ports`, nil, nil, No, true},
 	}

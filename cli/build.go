@@ -172,6 +172,9 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 			parts := strings.SplitN(m, ":", 2)
 			cml[parts[0]] = parts[1]
 		}
+		if *mosRepo != "" {
+			cml[build.MosModuleName] = *mosRepo
+		}
 
 		buildVarsFromCLI, err := getBuildVarsFromCLI()
 		if err != nil {
@@ -634,56 +637,6 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 	}
 
 	return targetDir, nil
-}
-
-func (lpr *compProviderReal) GetMongooseOSLocalPath(
-	rootAppDir, modulesDefVersion string,
-) (string, error) {
-	targetDir, err := getMosDirEffective(modulesDefVersion, *libsUpdateInterval)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return targetDir, nil
-}
-
-func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) (string, error) {
-	var mosDirEffective string
-	if *mosRepo != "" {
-		freportf(logWriter, "Using mongoose-os located at %q", *mosRepo)
-		mosDirEffective = *mosRepo
-	} else {
-		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
-		appDir, err := getCodeDirAbs()
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-
-		md := paths.GetModulesDir(appDir)
-
-		m := build.SWModule{
-			// TODO(dfrank) get upstream repo URL from a flag
-			// (and this flag needs to be forwarded to fwbuild as well, which should
-			// forward it to the mos invocation)
-			Location: "https://github.com/cesanta/mongoose-os",
-			Version:  mongooseOsVersion,
-		}
-
-		if *noLibsUpdate {
-			updateInterval = 0
-		}
-
-		if mosDirEffective == "" {
-			// NOTE: mongoose-os repo is huge, so in order to save space and time, we
-			// do a shallow clone (--depth 1).
-			mosDirEffective, err = m.PrepareLocalDir(md, logWriter, true, "", updateInterval, 1)
-			if err != nil {
-				return "", errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
-			}
-		}
-	}
-
-	return mosDirEffective, nil
 }
 
 // }}}
