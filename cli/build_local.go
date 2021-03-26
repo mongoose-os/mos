@@ -158,9 +158,9 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 	}
 
 	switch manifest.Type {
-	case build.AppTypeApp:
+	case build.ManifestTypeApp:
 		// Fine
-	case build.AppTypeLib:
+	case build.ManifestTypeLib:
 		bParams.BuildTarget = moscommon.GetOrigLibArchiveFilePath(buildDir, manifest.Platform)
 		if manifest.Platform == "esp32" {
 			*buildCmdExtra = append(*buildCmdExtra, "MGOS_MAIN_COMPONENT=moslib")

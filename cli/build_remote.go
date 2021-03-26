@@ -131,9 +131,9 @@ func buildRemote(bParams *build.BuildParams) error {
 	}
 
 	switch manifest.Type {
-	case build.AppTypeApp:
+	case build.ManifestTypeApp:
 		// Fine
-	case build.AppTypeLib:
+	case build.ManifestTypeLib:
 		bParams.BuildTarget = moscommon.GetOrigLibArchiveFilePath(buildDir, manifest.Platform)
 	default:
 		return errors.Errorf("invalid project type: %q", manifest.Type)

@@ -325,7 +325,7 @@ func ReadManifestFinal(
 	manifest.FSFilters = nil
 
 	// When building an app, also add all libs' sources or prebuilt binaries.
-	if manifest.Type == build.AppTypeApp {
+	if manifest.Type == build.ManifestTypeApp {
 		for k, lcur := range manifest.LibsHandled {
 			libSourceDirs := []string{}
 
@@ -1017,7 +1017,7 @@ func ReadManifest(
 
 	// If type is omitted, assume "app"
 	if manifest.Type == "" {
-		manifest.Type = build.AppTypeApp
+		manifest.Type = build.ManifestTypeApp
 	}
 
 	if manifest.Platform != "" {
