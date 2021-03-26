@@ -21,8 +21,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -161,16 +163,15 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 		}
 	} else {
 		// Create map of given lib locations, via --lib flag(s)
-		cll, err := getCustomLibLocations()
+		cll, err := getCustomLocations(*libs)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
 		// Create map of given module locations, via --module flag(s)
-		cml := map[string]string{}
-		for _, m := range *modules {
-			parts := strings.SplitN(m, ":", 2)
-			cml[parts[0]] = parts[1]
+		cml, err := getCustomLocations(*modules)
+		if err != nil {
+			return errors.Trace(err)
 		}
 		if *mosRepo != "" {
 			cml[build.MosModuleName] = *mosRepo
@@ -431,21 +432,30 @@ func getCodeDirAbs() (string, error) {
 	return absCodeDir, nil
 }
 
-func getCustomLibLocations() (map[string]string, error) {
-	customLibLocations := map[string]string{}
-	for _, l := range *libs {
+func isURL(s string) bool {
+	u, err := url.Parse(s)
+	return err == nil && u.Scheme != ""
+}
+
+func getCustomLocations(entries []string) (map[string]string, error) {
+	var err error
+	res := map[string]string{}
+	for _, l := range entries {
 		parts := strings.SplitN(l, ":", 2)
-
-		// Absolutize the given lib path
-		var err error
-		parts[1], err = filepath.Abs(parts[1])
-		if err != nil {
-			return nil, errors.Trace(err)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid --libs entry %q", l)
 		}
-
-		customLibLocations[parts[0]] = parts[1]
+		loc := parts[1]
+		// Absolutize local paths
+		if !isURL(loc) {
+			loc, err = filepath.Abs(loc)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+		}
+		res[parts[0]] = loc
 	}
-	return customLibLocations, nil
+	return res, nil
 }
 
 func newMosVars() *interpreter.MosVars {
@@ -496,14 +506,14 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	}
 
 	// --lib has the highest precedence.
-	libDirAbs, ok := lpr.bParams.CustomLibLocations[name]
-	if ok {
-		ourutil.Freportf(lpr.logWriter, "%s: Using %q (--lib)", name, libDirAbs)
-		return libDirAbs, nil
+	customLoc, ok := lpr.bParams.CustomLibLocations[name]
+	if ok && !isURL(customLoc) {
+		ourutil.Freportf(lpr.logWriter, "%s: Using %q (--lib)", name, customLoc)
+		return customLoc, nil
 	}
 
 	// Check --libs-dir.
-	if len(paths.LibsDirFlag) > 0 {
+	if !ok && len(paths.LibsDirFlag) > 0 {
 		name2, _ := m.GetName2()
 		for _, libsDir := range paths.LibsDirFlag {
 			libDir := filepath.Join(libsDir, name2)
@@ -516,6 +526,10 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	}
 
 	// Try to fetch into --deps-dir.
+	if ok {
+		m.Location = customLoc
+	}
+	libDirAbs := ""
 	depsDir := paths.GetDepsDir(appDir)
 	for {
 		localDir, err := m.GetLocalDir(depsDir, libsDefVersion)
@@ -612,28 +626,32 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 
 	m.SetCredentials(lpr.bParams.GetCredentialsForHost(m.GetHostName()))
 
-	targetDir, ok := lpr.bParams.CustomModuleLocations[name]
-	if !ok {
-		// Custom module location wasn't provided in command line, so, we'll
-		// use the module name and will clone/pull it if necessary
-		freportf(logWriter, "The flag --module is not given for the module %q, going to use the repository", name)
+	customLoc, ok := lpr.bParams.CustomModuleLocations[name]
+	if ok && !isURL(customLoc) {
+		freportf(logWriter, "Using module %q located at %q", name, customLoc)
+	}
 
-		appDir, err := getCodeDirAbs()
-		if err != nil {
-			return "", errors.Trace(err)
-		}
+	if ok {
+		m.Location = customLoc
+	}
 
-		updateIntvl := *libsUpdateInterval
-		if *noLibsUpdate {
-			updateIntvl = 0
-		}
+	// Custom module location wasn't provided on the command line, so, we'll
+	// use the module name and will clone/pull it if necessary
+	freportf(logWriter, "%s: Going to fetch module from %s", name, m.Location)
 
-		targetDir, err = m.PrepareLocalDir(paths.GetModulesDir(appDir), logWriter, true, modulesDefVersion, updateIntvl, 0)
-		if err != nil {
-			return "", errors.Annotatef(err, "preparing local copy of the module %q", name)
-		}
-	} else {
-		freportf(logWriter, "Using module %q located at %q", name, targetDir)
+	appDir, err := getCodeDirAbs()
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	updateIntvl := *libsUpdateInterval
+	if *noLibsUpdate {
+		updateIntvl = 0
+	}
+
+	targetDir, err := m.PrepareLocalDir(paths.GetModulesDir(appDir), logWriter, true, modulesDefVersion, updateIntvl, 0)
+	if err != nil {
+		return "", errors.Annotatef(err, "preparing local copy of the module %q", name)
 	}
 
 	return targetDir, nil

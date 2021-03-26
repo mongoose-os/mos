@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"context"
 
@@ -35,7 +34,11 @@ import (
 )
 
 func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
-	cll, err := getCustomLibLocations()
+	cll, err := getCustomLocations(*libs)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	cml, err := getCustomLocations(*modules)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -52,14 +55,8 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 		ManifestAdjustments: build.ManifestAdjustments{
 			Platform: flags.Platform(),
 		},
-		CustomLibLocations: cll,
-	}
-
-	// Create map of given module locations, via --module flag(s)
-	customModuleLocations := map[string]string{}
-	for _, m := range *modules {
-		parts := strings.SplitN(m, ":", 2)
-		customModuleLocations[parts[0]] = parts[1]
+		CustomLibLocations:    cll,
+		CustomModuleLocations: cml,
 	}
 
 	interp := interpreter.NewInterpreter(newMosVars())
