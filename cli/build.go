@@ -52,29 +52,8 @@ import (
 
 // mos build specific advanced flags
 var (
-	cleanBuildFlag     = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
-	buildDryRunFlag    = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
-	buildParamsFlag    = flag.String("build-params", "", "build params file")
-	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
-	modules            = flag.StringArray("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
-	libs               = flag.StringArray("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
-	libsUpdateInterval = flag.Duration("libs-update-interval", time.Hour*1, "how often to update already fetched libs")
-
+	// Don't want to move this to BuildParams to avoid trivial command line injection.
 	buildCmdExtra = flag.StringArray("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
-	cflagsExtra   = flag.StringArray("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
-	cxxflagsExtra = flag.StringArray("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
-	libsExtraFlag = flag.StringArray("lib-extra", []string{}, "Extra libs to add to the app being built. Value should be a YAML string. Can be used multiple times.")
-	saveBuildStat = flag.Bool("save-build-stat", true, "save build statistics")
-
-	noPlatformCheckFlag = flag.Bool("no-platform-check", false, "override platform support check")
-
-	preferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
-
-	buildVarsSlice = flag.StringSlice("build-var", []string{}, `Build variable in the format "NAME=VALUE". Can be used multiple times.`)
-	cdefsSlice     = flag.StringSlice("cdef", []string{}, `C/C++ define in the format "NAME=VALUE". Can be used multiple times.`)
-
-	noLibsUpdate  = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
-	skipCleanLibs = flag.Bool("skip-clean-libs", true, "if false, then during the remote build all libs will be uploaded to the builder")
 
 	// In-memory buffer containing all the log messages.  It has to be
 	// thread-safe, because it's used in compProviderReal, which is an
@@ -153,8 +132,8 @@ func getCredentialsFromCLI() (map[string]build.Credentials, error) {
 // Build command handler {{{
 func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 	var bParams build.BuildParams
-	if *buildParamsFlag != "" {
-		buildParamsBytes, err := ioutil.ReadFile(*buildParamsFlag)
+	if *flags.BuildParams != "" {
+		buildParamsBytes, err := ioutil.ReadFile(*flags.BuildParams)
 		if err != nil {
 			return errors.Annotatef(err, "error reading --build-params file")
 		}
@@ -163,18 +142,18 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 		}
 	} else {
 		// Create map of given lib locations, via --lib flag(s)
-		cll, err := getCustomLocations(*libs)
+		cll, err := getCustomLocations(*flags.Libs)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
 		// Create map of given module locations, via --module flag(s)
-		cml, err := getCustomLocations(*modules)
+		cml, err := getCustomLocations(*flags.Modules)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		if *mosRepo != "" {
-			cml[build.MosModuleName] = *mosRepo
+		if *flags.MosRepo != "" {
+			cml[build.MosModuleName] = *flags.MosRepo
 		}
 
 		buildVarsFromCLI, err := getBuildVarsFromCLI()
@@ -197,19 +176,30 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 			return errors.Annotatef(err, "error parsing --credentials")
 		}
 
+		libsUpdateIntvl := *flags.LibsUpdateInterval
+		if *flags.NoLibsUpdate {
+			libsUpdateIntvl = 0
+		}
+
 		bParams = build.BuildParams{
 			ManifestAdjustments: build.ManifestAdjustments{
 				Platform:  flags.Platform(),
 				BuildVars: buildVarsFromCLI,
 				CDefs:     cdefsFromCLI,
-				CFlags:    *cflagsExtra,
-				CXXFlags:  *cxxflagsExtra,
+				CFlags:    *flags.CFlagsExtra,
+				CXXFlags:  *flags.CXXFlagsExtra,
 				ExtraLibs: libsFromCLI,
 			},
-			BuildTarget:           *buildTarget,
+			Clean:                 *flags.Clean,
+			DryRun:                *flags.BuildDryRun,
+			Verbose:               *flags.Verbose,
+			BuildTarget:           *flags.BuildTarget,
 			CustomLibLocations:    cll,
 			CustomModuleLocations: cml,
-			NoPlatformCheck:       *noPlatformCheckFlag,
+			LibsUpdateInterval:    libsUpdateIntvl,
+			NoPlatformCheck:       *flags.NoPlatformCheck,
+			SaveBuildStat:         *flags.SaveBuildStat,
+			PreferPrebuiltLibs:    *flags.PreferPrebuiltLibs,
 			Credentials:           credentials,
 		}
 	}
@@ -229,7 +219,7 @@ func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 
 	// Request server version in parallel
 	serverVersionCh := make(chan *version.VersionJson, 1)
-	if true || !*local {
+	if true || !*flags.Local {
 		go func() {
 			v, err := update.GetServerMosVersion(string(update.GetUpdateChannel()), bParams.Platform, bParams.BuildVars["BOARD"])
 			if err != nil {
@@ -256,7 +246,7 @@ func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 	logWriterStderr = io.MultiWriter(logFile, &logBuf, os.Stderr)
 	logWriter = io.MultiWriter(logFile, &logBuf)
 
-	if *verbose {
+	if bParams.Verbose {
 		logWriter = logWriterStderr
 	}
 
@@ -265,7 +255,7 @@ func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 		return errors.Errorf("No mos.yml file")
 	}
 
-	if *local {
+	if *flags.Local {
 		err = buildLocal(ctx, bParams)
 	} else {
 		err = buildRemote(bParams)
@@ -273,7 +263,7 @@ func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	if *buildDryRunFlag {
+	if bParams.DryRun {
 		return nil
 	}
 
@@ -289,7 +279,7 @@ func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 
 		end := time.Now()
 
-		if *saveBuildStat {
+		if bParams.SaveBuildStat {
 			bstat := moscommon.BuildStat{
 				ArchOld:     fw.Platform,
 				Platform:    fw.Platform,
@@ -305,7 +295,7 @@ func doBuild(ctx context.Context, bParams *build.BuildParams) error {
 			ioutil.WriteFile(moscommon.GetBuildStatFilePath(buildDir), data, 0666)
 		}
 
-		if *local || !*verbose {
+		if *flags.Local || !bParams.Verbose {
 			if err == nil {
 				freportf(logWriter, "Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
 			}
@@ -366,7 +356,7 @@ func getBuildVarsFromCLI() (map[string]string, error) {
 	m := map[string]string{
 		"BOARD": *flags.Board,
 	}
-	if err := parseVarsSlice(*buildVarsSlice, m); err != nil {
+	if err := parseVarsSlice(*flags.BuildVars, m); err != nil {
 		return nil, errors.Annotatef(err, "invalid --build-var")
 	}
 	return m, nil
@@ -374,7 +364,7 @@ func getBuildVarsFromCLI() (map[string]string, error) {
 
 func getCdefsFromCLI() (map[string]string, error) {
 	m := map[string]string{}
-	if err := parseVarsSlice(*cdefsSlice, m); err != nil {
+	if err := parseVarsSlice(*flags.CDefs, m); err != nil {
 		return nil, errors.Annotatef(err, "invalid --cdef")
 	}
 	return m, nil
@@ -382,7 +372,7 @@ func getCdefsFromCLI() (map[string]string, error) {
 
 func getLibsFromCLI() ([]build.SWModule, error) {
 	var res []build.SWModule
-	for _, v := range *libsExtraFlag {
+	for _, v := range *flags.LibsExtra {
 		var m build.SWModule
 		if err := yaml.Unmarshal([]byte(v), &m); err != nil {
 			return nil, errors.Annotatef(err, "invalid --libs-extra value %q", v)
@@ -537,10 +527,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 			return "", errors.Trace(err)
 		}
 
-		updateIntvl := *libsUpdateInterval
-		if *noLibsUpdate {
-			updateIntvl = 0
-		}
+		updateIntvl := lpr.bParams.LibsUpdateInterval
 
 		// Try to get current hash, ignoring errors
 		curHash := ""
@@ -644,10 +631,7 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 		return "", errors.Trace(err)
 	}
 
-	updateIntvl := *libsUpdateInterval
-	if *noLibsUpdate {
-		updateIntvl = 0
-	}
+	updateIntvl := lpr.bParams.LibsUpdateInterval
 
 	targetDir, err := m.PrepareLocalDir(paths.GetModulesDir(appDir), logWriter, true, modulesDefVersion, updateIntvl, 0)
 	if err != nil {

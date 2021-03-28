@@ -72,7 +72,7 @@ func buildRemote(bParams *build.BuildParams) error {
 	if !*flags.KeepTempFiles {
 		defer os.RemoveAll(appStagingDir)
 	}
-	if *verbose {
+	if bParams.Verbose {
 		ourutil.Reportf("Using %s as staging dir", appStagingDir)
 	}
 
@@ -89,7 +89,7 @@ func buildRemote(bParams *build.BuildParams) error {
 	// Copy CustomLibLocations and CustomModuleLocations to deps
 	for n, libDir := range bParams.CustomLibLocations {
 		libDirStaging := filepath.Join(appStagingDir, depsDir, n)
-		if *verbose {
+		if bParams.Verbose {
 			ourutil.Reportf("Copying %s", libDir)
 		}
 		if err := ourio.CopyDir(libDir, libDirStaging, []string{".git"}); err != nil {
@@ -99,7 +99,7 @@ func buildRemote(bParams *build.BuildParams) error {
 	bParams.CustomLibLocations = nil
 	for n, moduleDir := range bParams.CustomModuleLocations {
 		moduleDirStaging := filepath.Join(appStagingDir, depsDir, "modules", n)
-		if *verbose {
+		if bParams.Verbose {
 			ourutil.Reportf("Copying %s", moduleDir)
 		}
 		if err := ourio.CopyDir(moduleDir, moduleDirStaging, []string{".git"}); err != nil {
@@ -214,7 +214,7 @@ func buildRemote(bParams *build.BuildParams) error {
 
 	// create a zip out of the code dir
 	os.Chdir(appStagingDir)
-	src, err := zipUp(".", whitelist, transformers)
+	src, err := zipUp(bParams, ".", whitelist, transformers)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -232,14 +232,14 @@ func buildRemote(bParams *build.BuildParams) error {
 		return errors.Trace(err)
 	}
 
-	if *cleanBuildFlag {
+	if bParams.Clean {
 		if err := mpw.WriteField(moscommon.FormCleanName, "1"); err != nil {
 			return errors.Trace(err)
 		}
 	}
 
 	pbValue := "0"
-	if *preferPrebuiltLibs {
+	if bParams.PreferPrebuiltLibs {
 		pbValue = "1"
 	}
 
@@ -321,7 +321,7 @@ func buildRemote(bParams *build.BuildParams) error {
 		ioutil.WriteFile(moscommon.GetBuildLogLocalFilePath(buildDir), logBuf.Bytes(), 0666)
 
 		// print log in verbose mode or when build fails
-		if *verbose || resp.StatusCode != http.StatusOK {
+		if bParams.Verbose || resp.StatusCode != http.StatusOK {
 			log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
 			if err != nil {
 				return errors.Trace(err)
@@ -420,6 +420,7 @@ func copyExternalCodeAll(paths *[]string, appDir, appStagingDir string) error {
 // archive, the appropriate transformer function should be placed at the
 // transformers map.
 func zipUp(
+	bParams *build.BuildParams,
 	dir string,
 	whitelist map[string]bool,
 	transformers map[string]fileTransformer,
@@ -447,7 +448,7 @@ func zipUp(
 			return nil
 		}
 
-		if *verbose {
+		if bParams.Verbose {
 			ourutil.Reportf("Zipping %s", file)
 		}
 

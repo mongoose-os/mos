@@ -25,6 +25,8 @@ import (
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/cli/ourutil"
 	flag "github.com/spf13/pflag"
+
+	moscommon "github.com/mongoose-os/mos/cli/common"
 )
 
 var (
@@ -96,6 +98,28 @@ var (
 
 	Attr      = flag.StringArray("attr", nil, "manifest attribute, can be used multiple times")
 	ExtraAttr = flag.StringArray("extra-attr", nil, "manifest extra attribute info to be added to ZIP")
+
+	// Build flags.
+	BuildParams = flag.String("build-params", "", "build params file")
+
+	Local              = flag.Bool("local", false, "Local build.")
+	Clean              = flag.Bool("clean", false, "Perform a clean build, wipe the previous build state")
+	MosRepo            = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")
+	Verbose            = flag.Bool("verbose", false, "Verbose output")
+	Modules            = flag.StringArray("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
+	Libs               = flag.StringArray("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
+	NoLibsUpdate       = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
+	LibsUpdateInterval = flag.Duration("libs-update-interval", time.Hour*1, "how often to update already fetched libs")
+	BuildVars          = flag.StringSlice("build-var", []string{}, `Build variable in the format "NAME=VALUE". Can be used multiple times.`)
+	CDefs              = flag.StringSlice("cdef", []string{}, `C/C++ define in the format "NAME=VALUE". Can be used multiple times.`)
+	BuildDryRun        = flag.Bool("build-dry-run", false, "do not actually run the build, only prepare")
+	BuildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
+	NoPlatformCheck    = flag.Bool("no-platform-check", false, "override platform support check")
+	CFlagsExtra        = flag.StringArray("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
+	CXXFlagsExtra      = flag.StringArray("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
+	LibsExtra          = flag.StringArray("lib-extra", []string{}, "Extra libs to add to the app being built. Value should be a YAML string. Can be used multiple times.")
+	SaveBuildStat      = flag.Bool("save-build-stat", true, "save build statistics")
+	PreferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
 
 	// Local build flags.
 	BuildDockerExtra = flag.StringArray(

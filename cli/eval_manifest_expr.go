@@ -34,11 +34,11 @@ import (
 )
 
 func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
-	cll, err := getCustomLocations(*libs)
+	cll, err := getCustomLocations(*flags.Libs)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	cml, err := getCustomLocations(*modules)
+	cml, err := getCustomLocations(*flags.Modules)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -57,6 +57,8 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 		},
 		CustomLibLocations:    cll,
 		CustomModuleLocations: cml,
+		// Never update libs on that command
+		LibsUpdateInterval: 0,
 	}
 
 	interp := interpreter.NewInterpreter(newMosVars())
@@ -66,12 +68,9 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	// Never update libs on that command
-	*noLibsUpdate = true
-
 	logWriterStderr = os.Stderr
 
-	if *verbose {
+	if *flags.Verbose {
 		logWriter = logWriterStderr
 	} else {
 		logWriter = &bytes.Buffer{}
@@ -93,7 +92,7 @@ func evalManifestExpr(ctx context.Context, devConn dev.DevConn) error {
 			BuildVars: buildVarsCli,
 		}, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider},
-		false /* requireArch */, *preferPrebuiltLibs, 0, /* binaryLibsUpdateInterval */
+		false /* requireArch */, *flags.PreferPrebuiltLibs, 0, /* binaryLibsUpdateInterval */
 	)
 	if err != nil {
 		return errors.Trace(err)

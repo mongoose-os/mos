@@ -55,9 +55,9 @@ func buildLocal(ctx context.Context, bParams *build.BuildParams) error {
 
 	buildDir := moscommon.GetBuildDir(projectDir)
 
-	buildErr := buildLocal2(ctx, bParams, *cleanBuildFlag)
+	buildErr := buildLocal2(ctx, bParams)
 
-	if !*verbose && buildErr != nil {
+	if !bParams.Verbose && buildErr != nil {
 		log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
 		if err != nil {
 			glog.Errorf("can't read build log: %s", err)
@@ -83,7 +83,7 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 	return strings.Join(append(cflags), " ")
 }
 
-func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (err error) {
+func buildLocal2(ctx context.Context, bParams *build.BuildParams) (err error) {
 	gitinst := mosgit.NewOurGit(nil)
 
 	buildDir := moscommon.GetBuildDir(projectDir)
@@ -104,7 +104,7 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
 	// Perform cleanup before the build {{{
-	if clean {
+	if bParams.Clean {
 		// Cleanup build dir, but leave build log intact, because we're already
 		// writing to it.
 		if err := ourio.RemoveFromDir(buildDir, []string{moscommon.GetBuildLogFilePath("")}); err != nil {
@@ -134,14 +134,10 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 		return errors.Trace(err)
 	}
 
-	libsUpdateIntvl := *libsUpdateInterval
-	if *noLibsUpdate {
-		libsUpdateIntvl = 0
-	}
 	manifest, fp, err := manifest_parser.ReadManifestFinal(
 		appDir, &bParams.ManifestAdjustments, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider},
-		true /* requireArch */, *preferPrebuiltLibs, libsUpdateIntvl)
+		true /* requireArch */, bParams.PreferPrebuiltLibs, bParams.LibsUpdateInterval)
 	if err != nil {
 		return errors.Annotatef(err, "error parsing manifest")
 	}
@@ -152,9 +148,11 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 		return errors.Trace(err)
 	}
 	// Force clean rebuild if manifest was updated
-	if manifestUpdated && !clean {
+	if manifestUpdated && !bParams.Clean {
 		freportf(logWriter, "== Manifest has changed, forcing a clean rebuild...")
-		return buildLocal2(ctx, bParams, true /* clean */)
+		bParams2 := *bParams
+		bParams2.Clean = true
+		return buildLocal2(ctx, bParams)
 	}
 
 	switch manifest.Type {
@@ -445,10 +443,10 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
 		)
 
-		if err := runDockerBuild(dockerRunArgs); err != nil {
+		if err := runDockerBuild(dockerRunArgs, bParams.DryRun); err != nil {
 			return errors.Trace(err)
 		}
-		if *buildDryRunFlag {
+		if bParams.DryRun {
 			return nil
 		}
 	} else {
@@ -470,7 +468,7 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams, clean bool) (e
 
 		freportf(logWriter, "Make arguments: %s", strings.Join(makeArgs, " "))
 
-		if *buildDryRunFlag {
+		if bParams.DryRun {
 			return nil
 		}
 
@@ -634,7 +632,7 @@ func getPathsForDocker(p []string) []string {
 	return ret
 }
 
-func runDockerBuild(dockerRunArgs []string) error {
+func runDockerBuild(dockerRunArgs []string, dryRun bool) error {
 	containerName := fmt.Sprintf(
 		"mos_build_%s_%d", time.Now().Format("2006-01-02T15-04-05-00"), rand.Int(),
 	)
@@ -645,7 +643,7 @@ func runDockerBuild(dockerRunArgs []string) error {
 
 	freportf(logWriter, "Docker arguments: %s", strings.Join(dockerArgs, " "))
 
-	if *buildDryRunFlag {
+	if dryRun {
 		return nil
 	}
 

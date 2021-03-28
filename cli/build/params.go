@@ -1,5 +1,7 @@
 package build
 
+import "time"
+
 // Last-minute adjustments for the manifest, typically constructed from command line
 type ManifestAdjustments struct {
 	Platform  string
@@ -13,10 +15,16 @@ type ManifestAdjustments struct {
 // Note: this struct gets transmitted to the server
 type BuildParams struct {
 	ManifestAdjustments
+	Clean                 bool
+	DryRun                bool
+	Verbose               bool
 	BuildTarget           string
 	CustomLibLocations    map[string]string
 	CustomModuleLocations map[string]string
+	LibsUpdateInterval    time.Duration
 	NoPlatformCheck       bool
+	SaveBuildStat         bool
+	PreferPrebuiltLibs    bool
 	// host -> credentials, used for authentication when fetching libs.
 	Credentials map[string]Credentials
 }
