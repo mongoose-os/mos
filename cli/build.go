@@ -140,68 +140,82 @@ func buildHandler(ctx context.Context, devConn dev.DevConn) error {
 		if err := yaml.Unmarshal(buildParamsBytes, &bParams); err != nil {
 			return errors.Annotatef(err, "error parsing --build-params file")
 		}
-	} else {
-		// Create map of given lib locations, via --lib flag(s)
-		cll, err := getCustomLocations(*flags.Libs)
+		return errors.Trace(doBuild(ctx, &bParams))
+	}
+
+	// Create map of given lib locations, via --lib flag(s)
+	cll, err := getCustomLocations(*flags.Libs)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Create map of given module locations, via --module flag(s)
+	cml, err := getCustomLocations(*flags.Modules)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if *flags.MosRepo != "" {
+		cml[build.MosModuleName] = *flags.MosRepo
+	}
+
+	buildVarsFromCLI, err := getBuildVarsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	cdefsFromCLI, err := getCdefsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	libsFromCLI, err := getLibsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	credentials, err := getCredentialsFromCLI()
+	if err != nil {
+		return errors.Annotatef(err, "error parsing --credentials")
+	}
+
+	libsUpdateIntvl := *flags.LibsUpdateInterval
+	if *flags.NoLibsUpdate {
+		libsUpdateIntvl = 0
+	}
+
+	bParams = build.BuildParams{
+		ManifestAdjustments: build.ManifestAdjustments{
+			Platform:  flags.Platform(),
+			BuildVars: buildVarsFromCLI,
+			CDefs:     cdefsFromCLI,
+			CFlags:    *flags.CFlagsExtra,
+			CXXFlags:  *flags.CXXFlagsExtra,
+			ExtraLibs: libsFromCLI,
+		},
+		Clean:                 *flags.Clean,
+		DryRun:                *flags.BuildDryRun,
+		Verbose:               *flags.Verbose,
+		BuildTarget:           *flags.BuildTarget,
+		CustomLibLocations:    cll,
+		CustomModuleLocations: cml,
+		LibsUpdateInterval:    libsUpdateIntvl,
+		NoPlatformCheck:       *flags.NoPlatformCheck,
+		SaveBuildStat:         *flags.SaveBuildStat,
+		PreferPrebuiltLibs:    *flags.PreferPrebuiltLibs,
+		Credentials:           credentials,
+	}
+
+	if *flags.DepsVersions != "" {
+		dmBytes, err := ioutil.ReadFile(*flags.DepsVersions)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "error reading --build-deps-versions file")
 		}
-
-		// Create map of given module locations, via --module flag(s)
-		cml, err := getCustomLocations(*flags.Modules)
-		if err != nil {
-			return errors.Trace(err)
+		var dm build.DepsManifest
+		if err := yaml.Unmarshal(dmBytes, &dm); err != nil {
+			return errors.Annotatef(err, "error parsing --build-deps-versions file")
 		}
-		if *flags.MosRepo != "" {
-			cml[build.MosModuleName] = *flags.MosRepo
-		}
-
-		buildVarsFromCLI, err := getBuildVarsFromCLI()
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		cdefsFromCLI, err := getCdefsFromCLI()
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		libsFromCLI, err := getLibsFromCLI()
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		credentials, err := getCredentialsFromCLI()
-		if err != nil {
-			return errors.Annotatef(err, "error parsing --credentials")
-		}
-
-		libsUpdateIntvl := *flags.LibsUpdateInterval
-		if *flags.NoLibsUpdate {
-			libsUpdateIntvl = 0
-		}
-
-		bParams = build.BuildParams{
-			ManifestAdjustments: build.ManifestAdjustments{
-				Platform:  flags.Platform(),
-				BuildVars: buildVarsFromCLI,
-				CDefs:     cdefsFromCLI,
-				CFlags:    *flags.CFlagsExtra,
-				CXXFlags:  *flags.CXXFlagsExtra,
-				ExtraLibs: libsFromCLI,
-			},
-			Clean:                 *flags.Clean,
-			DryRun:                *flags.BuildDryRun,
-			Verbose:               *flags.Verbose,
-			BuildTarget:           *flags.BuildTarget,
-			CustomLibLocations:    cll,
-			CustomModuleLocations: cml,
-			LibsUpdateInterval:    libsUpdateIntvl,
-			NoPlatformCheck:       *flags.NoPlatformCheck,
-			SaveBuildStat:         *flags.SaveBuildStat,
-			PreferPrebuiltLibs:    *flags.PreferPrebuiltLibs,
-			Credentials:           credentials,
-		}
+		bParams.ManifestAdjustments.DepsVersions = &dm
+		bParams.ManifestAdjustments.StrictDepsVersions = *flags.StrictDepsVersions
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
@@ -515,6 +529,22 @@ func (lpr *compProviderReal) GetLibLocalPath(
 		}
 	}
 
+	// Check for version overrides.
+	if lpr.bParams.ManifestAdjustments.DepsVersions != nil {
+		dve := lpr.bParams.ManifestAdjustments.DepsVersions.FindLibEntry(name)
+		if dve == nil {
+			ourutil.Reportf("%s: No deps manifest entry found [%s]", name, m.Location)
+			if lpr.bParams.StrictDepsVersions {
+				return "", fmt.Errorf("no dep manifest entry found for %q [%s] (strict mode)", name, m.Location)
+			}
+		} else {
+			if dve.RepoVersion != "" {
+				glog.V(1).Infof("%s: forcing version %s", name, dve.RepoVersion)
+				m.SetVersionOverride(dve.RepoVersion)
+			}
+		}
+	}
+
 	// Try to fetch into --deps-dir.
 	if ok {
 		m.Location = customLoc
@@ -620,6 +650,22 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 
 	if ok {
 		m.Location = customLoc
+	}
+
+	// Check for version overrides.
+	if lpr.bParams.ManifestAdjustments.DepsVersions != nil {
+		dve := lpr.bParams.ManifestAdjustments.DepsVersions.FindModuleEntry(name)
+		if dve == nil {
+			ourutil.Reportf("%s: No deps manifest entry found [%s]", name, m.Location)
+			if lpr.bParams.StrictDepsVersions {
+				return "", fmt.Errorf("no dep manifest entry found for %q [%s] (strict mode)", name, m.Location)
+			}
+		} else {
+			if dve.RepoVersion != "" {
+				glog.V(1).Infof("%s: forcing version %s", name, dve.RepoVersion)
+				m.SetVersionOverride(dve.RepoVersion)
+			}
+		}
 	}
 
 	// Custom module location wasn't provided on the command line, so, we'll

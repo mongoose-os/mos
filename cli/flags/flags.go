@@ -121,6 +121,9 @@ var (
 	SaveBuildStat      = flag.Bool("save-build-stat", true, "save build statistics")
 	PreferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
 
+	DepsVersions       = flag.String("deps-versions", "", "If specified, this file will be consulted for all libs and modules versions")
+	StrictDepsVersions = flag.Bool("strict-deps-versions", true, "If set, then --deps-versions will be in strict mode: missing deps will be disallowed")
+
 	// Local build flags.
 	BuildDockerExtra = flag.StringArray(
 		"build-docker-extra", []string{},

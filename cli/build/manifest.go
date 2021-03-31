@@ -53,6 +53,7 @@ type FWAppManifestLibHandled struct {
 	Sources     []string       `yaml:"sources,omitempty" json:"sources"`
 	BinaryLibs  []string       `yaml:"binary_libs,omitempty" json:"binary_libs"`
 	Version     string         `yaml:"version,omitempty" json:"version"`
+	UserVersion string         `yaml:"user_version,omitempty" json:"version"`
 	RepoVersion string         `yaml:"repo_version,omitempty" json:"version"`
 	RepoDirty   bool           `yaml:"repo_dirty,omitempty" json:"repo_dirty"`
 	Manifest    *FWAppManifest `yaml:"-" json:"-"`

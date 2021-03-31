@@ -1,11 +1,16 @@
+app_name: app
 libs:
 - name: core
   location: https://github.com/mongoose-os-libs/core
+  version: "0.01"
 - name: lib1
   location: libs/mylib1
+  version: 2.0-from-app
 - name: mylib2
   location: libs/mylib2
+  version: "0.01"
 modules:
 - name: mongoose-os
   location: https://github.com/cesanta/mongoose-os
+  version: "0.01"
 manifest_version: "2021-03-26"

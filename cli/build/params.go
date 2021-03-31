@@ -10,6 +10,10 @@ type ManifestAdjustments struct {
 	CFlags    []string
 	CXXFlags  []string
 	ExtraLibs []SWModule
+
+	// Libs and module version requirements.
+	DepsVersions       *DepsManifest
+	StrictDepsVersions bool
 }
 
 // Note: this struct gets transmitted to the server
@@ -25,7 +29,8 @@ type BuildParams struct {
 	NoPlatformCheck       bool
 	SaveBuildStat         bool
 	PreferPrebuiltLibs    bool
-	// host -> credentials, used for authentication when fetching libs.
+
+	// Host -> credentials, used for authentication when fetching libs.
 	Credentials map[string]Credentials
 }
 

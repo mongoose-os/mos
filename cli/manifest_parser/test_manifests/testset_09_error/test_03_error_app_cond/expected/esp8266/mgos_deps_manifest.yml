@@ -1,4 +1,6 @@
+app_name: app
 modules:
 - name: mongoose-os
   location: https://github.com/cesanta/mongoose-os
+  version: "0.01"
 manifest_version: "2021-03-26"

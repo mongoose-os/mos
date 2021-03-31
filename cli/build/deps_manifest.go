@@ -43,6 +43,7 @@ type DepsManifestEntry struct {
 	Name        string           `yaml:"name,omitempty" json:"name,omitempty"`
 	Location    string           `yaml:"location,omitempty" json:"location,omitempty"`
 	Version     string           `yaml:"version,omitempty" json:"version,omitempty"`
+	UserVersion string           `yaml:"user_version,omitempty" json:"version,omitempty"`
 	RepoVersion string           `yaml:"repo_version,omitempty" json:"repo_version,omitempty"`
 	RepoDirty   bool             `yaml:"repo_dirty,omitempty" json:"repo_dirty,omitempty"`
 	Blobs       []*DepsBlobEntry `yaml:"blobs,omitempty" json:"blobs,omitempty"`
@@ -54,17 +55,48 @@ type DepsBlobEntry struct {
 	SHA256 string `yaml:"cs_sha256,omitempty" json:"cs_sha256,omitempty"`
 }
 
-func GenerateDepsManifest(m *FWAppManifest) (*DepsManifest, error) {
+func findEntry(entries []*DepsManifestEntry, name string) *DepsManifestEntry {
+	for _, e := range entries {
+		if e.Name == name {
+			return e
+		}
+	}
+	return nil
+}
+
+func (dm *DepsManifest) FindLibEntry(name string) *DepsManifestEntry {
+	return findEntry(dm.Libs, name)
+}
+
+func (dm *DepsManifest) FindBlobEntry(libName, blobName string) *DepsBlobEntry {
+	l := dm.FindLibEntry(libName)
+	if l == nil {
+		return nil
+	}
+	for _, e := range l.Blobs {
+		if e.Name == blobName {
+			return e
+		}
+	}
+	return nil
+}
+
+func (dm *DepsManifest) FindModuleEntry(name string) *DepsManifestEntry {
+	return findEntry(dm.Modules, name)
+}
+
+func GenerateDepsManifest(manifest *FWAppManifest) (*DepsManifest, error) {
 	res := &DepsManifest{
-		AppName:         m.Name,
+		AppName:         manifest.Name,
 		ManifestVersion: DepsManifestVersion,
 	}
 
-	for _, lh := range m.LibsHandled {
+	for _, lh := range manifest.LibsHandled {
 		e := &DepsManifestEntry{
 			Name:        lh.Lib.Name,
 			Location:    lh.Lib.Location,
 			Version:     lh.Version,
+			UserVersion: lh.UserVersion,
 			RepoVersion: lh.RepoVersion,
 			RepoDirty:   lh.RepoDirty,
 		}
@@ -89,11 +121,12 @@ func GenerateDepsManifest(m *FWAppManifest) (*DepsManifest, error) {
 		return strings.Compare(res.Libs[i].Name, res.Libs[j].Name) < 0
 	})
 
-	for _, m := range m.Modules {
+	for _, m := range manifest.Modules {
 		rv, dirty, _ := m.GetRepoVersion()
 		res.Modules = append(res.Modules, &DepsManifestEntry{
 			Name:        m.Name,
 			Location:    m.Location,
+			Version:     m.GetVersion(manifest.ModulesVersion),
 			RepoVersion: rv,
 			RepoDirty:   dirty,
 		})
@@ -103,4 +136,64 @@ func GenerateDepsManifest(m *FWAppManifest) (*DepsManifest, error) {
 	})
 
 	return res, nil
+}
+
+func ValidateDepsRequirements(have, want *DepsManifest) error {
+	// ReporVersion was enforced during fetch.
+	var failures []string
+	for _, haveLib := range have.Libs {
+		name := haveLib.Name
+		wantLib := want.FindLibEntry(name)
+		if wantLib == nil {
+			failures = append(failures, fmt.Sprintf("%s: no entry found", name))
+			continue
+		}
+		if wantLib.UserVersion != "" && haveLib.UserVersion != wantLib.UserVersion {
+			failures = append(failures, fmt.Sprintf("%s: want user version %s, have %s",
+				name, wantLib.UserVersion, haveLib.UserVersion))
+		}
+		if wantLib.RepoVersion != "" && haveLib.RepoVersion != wantLib.RepoVersion {
+			failures = append(failures, fmt.Sprintf("%s: want repo version %s, have %s",
+				name, wantLib.RepoVersion, haveLib.RepoVersion))
+		}
+		if haveLib.RepoDirty && !wantLib.RepoDirty {
+			failures = append(failures, fmt.Sprintf("%s: repo is dirty", name))
+		}
+		for _, haveBlob := range haveLib.Blobs {
+			blobName := haveBlob.Name
+			wantBlob := want.FindBlobEntry(name, blobName)
+			if wantBlob == nil {
+				failures = append(failures, fmt.Sprintf("%s: %s: no entry found", name, blobName))
+				continue
+			}
+			// Can't enforce this for "latest" as binaries are rebuilt regularly.
+			// TODO(rojer): Impelment archiving of "latest" blobs.
+			if haveLib.Version != "latest" {
+				if (haveBlob.Size > 0 && haveBlob.Size != wantBlob.Size) ||
+					(haveBlob.SHA256 != "" && haveBlob.SHA256 != wantBlob.SHA256) {
+					failures = append(failures, fmt.Sprintf("%s: %s: want %d/%s, have %d/%s",
+						name, blobName, wantBlob.Size, wantBlob.SHA256, haveBlob.Size, haveBlob.SHA256))
+				}
+			}
+		}
+	}
+	for _, haveMod := range have.Modules {
+		name := haveMod.Name
+		wantMod := want.FindModuleEntry(name)
+		if wantMod == nil {
+			failures = append(failures, fmt.Sprintf("%s: no entry found", name))
+			continue
+		}
+		if wantMod.RepoVersion != "" && haveMod.RepoVersion != wantMod.RepoVersion {
+			failures = append(failures, fmt.Sprintf("%s: want repo version %s, have %s",
+				name, wantMod.RepoVersion, haveMod.RepoVersion))
+		}
+		if haveMod.RepoDirty && !wantMod.RepoDirty {
+			failures = append(failures, fmt.Sprintf("%s: repo is dirty", name))
+		}
+	}
+	if len(failures) > 0 {
+		return fmt.Errorf("deps validation failures: %s", strings.Join(failures, "; "))
+	}
+	return nil
 }

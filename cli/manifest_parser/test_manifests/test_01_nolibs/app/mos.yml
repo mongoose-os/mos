@@ -1,3 +1,4 @@
+name: test-app
 author: mongoose-os
 description: My nolibs app
 version: 1.0

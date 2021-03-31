@@ -247,12 +247,9 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams) (err error) {
 	freportf(logWriter, "Include dirs: %v", appIncludes)
 	freportf(logWriter, "Binary libs: %v", appBinLibs)
 
-	freportf(logWriter, "Building...")
+	appName := manifest.Name
 
-	appName, err := fixupAppName(manifest.Name)
-	if err != nil {
-		return errors.Trace(err)
-	}
+	freportf(logWriter, "Building %s...", appName)
 
 	var errs error
 	for k, v := range map[string]string{

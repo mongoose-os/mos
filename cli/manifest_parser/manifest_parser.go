@@ -34,6 +34,7 @@ import (
 	"sync"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
@@ -141,6 +142,15 @@ func ReadManifestFinal(
 		return nil, nil, errors.Trace(err)
 	}
 
+	if manifest.Name == "" {
+		manifest.Name = filepath.Base(dir)
+	}
+	for _, c := range manifest.Name {
+		if unicode.IsSpace(c) {
+			return nil, nil, fmt.Errorf("app name (%q) should not contain spaces", manifest.Name)
+		}
+	}
+
 	// Set the mos.platform variable
 	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
@@ -189,7 +199,6 @@ func ReadManifestFinal(
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
-
 		if modulesHandled[name] {
 			continue
 		}
@@ -224,7 +233,8 @@ func ReadManifestFinal(
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
-		manifest.LibsHandled[i].Version = v.Manifest.Version
+		manifest.LibsHandled[i].Version = v.Lib.GetVersion(manifest.LibsVersion)
+		manifest.LibsHandled[i].UserVersion = v.Manifest.Version
 		manifest.LibsHandled[i].RepoVersion, manifest.LibsHandled[i].RepoDirty, _ = v.Lib.GetRepoVersion()
 	}
 
@@ -418,6 +428,17 @@ func ReadManifestFinal(
 
 		if err = ioutil.WriteFile(moscommon.GetDepsManifestFilePath(buildDirAbs), dmData, 0666); err != nil {
 			return nil, nil, errors.Trace(err)
+		}
+
+		if adjustments.DepsVersions != nil {
+			if err = build.ValidateDepsRequirements(dm, adjustments.DepsVersions); err != nil {
+				if adjustments.StrictDepsVersions {
+					return nil, nil, errors.Annotatef(err, "error validating dependencies (strict mode)")
+				} else {
+					ourutil.Freportf(logWriter, "%s", err)
+					glog.Errorf("%s", err)
+				}
+			}
 		}
 
 		// Generate deps_init C code, and if it's not empty, write it to the temp
@@ -1708,7 +1729,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest, dm *build.DepsManifest) ([]
 		}
 		tplData.Libs = append(tplData.Libs, libInfo{
 			Name:        quoteOrNULL(lh.Lib.Name),
-			Version:     quoteOrNULL(lh.Version),
+			Version:     quoteOrNULL(lh.UserVersion),
 			RepoVersion: quoteOrNULL(rv),
 			BinaryLibs:  quoteOrNULL(strings.Join(blHashes, ",")),
 			HaveInit:    initFunc != "NULL",

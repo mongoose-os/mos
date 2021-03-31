@@ -49,6 +49,8 @@ type SWModule struct {
 	// API used to download binary assets. If not specified, will take a guess based on location.
 	AssetAPI SWModuleAssetAPIType `yaml:"asset_api,omitempty" json:"asset_api,omitempty"`
 
+	versionOverride string
+
 	localPath   string // Path where the lib resides locally. Valid after successful PrepareLocalDir.
 	repoVersion string // Specific version (hash, commit) of the library at the localPath.
 	isDirty     bool   // Local repo is "dirty" - i.e., has local changes.
@@ -324,8 +326,15 @@ func (m *SWModule) GetVersion(defaultVersion string) string {
 	return version
 }
 
+func (m *SWModule) SetVersionOverride(version string) {
+	m.versionOverride = version
+}
+
 func (m *SWModule) getVersionGit(defaultVersion string) string {
-	version := m.GetVersion(defaultVersion)
+	version := m.versionOverride
+	if version == "" {
+		version = m.GetVersion(defaultVersion)
+	}
 	if version == "latest" {
 		version = "master"
 	}

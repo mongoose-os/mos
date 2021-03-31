@@ -1,3 +1,4 @@
+name: app
 type: app
 version: "1.0"
 platform: esp8266
@@ -37,7 +38,8 @@ libs_handled:
     location: https://github.com/mongoose-os-libs/core
     name: core
   path: __APP_ROOT__/libs/core
-  version: "1.0"
+  version: "0.01"
+  user_version: "1.0"
 - lib:
     origin: https://github.com/mongoose-os-libs/mylib1
     location: https://github.com/mongoose-os-libs/mylib1
@@ -47,7 +49,8 @@ libs_handled:
   - core
   sources:
   - __APP_ROOT__/libs/mylib1/src/mylib1_src1.c
-  version: "1.0"
+  version: "0.01"
+  user_version: "1.0"
 init_deps:
 - core
 - mylib1

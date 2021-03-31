@@ -1,3 +1,4 @@
+name: app
 type: app
 platform: esp8266
 platforms:

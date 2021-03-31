@@ -1,6 +1,8 @@
+app_name: test-app
 modules:
 - name: mongoose-os
   location: https://github.com/cesanta/mongoose-os
+  version: 1.2.3
   repo_version: 2a2b2c
   repo_dirty: true
 manifest_version: "2021-03-26"

@@ -1,3 +1,4 @@
+name: app
 type: app
 platform: esp32
 platforms:
@@ -33,6 +34,7 @@ libs_handled:
   path: __APP_ROOT__/libs/core
   sources:
   - __APP_ROOT__/libs/core/src/lib.c
+  version: "0.01"
 - lib:
     origin: libs/mylib1
     location: libs/mylib1
@@ -42,6 +44,7 @@ libs_handled:
   - core
   sources:
   - __APP_ROOT__/libs/mylib1/src/lib.c
+  version: "0.01"
 init_deps:
 - core
 - lib1
