@@ -121,9 +121,9 @@ if __name__ == "__main__":
                 if len(parts) > 1 and parts[0] == "sha256":
                     # If it's a bottle for a version that we don't have
                     # but it matches the package version, keep it.
-                    m = re.match(r'\s*sha256\s+"(\S+)"\s*=>\s*:(\S+)\s*#\s*(\S+)', l)
+                    m = re.match(r'\s*sha256\s+.+?(\S+):\s*"(\S+)"\s*#\s*(\S+)', l)
                     if m:
-                        sha, mov, v = m.groups()
+                        mov, sha, v = m.groups()
                         if mov not in bottles and v == args.version:
                             bottles[mov] = (None, None, sha)
                     copy = False
@@ -131,7 +131,8 @@ if __name__ == "__main__":
                     in_bottle = False
                     for mac_os_version in sorted(bottles.keys()):
                         bottle_fname, bottle_base_name, sha256 = bottles[mac_os_version]
-                        new_lines.append('    sha256 "%s" => :%s # %s' % (sha256, mac_os_version, args.version))
+                        new_lines.append('    sha256 cellar: :any, %s: "%s" # %s' % (
+                            mac_os_version, sha256, args.version))
                         if bottle_fname and args.bottle_upload_dest:
                             upload_dst = "%s/%s" % (args.bottle_upload_dest, bottle_base_name)
                             logging.info("Uploading %s to %s...", bottle_fname, upload_dst)
