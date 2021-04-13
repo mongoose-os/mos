@@ -19,6 +19,16 @@ SHELL := bash
 
 export GOCACHE
 
+# Determine the location of the Go binary.
+GO ?= $(shell which go)
+ifeq "$(GO)" ""
+# Ubuntu Xenial and Bionic install golang-1.13 here.
+GO = $(wildcard /usr/lib/go-*/bin/go)
+ifeq "$(GO)" ""
+$(error Go not found)
+endif
+endif
+
 all: mos fwbuild-manager fwbuild-instance
 
 # Our main targets
@@ -36,19 +46,19 @@ fwbuild-instance: OUT ?= fwbuild-instance
 fwbuild-instance: build-fwbuild-instance
 
 $(GOBIN)/go-bindata:
-	go install github.com/mongoose-os/mos/vendor/github.com/go-bindata/go-bindata/go-bindata
+	$(GO) install github.com/mongoose-os/mos/vendor/github.com/go-bindata/go-bindata/go-bindata
 
 $(GOBIN)/go-bindata-assetfs:
-	go install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+	$(GO) install github.com/mongoose-os/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 
 vendor/modules.txt:
-	go mod download
-	go mod vendor
+	$(GO) mod download
+	$(GO) mod vendor
 
 deps: vendor/modules.txt
 
 generate: $(GOBIN)/go-bindata $(GOBIN)/go-bindata-assetfs
-	go generate \
+	$(GO) generate \
 	  github.com/mongoose-os/mos/cli/... \
 	  github.com/mongoose-os/mos/common/... \
 	  github.com/mongoose-os/mos/fwbuild/...
@@ -80,9 +90,9 @@ get-version: version/version.json
 	jq -r .build_version version/version.json
 
 build-%: version vendor/modules.txt
-	@go version
+	@$(GO) version
 	GOOS=$(GOBUILD_GOOS) GOARCH=$(GOBUILD_GOARCH) CC=$(GOBUILD_CC) CXX=$(GOBUILD_CXX) \
-	  go build -mod=vendor -tags $(GOBUILD_TAGS) -ldflags '-s -w '$(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
+	  $(GO) build -mod=vendor -tags $(GOBUILD_TAGS) -ldflags '-s -w '$(GOBUILD_LDFLAGS) -o $(OUT) $(PKG)
 
 docker-build-%:
 	docker run -i --rm \
@@ -162,6 +172,6 @@ clean-version: clean
 	rm -f version/version.*
 
 test: version deps
-	go test github.com/mongoose-os/mos/cli/...
-	go test github.com/mongoose-os/mos/common/...
-	go test github.com/mongoose-os/mos/fwbuild/...
+	$(GO) test github.com/mongoose-os/mos/cli/...
+	$(GO) test github.com/mongoose-os/mos/common/...
+	$(GO) test github.com/mongoose-os/mos/fwbuild/...
