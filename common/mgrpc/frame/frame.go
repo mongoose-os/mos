@@ -92,11 +92,13 @@ type Command struct {
 }
 
 type FrameAuth struct {
-	Realm    string `json:"realm"`
-	Username string `json:"username"`
-	Nonce    int    `json:"nonce"`
-	CNonce   int    `json:"cnonce"`
-	Response string `json:"response"`
+	Realm     string `json:"realm"`
+	Username  string `json:"username"`
+	Nonce     int    `json:"nonce"`
+	CNonce    int    `json:"cnonce"`
+	Algorithm string `json:"algorithm,omitempty"`
+	Response  string `json:"response"`
+	Opaque    string `json:"opaque,omitempty"`
 }
 
 // Trace groups optional call tracing info.

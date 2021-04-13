@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
@@ -77,10 +78,12 @@ type req struct {
 }
 
 type authErrorMsg struct {
-	AuthType string `json:"auth_type"`
-	Nonce    int    `json:"nonce"`
-	NC       int    `json:"nc"`
-	Realm    string `json:"realm"`
+	AuthType  string `json:"auth_type"`
+	Nonce     int    `json:"nonce"`
+	NC        int    `json:"nc"`
+	Realm     string `json:"realm"`
+	Algorithm string `json:"algorithm,omitempty"`
+	Opaque    string `json:"opaque,omitempty"`
 }
 
 const tcpKeepAliveInterval = 3 * time.Minute
@@ -425,20 +428,25 @@ func (r *mgRPCImpl) Call(
 					cnonce := int(cnonceBig.Int64())
 
 					// Compute resp
-					resp := mkMd5Resp(
+					resp, err := mkDigestResp(
 						"dummy_method", "dummy_uri", username, authMsg.Realm, passwd,
-						authMsg.Nonce, authMsg.NC, cnonce, "auth",
+						authMsg.Algorithm, authMsg.Nonce, authMsg.NC, cnonce, "auth",
 					)
+					if err != nil {
+						return nil, errors.Trace(err)
+					}
 
 					cmdWithAuth := *cmd
 					cmdWithAuth.Auth = &frame.FrameAuth{
-						Realm:    authMsg.Realm,
-						Nonce:    authMsg.Nonce,
-						Username: username,
-						CNonce:   cnonce,
-						Response: resp,
+						Realm:     authMsg.Realm,
+						Nonce:     authMsg.Nonce,
+						Username:  username,
+						CNonce:    cnonce,
+						Algorithm: authMsg.Algorithm,
+						Response:  resp,
+						Opaque:    authMsg.Opaque,
 					}
-					glog.V(2).Infof("resending cmd %d with auth added: %v", cmd.ID, cmdWithAuth)
+					glog.V(2).Infof("resending cmd %d with auth added: %+v", cmd.ID, cmdWithAuth)
 					return r.Call(ctx, dst, &cmdWithAuth, getCreds)
 
 				default:
@@ -479,18 +487,29 @@ func (r *mgRPCImpl) SetCodecOptions(opts *codec.Options) error {
 	return r.codec.SetOptions(opts)
 }
 
-func mkMd5Resp(method, uri, username, realm, passwd string, nonce, nc, cnonce int, qop string) string {
-	ha1Arr := md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", username, realm, passwd)))
-	ha1 := hex.EncodeToString(ha1Arr[:])
+func mkDigestResp(method, uri, username, realm, passwd, algorithm string, nonce, nc, cnonce int, qop string) (string, error) {
 
-	ha2Arr := md5.Sum([]byte(fmt.Sprintf("%s:%s", method, uri)))
-	ha2 := hex.EncodeToString(ha2Arr[:])
+	hashFunc := func(data []byte) []byte {
+		s := md5.Sum(data)
+		return s[:]
+	}
+	switch algorithm {
+	case "":
+	case "MD5":
+	case "SHA-256":
+		hashFunc = func(data []byte) []byte {
+			s := sha256.Sum256(data)
+			return s[:]
+		}
+	default:
+		return "", fmt.Errorf("unknown digest algorithm %q", algorithm)
+	}
 
-	respArr := md5.Sum([]byte(fmt.Sprintf(
-		"%s:%d:%d:%d:%s:%s",
-		ha1, nonce, nc, cnonce, "auth", ha2,
-	)))
-	resp := hex.EncodeToString(respArr[:])
+	ha1 := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s:%s", username, realm, passwd))))
 
-	return resp
+	ha2 := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s", method, uri))))
+
+	resp := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%d:%d:%d:%s:%s", ha1, nonce, nc, cnonce, qop, ha2))))
+
+	return resp, nil
 }
