@@ -81,7 +81,7 @@ struct mgos_lib_info {
 #ifndef MGOS_MODULE_INFO_VERSION
 struct mgos_module_info {
   const char *name;
-  const char *version;
+  const char *repo_version;
 };
 #define MGOS_MODULE_INFO_VERSION 1
 #endif
@@ -139,7 +139,7 @@ func dataMgos_deps_initCTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/mgos_deps_init.c.tmpl", size: 1911, mode: os.FileMode(420), modTime: time.Unix(1615426523, 0)}
+	info := bindataFileInfo{name: "data/mgos_deps_init.c.tmpl", size: 1916, mode: os.FileMode(420), modTime: time.Unix(1619577448, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -167,7 +167,7 @@ func dataRoot_manifestYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/root_manifest.yml", size: 197, mode: os.FileMode(420), modTime: time.Unix(1598039116, 0)}
+	info := bindataFileInfo{name: "data/root_manifest.yml", size: 197, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

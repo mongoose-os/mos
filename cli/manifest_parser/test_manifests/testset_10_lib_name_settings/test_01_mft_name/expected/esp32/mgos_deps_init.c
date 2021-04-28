@@ -25,7 +25,7 @@ struct mgos_lib_info {
 #ifndef MGOS_MODULE_INFO_VERSION
 struct mgos_module_info {
   const char *name;
-  const char *version;
+  const char *repo_version;
 };
 #define MGOS_MODULE_INFO_VERSION 1
 #endif
