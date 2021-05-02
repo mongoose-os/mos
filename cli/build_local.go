@@ -152,7 +152,7 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams) (err error) {
 		freportf(logWriter, "== Manifest has changed, forcing a clean rebuild...")
 		bParams2 := *bParams
 		bParams2.Clean = true
-		return buildLocal2(ctx, bParams)
+		return buildLocal2(ctx, &bParams2)
 	}
 
 	switch manifest.Type {
