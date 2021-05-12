@@ -8,9 +8,9 @@ sources:
 - __APP_ROOT__/libs/lib1/src/lib.c
 - __APP_ROOT__/app/build/gen/mgos_deps_init.c
 modules:
-- location: https://github.com/cesanta/mongoose-os
+- name: mongoose-os
+  location: https://github.com/cesanta/mongoose-os
   version: "0.01"
-  name: mongoose-os
 build_vars:
   BOARD: ""
   ESP_IDF_EXTRA_COMPONENTS: ""
@@ -30,18 +30,16 @@ mongoose_os_version: "0.01"
 manifest_version: "2020-08-02"
 libs_handled:
 - lib:
-    origin: https://github.com/mongoose-os-libs/core
-    location: https://github.com/mongoose-os-libs/core
     name: core
+    location: https://github.com/mongoose-os-libs/core
   path: __APP_ROOT__/libs/core
   sources:
   - __APP_ROOT__/libs/core/src/lib.c
   version: "0.01"
 - lib:
-    origin: libs/lib1
+    name: lib1
     location: libs/lib1
     version: 2.0-from-app
-    name: lib1
   path: __APP_ROOT__/libs/lib1
   init_deps:
   - core
@@ -49,9 +47,8 @@ libs_handled:
   - __APP_ROOT__/libs/lib1/src/lib.c
   version: 2.0-from-app
 - lib:
-    origin: libs/mylib2
-    location: libs/mylib2
     name: mylib2
+    location: libs/mylib2
   path: __APP_ROOT__/libs/mylib2
   init_deps:
   - core

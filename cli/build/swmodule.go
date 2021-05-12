@@ -38,12 +38,12 @@ import (
 )
 
 type SWModule struct {
-	Type string `yaml:"type,omitempty" json:"type,omitempty"`
+	Type     string `yaml:"type,omitempty" json:"type,omitempty"`
+	Name     string `yaml:"name,omitempty" json:"name,omitempty"`
+	Location string `yaml:"location,omitempty" json:"location,omitempty"`
 	// Origin is deprecated since 2017/08/18
 	OriginOld string `yaml:"origin,omitempty" json:"origin,omitempty"`
-	Location  string `yaml:"location,omitempty" json:"location,omitempty"`
 	Version   string `yaml:"version,omitempty" json:"version,omitempty"`
-	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
 	Variant   string `yaml:"variant,omitempty" json:"variant,omitempty"`
 
 	// API used to download binary assets. If not specified, will take a guess based on location.
@@ -184,10 +184,11 @@ func parseGitLocation(loc string) (string, string, string, string, string, strin
 func (m *SWModule) Normalize() error {
 	if m.Location == "" && m.OriginOld != "" {
 		m.Location = m.OriginOld
-	} else {
-		// Just for the compatibility with a bit older fwbuild
-		m.OriginOld = m.Location
 	}
+	if m.Location == "" {
+		return fmt.Errorf("location is not set")
+	}
+	m.OriginOld = ""
 	if m.Name == "" {
 		n, err := m.GetName()
 		if err != nil {

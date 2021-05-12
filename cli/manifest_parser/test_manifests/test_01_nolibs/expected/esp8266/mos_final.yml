@@ -13,9 +13,9 @@ sources:
 filesystem:
 - __APP_ROOT__/app/fs/myfile
 modules:
-- location: https://github.com/cesanta/mongoose-os
+- name: mongoose-os
+  location: https://github.com/cesanta/mongoose-os
   version: 1.2.3
-  name: mongoose-os
 no_implicit_init_deps: true
 build_vars:
   BOARD: ""
