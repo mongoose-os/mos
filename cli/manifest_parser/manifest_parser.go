@@ -183,11 +183,24 @@ func ReadManifestFinal(
 		return nil, nil, errors.Annotatef(err, "while expanding description")
 	}
 
-	manifest.Modules = append(manifest.Modules, build.SWModule{
-		Name:     build.MosModuleName,
-		Location: build.MosDefaultRepo,
-		Version:  manifest.MongooseOsVersion,
-	})
+	var mosModule *build.SWModule
+	for i, m := range manifest.Modules {
+		if m.Name == build.MosModuleName {
+			mosModule = &manifest.Modules[i]
+			break
+		}
+	}
+	if mosModule == nil {
+		manifest.Modules = append(manifest.Modules, build.SWModule{
+			Name:     build.MosModuleName,
+			Location: build.MosDefaultRepo,
+			Version:  manifest.MongooseOsVersion,
+		})
+	} else {
+		if mosModule.Version == "" {
+			mosModule.Version = manifest.MongooseOsVersion
+		}
+	}
 
 	// Prepare local copies of all sw modules {{{
 	// Modules are collected from the bottom of the dependency chain,
@@ -786,20 +799,19 @@ func readManifestWithLibs2(dir string, pc *manifestParseContext) (*build.FWAppMa
 }
 
 func prepareLibs(parentNodeName string, manifest *build.FWAppManifest, pc *manifestParseContext) (time.Time, error) {
-	wg := &sync.WaitGroup{}
+	var wg sync.WaitGroup
 	wg.Add(len(manifest.Libs))
 
-	lpres := make(chan libPrepareResult)
-
-	for i := range manifest.Libs {
-		go prepareLib(parentNodeName, &manifest.Libs[i], manifest, pc, lpres, wg)
-	}
-
+	lpres := make(chan libPrepareResult, 1000)
 	// Closer goroutine
 	go func() {
 		wg.Wait()
 		close(lpres)
 	}()
+
+	for i := range manifest.Libs {
+		go prepareLib(parentNodeName, &manifest.Libs[i], manifest, pc, lpres, &wg)
+	}
 
 	// Handle all lib prepare results
 	var mtime time.Time
@@ -966,8 +978,10 @@ func prepareLib(
 	)
 
 	pc.mtx.Lock()
-	if pc.libsHandled[name] != nil {
+	lh := pc.libsHandled[name]
+	if lh != nil {
 		pc.mtx.Unlock()
+		ls.Lib = &lh.Lib
 		prepareLibReencounter(parentNodeName, manifest, pc,
 			&pc.libsHandled[name].Lib, m)
 		return
@@ -989,7 +1003,7 @@ func prepareLib(
 	manifest.BuildVars[haveName] = "1"
 	manifest.CDefs[haveName] = "1"
 
-	lh := &build.FWAppManifestLibHandled{
+	lh = &build.FWAppManifestLibHandled{
 		Lib:      *m,
 		Path:     libLocalDir,
 		Deps:     pc.deps.GetDeps(name),
@@ -1541,8 +1555,22 @@ func extendManifest(
 		prependPaths(m2.BinaryLibs, m2Dir)...,
 	)
 
-	// Add modules and libs from lib
-	mMain.Modules = append(m1.Modules, m2.Modules...)
+	// Add modules from the lib, dedup and override if necessary.
+	mm := make(map[string]build.SWModule)
+	for _, m := range append(m1.Modules, m2.Modules...) {
+		// Module must already be normalized at this point.
+		if m.Name == "" {
+			return fmt.Errorf("module not normalized! %+v", m)
+		}
+		mm[m.Name] = m
+	}
+	mMain.Modules = nil
+	for _, m := range mm {
+		mMain.Modules = append(mMain.Modules, m)
+	}
+	sort.Slice(mMain.Modules, func(i, j int) bool { return mMain.Modules[i].Name < mMain.Modules[j].Name })
+
+	// Add modules libs from the lib.
 	mMain.Libs = append(m1.Libs, m2.Libs...)
 	mMain.ConfigSchema = append(m1.ConfigSchema, m2.ConfigSchema...)
 	mMain.CFlags = append(m1.CFlags, m2.CFlags...)
