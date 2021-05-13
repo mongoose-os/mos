@@ -1,0 +1,9 @@
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/mylib1
+    name: lib1
+
+# prepareLib() commentary case (6): a library in use has `name' set in its
+# manifest distinct from `name' set in the referring manifest.  Check that this
+# mismatch is properly detected and reported.

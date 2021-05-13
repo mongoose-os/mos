@@ -1,0 +1,10 @@
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/mylib1
+    name: lib1
+  - location: libs/mylib2
+
+# Two lib1 libraries are referenced, one (named via the referencing manifest)
+# directly, the other (named by default) indirectly via mylib2; its source is
+# also unreadable (non-existent).  Check that manifest generation is successful.

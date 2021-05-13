@@ -1,9 +1,0 @@
-manifest_version: 2020-08-02
-
-libs:
-  - location: libs/mylib1
-    name: lib1
-
-# A library in use has `name' set in the manifest referring to it that doesn't
-# correspond to the basename of its location.  Check that the generated
-# MGOS_HAVE_* and mgos_*_init() identifiers are proper.

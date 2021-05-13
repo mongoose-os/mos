@@ -528,8 +528,8 @@ type manifestParseContext struct {
 
 	prepareLibs []*prepareLibsEntry
 
-	mtx       *sync.Mutex
-	libsByLoc *libByLocMap
+	mtx        *sync.Mutex
+	libsByName *libByNameMap
 }
 
 // readManifestWithLibs reads manifest from the provided dir, "expands" all
@@ -568,8 +568,8 @@ func readManifestWithLibs(
 
 		cbs: cbs,
 
-		mtx:       &sync.Mutex{},
-		libsByLoc: newLibByLocMap(),
+		mtx:        &sync.Mutex{},
+		libsByName: newLibByNameMap(),
 	}
 
 	manifest, mtime, err := readManifestWithLibs2(dir, pc)
@@ -909,14 +909,14 @@ func prepareLib(
 		return
 	}
 
-	ls := pc.libsByLoc.AddOrFetchAndLock(m.Location)
+	ls := pc.libsByName.AddOrFetchAndLock(m.Name)
 	defer ls.mtx.Unlock()
 	if ls.Lib != nil {
 		prepareLibReencounter(parentNodeName, manifest, pc, ls.Lib, m)
 		return
 	}
 
-	ourutil.Freportf(pc.logWriter, "Reading lib at %q...", m.Location)
+	ourutil.Freportf(pc.logWriter, "Reading lib %q at %q...", m.Name, m.Location)
 
 	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
 		m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
@@ -947,14 +947,55 @@ func prepareLib(
 		return
 	}
 
-	// The library can explicitly set its name in its manifest.  Also its
-	// name can be explicitly set in the referring manifest.  Either
-	// separately is fine.  None is fine too (the name defaults to the
-	// location basename).  However if both are used, treat a mismatch as an
-	// error (building without one of the two names in place is guaranteed
-	// to fail, and is likely with both too).
+	// The name of a library can be explicitly set in its manifest and/or in the
+	// referring manifest.  Barring that, the name defaults to the location
+	// basename.
+	//
+	// The library code is hardwired to the right name via at least its
+	// mgos_*_init() symbol.  The code using the library may also be via, e.g.,
+	// HAVE_* variables.
+	//
+	// The building process uses the library name for library deduplication and
+	// overriding.
+	//
+	// The location being `.../foo', the library name in use is:
+	//
+	// (#)  lib mos.yml  ref mos.yml  name in use
+	// --------------------------------------
+	// (1)  (none)       (none)       foo
+	// (2)  (none)       foo          foo
+	// (3)  (none)       bar          bar
+	// (4)  foo          (none)       foo
+	// (5)  foo          foo          foo
+	// (6)  foo          bar          (ERROR)
+	// (7)  bar          (none)       (ERROR)
+	// (8)  bar          foo          (ERROR)
+	// (9)  bar          bar          bar
+	//
+	// Rationales per (#) case:
+	// - (1) The most typical use case.
+	// - (2, 4, 5) Effectively no new information atop the location basename.
+	// - (3) The handy use case of, e.g., .../foo-test1, .../foo-test2 copies
+	//   adjacent to one another and/or the original .../foo.
+	// - (6) If `foo' were correct here, the same problem as in (7) would apply.
+	//   If `bar' were correct, then `foo' in lib mos.yml would produce erroneous
+	//   results via any automation/content generation applied to individual
+	//   libraries outside their usages.
+	// - (7) The name set via the library manifest must be replicated in the
+	//   referring manifest.  Otherwise, if this library is overridden while this
+	//   particular location isn't accessible from the building environment,
+	//   library deduplication/overriding by name can't obviate the need to read
+	//   the inaccessible manifest.
+	// - (8) This is (6) with the names swapped around.
+	// - (9) A location-independently named library.  E.g., Github repositories
+	//   .../mgos-foo, .../mgos-bar with libraries next to repositories unrelated
+	//   to Mongoose OS.
+	//
+	// At this point, libRefName == `ref mos.yml' name above; libManifest.name ==
+	// `lib mos.yml' name; m.Name == libRefName || library location basename.
+	// After validation, m.Name will be the library `name to use' above.
 	if libManifest.Name != "" {
-		if libRefName != "" && libRefName != libManifest.Name {
+		if libRefName != "" && libRefName != libManifest.Name {  // (6, 8) above
 			lpres <- libPrepareResult{
 				err: fmt.Errorf("Library %q at %q is referred to as %q from %q",
 					libManifest.Name, m.Location,
@@ -962,7 +1003,17 @@ func prepareLib(
 			}
 			return
 		}
-		m.Name = libManifest.Name
+		if libRefName == "" && m.Name != libManifest.Name {  // (7) above
+			lpres <- libPrepareResult{
+				err: fmt.Errorf("Library %q at %q must be referred to as %q from %q",
+					libManifest.Name, m.Location,
+					libManifest.Name, manifest.Origin),
+			}
+			return
+		}
+	}
+	if libRefName != "" && m.Name != libRefName {  // (3, 9) above
+		m.Name = libRefName
 	}
 	name, err := m.GetName()
 	if err != nil {

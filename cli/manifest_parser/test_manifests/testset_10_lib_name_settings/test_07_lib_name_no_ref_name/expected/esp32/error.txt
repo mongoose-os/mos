@@ -1,0 +1,1 @@
+Library "lib1" at "libs/mylib1" must be referred to as "lib1" from "test_manifests/testset_10_lib_name_settings/test_07_lib_name_no_ref_name/app/mos.yml"
