@@ -1,0 +1,8 @@
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/mylib1
+
+# prepareLib() commentary case (1): a library in use has no explicit `name'
+# settings.  Check that the generated MGOS_HAVE_* and mgos_*_init() identifiers
+# are proper.

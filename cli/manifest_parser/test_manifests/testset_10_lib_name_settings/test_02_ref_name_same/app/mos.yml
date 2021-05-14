@@ -1,0 +1,9 @@
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/mylib1
+    name: mylib1
+
+# prepareLib() commentary case (2): a library in use has `name' set in referring
+# manifest that corresponds to the basename of its location.  Check that the
+# generated MGOS_HAVE_* and mgos_*_init() identifiers are unaffected.

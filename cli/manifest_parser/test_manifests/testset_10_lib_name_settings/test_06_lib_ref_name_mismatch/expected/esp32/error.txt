@@ -1,0 +1,1 @@
+Library "mylib1" at "libs/mylib1" is referred to as "lib1" from "test_manifests/testset_10_lib_name_settings/test_06_lib_ref_name_mismatch/app/mos.yml"
