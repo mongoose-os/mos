@@ -1,1 +1,7 @@
-../../../test_06_diff_loc_lower_ref_name/libs/mylib2/mos.yml
+type: lib
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/mylib1
+    name: lib1
+    version: 1.0-from-mylib2

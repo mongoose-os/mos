@@ -14,6 +14,6 @@ config_schema:
   - ["mylib3", "o", {title: "mylib3 settings"}]
 
 libs:
-  - origin: https://github.com/mongoose-os-libs/mylib4
+  - location: https://github.com/mongoose-os-libs/mylib4
 
 manifest_version: 2017-09-29

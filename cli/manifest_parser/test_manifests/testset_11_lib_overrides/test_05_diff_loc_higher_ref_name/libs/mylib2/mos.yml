@@ -1,1 +1,6 @@
-../../../test_03_diff_loc_higher_mft_name/libs/mylib2/mos.yml
+type: lib
+manifest_version: 2020-08-02
+
+libs:
+  - location: libs/lib1
+    version: 1.0-from-mylib2

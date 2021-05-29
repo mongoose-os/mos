@@ -14,7 +14,7 @@ fs_filters:
   - exclude: "*.js"
 
 libs:
-  - origin: https://github.com/mongoose-os-libs/mylib1
+  - location: https://github.com/mongoose-os-libs/mylib1
 
 config_schema:
   - ["myapp", "o", {title: "Myapp settings"}]

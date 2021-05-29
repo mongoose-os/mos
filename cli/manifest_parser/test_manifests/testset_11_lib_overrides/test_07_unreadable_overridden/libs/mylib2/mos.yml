@@ -2,4 +2,4 @@ type: lib
 manifest_version: 2020-08-02
 
 libs:
-  - origin: libs/non-existent/lib1
+  - location: libs/non-existent/lib1

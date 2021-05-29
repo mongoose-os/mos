@@ -3,6 +3,6 @@ description: My test app
 version: 1.0
 
 libs:
-  - origin: https://github.com/mongoose-os-libs/mylib3
+  - location: https://github.com/mongoose-os-libs/mylib3
 
 manifest_version: 2018-08-29

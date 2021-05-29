@@ -7,7 +7,7 @@ conds:
   - when: mos.platform == "esp8266"
     apply:
       libs:
-        - origin: https://github.com/mongoose-os-libs/mylib2
+        - location: https://github.com/mongoose-os-libs/mylib2
 
 config_schema:
   - ["mylib3", "o", {title: "mylib3 settings"}]

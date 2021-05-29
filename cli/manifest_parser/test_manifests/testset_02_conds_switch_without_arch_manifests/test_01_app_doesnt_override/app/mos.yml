@@ -9,9 +9,9 @@ filesystem:
   - fs
 
 libs:
-  - origin: https://github.com/mongoose-os-libs/mylib3
-  - origin: https://github.com/mongoose-os-libs/mylib2
-  - origin: https://github.com/mongoose-os-libs/mylib1
+  - location: https://github.com/mongoose-os-libs/mylib3
+  - location: https://github.com/mongoose-os-libs/mylib2
+  - location: https://github.com/mongoose-os-libs/mylib1
 
 config_schema:
   - ["myapp", "o", {title: "Myapp settings"}]

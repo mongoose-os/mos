@@ -10,6 +10,6 @@ conds:
   - when: mos.platform == "esp8266"
     apply:
       libs:
-        - origin: https://github.com/mongoose-os-libs/mylib1
+        - location: https://github.com/mongoose-os-libs/mylib1
 
 manifest_version: 2017-09-29

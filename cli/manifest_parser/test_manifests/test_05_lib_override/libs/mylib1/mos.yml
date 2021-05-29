@@ -4,7 +4,7 @@ type: lib
 version: 1.0
 
 libs:
-  - origin: https://github.com/mongoose-os-libs/mylib2
+  - location: https://github.com/mongoose-os-libs/mylib2
 
 config_schema:
   - ["mylib1", "o", {title: "mylib1 settings"}]
