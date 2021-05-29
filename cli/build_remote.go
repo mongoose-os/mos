@@ -162,14 +162,46 @@ func buildRemote(bParams *build.BuildParams) error {
 		return errors.Trace(err)
 	}
 
-	// For all handled libs, fixup paths if local separator is different from
-	// the Linux separator (because remote builder runs on linux)
-	if filepath.Separator != '/' {
-		for k, lh := range manifest.LibsHandled {
-			manifest.LibsHandled[k].Path = strings.Replace(
-				lh.Path, string(filepath.Separator), "/", -1,
-			)
+	whitelist := map[string]bool{
+		moscommon.GetManifestFilePath(""): true,
+		localLibsDir:                      true,
+		depsDir:                           true,
+		".":                               true,
+	}
+
+	for i, l := range manifest.Libs {
+		if err = l.Normalize(); err != nil {
+			return errors.Trace(err)
 		}
+		if l.GetType() != build.SWModuleTypeLocal {
+			continue
+		}
+		libName, err := l.GetName()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		libDir, err := l.GetLocalDir("XX", "")
+		if err != nil {
+			return errors.Trace(err)
+		}
+		// If the lib is not already under staging dir, relocate to localLibsDir.
+		relLibDir, err := filepath.Rel(appDir, libDir)
+		if err != nil || strings.HasPrefix(relLibDir, "..") {
+			relLibDir = filepath.Join(localLibsDir, libName)
+			lld := filepath.Join(appStagingDir, relLibDir)
+			if err := os.MkdirAll(lld, 0755); err != nil {
+				return errors.Trace(err)
+			}
+			freportf(logWriter, "Copying %s -> %s", libDir, lld)
+			if err = ourio.CopyDir(libDir, lld, nil); err != nil {
+				return errors.Annotatef(err, "failed to relocate %q from %q to %q", libName, libDir, lld)
+			}
+		}
+		whitelist[relLibDir] = true
+		// If we are on Windows, fix up the location to use slashes.
+		relLibDir = filepath.ToSlash(relLibDir)
+		// Update the location in the manifest.
+		manifest.Libs[i].Location = relLibDir
 	}
 
 	// Write manifest yaml
@@ -188,12 +220,6 @@ func buildRemote(bParams *build.BuildParams) error {
 	}
 
 	// Craft file whitelist for zipping
-	whitelist := map[string]bool{
-		moscommon.GetManifestFilePath(""): true,
-		localLibsDir:                      true,
-		depsDir:                           true,
-		".":                               true,
-	}
 	for _, v := range manifest.Sources {
 		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
