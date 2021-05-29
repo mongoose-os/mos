@@ -71,7 +71,7 @@ def handle_repo(repo_name, from_tag, to_tag):
     local_path = os.path.join(args.tmpdir, repo_name)
     if not os.path.isdir(local_path):
         print("%s: Cloning to %s" % (repo_name, local_path), file=sys.stderr)
-        subprocess.check_call(["git", "clone", "git@github.com:%s" % repo_name, local_path])
+        subprocess.check_call(["git", "clone", "https://github.com/%s" % repo_name, local_path])
     elif not args.no_pull:
         print("%s: Pulling %s" % (repo_name, local_path), file=sys.stderr)
         subprocess.check_call(["git", "-C", local_path, "pull", "-q"])
