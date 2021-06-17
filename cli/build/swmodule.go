@@ -563,17 +563,18 @@ func prepareLocalCopyGitLocked(
 		return "", false, errors.Trace(err)
 	}
 
+	cloneOpts := ourgit.CloneOptions{
+		Depth: cloneDepth,
+	}
+	// We specify the revision to clone if only depth is limited; otherwise,
+	// we'll clone at master and checkout the needed revision afterwards,
+	// because this use case is faster for go-git.
+	if cloneDepth > 0 {
+		cloneOpts.Ref = version
+	}
+
 	if !repoExists {
 		freportf(logWriter, "%s: Does not exist, cloning from %q...", name, origin)
-		cloneOpts := ourgit.CloneOptions{
-			Depth: cloneDepth,
-		}
-		// We specify the revision to clone if only depth is limited; otherwise,
-		// we'll clone at master and checkout the needed revision afterwards,
-		// because this use case is faster for go-git.
-		if cloneDepth > 0 {
-			cloneOpts.Ref = version
-		}
 		err := gitinst.Clone(origin, targetDir, cloneOpts)
 		if err != nil {
 			return "", false, errors.Trace(err)
@@ -587,8 +588,23 @@ func prepareLocalCopyGitLocked(
 		}
 		curHash, _ := gitinst.GetCurrentHash(targetDir)
 		if !isClean {
-			freportf(logWriter, "%s exists and is dirty, leaving it intact\n", targetDir)
+			freportf(logWriter, "%s: %s exists and is dirty, leaving it intact", name, targetDir)
 			return curHash, true, nil
+		}
+		// Verify that origin matches.
+		if curOrigin, err := gitinst.GetOriginURL(targetDir); err != nil {
+			return "", false, errors.Trace(err)
+		} else {
+			if curOrigin != origin {
+				freportf(logWriter, "%s: Origin changed from %q to %q, re-cloning...", name, curOrigin, origin)
+				if err = os.RemoveAll(targetDir); err != nil {
+					return "", false, errors.Annotatef(err, "%s: failed to delete %q", name, targetDir)
+				}
+				err := gitinst.Clone(origin, targetDir, cloneOpts)
+				if err != nil {
+					return "", false, errors.Trace(err)
+				}
+			}
 		}
 	}
 
