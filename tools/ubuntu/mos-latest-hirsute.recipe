@@ -1,0 +1,6 @@
+# git-build-recipe format 0.4 deb-version {revtime}+{git-commit}~hirsute0
+
+# Build from local repo (volume-mount a clone of https://github.com/mongoose-os/mos.git to /src):
+/src master
+merge deb-latest https://github.com/mongoose-os/mos.git deb-latest
+run rsync -a /src/vendor/ vendor/
