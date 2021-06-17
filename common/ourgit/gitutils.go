@@ -14,7 +14,7 @@ type OurGit interface {
 	Fetch(localDir string, what string, opts FetchOptions) error
 	IsClean(localDir, version string, excludeGlobs []string) (bool, error)
 	Clone(srcURL, localDir string, opts CloneOptions) error
-	GetOriginUrl(localDir string) (string, error)
+	GetOriginURL(localDir string) (string, error)
 }
 
 type RefType string

@@ -211,7 +211,7 @@ func (m *ourGitShell) Clone(srcURL, targetDir string, opts CloneOptions) error {
 	return errors.Trace(err)
 }
 
-func (m *ourGitShell) GetOriginUrl(localDir string) (string, error) {
+func (m *ourGitShell) GetOriginURL(localDir string) (string, error) {
 	resp, err := m.shellGit(localDir, "remote", "get-url", "origin")
 	if err != nil {
 		return "", errors.Annotatef(err, "failed to get origin URL")

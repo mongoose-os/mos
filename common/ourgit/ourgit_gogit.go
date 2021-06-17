@@ -348,7 +348,7 @@ func (m *ourGitGoGit) Clone(srcURL, localDir string, opts CloneOptions) error {
 	return nil
 }
 
-func (m *ourGitGoGit) GetOriginUrl(localDir string) (string, error) {
+func (m *ourGitGoGit) GetOriginURL(localDir string) (string, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return "", errors.Trace(err)

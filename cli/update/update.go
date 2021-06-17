@@ -405,7 +405,7 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 	basename, projectVersion, _ := parseProjectDirname(projBase)
 
 	if projectVersion == oldVer {
-		originURL, err := gitinst.GetOriginUrl(newDir)
+		originURL, err := gitinst.GetOriginURL(newDir)
 		if err != nil {
 			ourutil.Reportf("Failed to get git origin for %s", newDir)
 			return
