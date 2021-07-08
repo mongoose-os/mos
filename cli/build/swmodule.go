@@ -635,7 +635,13 @@ func prepareLocalCopyGitLocked(
 		return curHash, false, nil
 	}
 
-	var branchExists, tagExists bool
+	var looksLikeSHA, branchExists, tagExists bool
+
+	// Does it look like a SHA?
+	if len(version) == 40 {
+		_, err = hex.DecodeString(version)
+		looksLikeSHA = (err == nil)
+	}
 
 	// Check if version is a known branch name
 	branchExists, err = gitinst.DoesBranchExist(targetDir, version)
@@ -643,18 +649,17 @@ func prepareLocalCopyGitLocked(
 		return "", false, errors.Trace(err)
 	}
 
-	glog.V(2).Infof("%s: branch %q exists=%v", name, version, branchExists)
-
 	// Check if version is a known tag name
 	tagExists, err = gitinst.DoesTagExist(targetDir, version)
 	if err != nil {
 		return "", false, errors.Trace(err)
 	}
 
-	glog.V(2).Infof("%s: tag %q exists=%v", name, version, tagExists)
+	glog.V(2).Infof("%s: %q looksLikeSHA=%v branchExists=%v tagExists=%v",
+		name, version, looksLikeSHA, branchExists, tagExists)
 
 	// If the desired mongoose-os version isn't a known branch, do git fetch
-	if !branchExists && !tagExists {
+	if !looksLikeSHA && !branchExists && !tagExists {
 		glog.V(2).Infof("%s: %s is neither a branch nor a tag, fetching...", name, version)
 		err = gitinst.Fetch(targetDir, version, ourgit.FetchOptions{Depth: 1})
 		if err != nil {

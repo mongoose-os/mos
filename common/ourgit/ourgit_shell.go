@@ -260,6 +260,7 @@ func (m *ourGitShell) shellGit(localDir string, subcmd string, args ...string) (
 	cmd.Dir = localDir
 	cmd.Stdout = &b
 	cmd.Stderr = &berr
+	glog.V(4).Infof("%s %s %v", "git", localDir, cmdArgs)
 	err := cmd.Run()
 	if err != nil {
 		return "", errors.Annotate(err, berr.String())
