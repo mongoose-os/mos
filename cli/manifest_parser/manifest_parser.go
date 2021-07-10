@@ -361,7 +361,10 @@ func ReadManifestFinal(
 				}
 				variants = append(variants, manifest.Platform)
 				for _, variant := range variants {
-					bl := moscommon.GetBinaryLibFilePath(buildDirAbs, lcur.Lib.Name, variant, libVersion)
+					bl, err := filepath.Abs(moscommon.GetBinaryLibFilePath(buildDirAbs, lcur.Lib.Name, variant, libVersion))
+					if err != nil {
+						return nil, nil, errors.Trace(err)
+					}
 					fi, err := os.Stat(bl)
 					if err == nil {
 						// Local file exists, check it.
@@ -372,10 +375,6 @@ func ReadManifestFinal(
 								// It's a tombstone, meaning this variant does not exist. Skip it.
 								glog.V(1).Infof("%s is a tombstone, skipping", bl)
 								continue
-							}
-							bl, err := filepath.Abs(bl)
-							if err != nil {
-								return nil, nil, errors.Trace(err)
 							}
 							ourutil.Freportf(logWriter, "Prebuilt binary for %q already exists at %q", lcur.Lib.Name, bl)
 							binaryLib = bl
@@ -995,7 +994,7 @@ func prepareLib(
 	// `lib mos.yml' name; m.Name == libRefName || library location basename.
 	// After validation, m.Name will be the library `name to use' above.
 	if libManifest.Name != "" {
-		if libRefName != "" && libRefName != libManifest.Name {  // (6, 8) above
+		if libRefName != "" && libRefName != libManifest.Name { // (6, 8) above
 			lpres <- libPrepareResult{
 				err: fmt.Errorf("Library %q at %q is referred to as %q from %q",
 					libManifest.Name, m.Location,
@@ -1003,7 +1002,7 @@ func prepareLib(
 			}
 			return
 		}
-		if libRefName == "" && m.Name != libManifest.Name {  // (7) above
+		if libRefName == "" && m.Name != libManifest.Name { // (7) above
 			lpres <- libPrepareResult{
 				err: fmt.Errorf("Library %q at %q must be referred to as %q from %q",
 					libManifest.Name, m.Location,
@@ -1012,7 +1011,7 @@ func prepareLib(
 			return
 		}
 	}
-	if libRefName != "" && m.Name != libRefName {  // (3, 9) above
+	if libRefName != "" && m.Name != libRefName { // (3, 9) above
 		m.Name = libRefName
 	}
 	name, err := m.GetName()
