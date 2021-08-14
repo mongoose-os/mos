@@ -255,9 +255,9 @@ func genCert(ctx context.Context, certType x509utils.CertType, useATCA bool, iot
 			}
 		}
 		ourutil.Reportf("Attaching policy %q to the certificate...", policy)
-		_, err := iotSvc.AttachPrincipalPolicy(&iot.AttachPrincipalPolicyInput{
+		_, err := iotSvc.AttachPolicy(&iot.AttachPolicyInput{
 			PolicyName: aws.String(AWSIoTPolicy),
-			Principal:  ccResp.CertificateArn,
+			Target:  ccResp.CertificateArn,
 		})
 		if err != nil {
 			return nil, nil, errors.Annotatef(err, "failed to attach policy")
