@@ -29,6 +29,8 @@ import (
 
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
+	"github.com/youmark/pkcs8"
+	"golang.org/x/crypto/ssh/terminal"
 
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/dev"
@@ -139,13 +141,32 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 			// TODO(rojer): ATCA support, maybe?
 			privKeyBytes, err := getPEMBlock(key, "EC PRIVATE KEY")
 			if err != nil {
-				return errors.Annotatef(err, "failed to read private key %q", key)
+				if errors.Cause(err) == x509.IncorrectPasswordError {
+					return err
+				}
+				// Is it encrypted?
+				encPrivKeyBytes, err := getPEMBlock(key, "ENCRYPTED PRIVATE KEY")
+				if err != nil {
+					return errors.Annotatef(err, "failed to read private key %q", key)
+				}
+				fmt.Printf("Password for %q: ", filepath.Base(key))
+				passwd, err := terminal.ReadPassword(0 /* stdin */)
+				if err != nil {
+					return errors.Annotatef(err, "error reading password for key %q", key)
+				}
+				fmt.Printf("\n")
+				ecPrivKey, err := pkcs8.ParsePKCS8PrivateKeyECDSA(encPrivKeyBytes, passwd)
+				if err != nil {
+					return errors.Annotatef(err, "error decrypting private key %q", key)
+				}
+				s = ecPrivKey
+			} else {
+				ecPrivKey, err := x509.ParseECPrivateKey(privKeyBytes)
+				if err != nil {
+					return errors.Annotatef(err, "failed to parse EC private key %q", key)
+				}
+				s = ecPrivKey
 			}
-			ecPrivKey, err := x509.ParseECPrivateKey(privKeyBytes)
-			if err != nil {
-				return errors.Annotatef(err, "failed to parse EC private key %q", key)
-			}
-			s = ecPrivKey
 		}
 		signers = append(signers, s)
 	}
@@ -166,6 +187,19 @@ func getPEMBlock(file string, blockType string) ([]byte, error) {
 		}
 		n++
 		if p.Type == blockType {
+			if x509.IsEncryptedPEMBlock(p) {
+				fmt.Printf("Password for %q: ", filepath.Base(file))
+				passwd, err := terminal.ReadPassword(0 /* stdin */)
+				if err != nil {
+					return nil, errors.Annotatef(err, "error reading password for key %q", file)
+				}
+				fmt.Printf("\n")
+				if data, err := x509.DecryptPEMBlock(p, passwd); err != nil {
+					return nil, errors.Annotatef(err, "error decrypting private key %q", file)
+				} else {
+					return data, nil
+				}
+			}
 			return p.Bytes, nil
 		}
 		data = rest

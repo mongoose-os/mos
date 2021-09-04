@@ -28,8 +28,10 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/pflag v1.0.3
+	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	go.opencensus.io v0.19.0 // indirect
 	goji.io v2.0.0+incompatible
+	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
 	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
