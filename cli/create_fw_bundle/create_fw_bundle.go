@@ -18,7 +18,10 @@ package create_fw_bundle
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -27,11 +30,11 @@ import (
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 
-	"github.com/mongoose-os/mos/common/fwbundle"
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"
+	"github.com/mongoose-os/mos/common/fwbundle"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -129,6 +132,46 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to parse --extra-attr")
 	}
+	var signers []crypto.Signer
+	for _, key := range *flags.SignKeys {
+		var s crypto.Signer
+		if key != "" {
+			// TODO(rojer): ATCA support, maybe?
+			privKeyBytes, err := getPEMBlock(key, "EC PRIVATE KEY")
+			if err != nil {
+				return errors.Annotatef(err, "failed to read private key %q", key)
+			}
+			ecPrivKey, err := x509.ParseECPrivateKey(privKeyBytes)
+			if err != nil {
+				return errors.Annotatef(err, "failed to parse EC private key %q", key)
+			}
+			s = ecPrivKey
+		}
+		signers = append(signers, s)
+	}
 	ourutil.Reportf("Writing %s", *flags.Output)
-	return fwbundle.WriteZipFirmwareBundle(fwb, *flags.Output, *flags.Compress, extraAttrs)
+	return fwbundle.WriteSignedZipFirmwareBundle(fwb, *flags.Output, *flags.Compress, signers, extraAttrs)
+}
+
+func getPEMBlock(file string, blockType string) ([]byte, error) {
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	n := 0
+	for {
+		p, rest := pem.Decode(data)
+		if p == nil {
+			break
+		}
+		n++
+		if p.Type == blockType {
+			return p.Bytes, nil
+		}
+		data = rest
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("%s is not a PEM file", file)
+	}
+	return nil, fmt.Errorf("no PEM type %s found in %s", blockType, file)
 }

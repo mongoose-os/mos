@@ -96,8 +96,10 @@ var (
 	KeepTempFiles = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	KeepFS        = flag.Bool("keep-fs", false, "When flashing, skip the filesystem parts")
 
+	// create-fw-bundle flags.
 	Attr      = flag.StringArray("attr", nil, "manifest attribute, can be used multiple times")
 	ExtraAttr = flag.StringArray("extra-attr", nil, "manifest extra attribute info to be added to ZIP")
+	SignKeys  = flag.StringArray("sign-key", nil, "Signing private key file name. Can be used multiple times for multipl signatures.")
 
 	// Build flags.
 	BuildParams = flag.String("build-params", "", "build params file")

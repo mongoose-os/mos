@@ -19,8 +19,14 @@ package fwbundle
 import (
 	"bytes"
 	"compress/flate"
+	"crypto"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"path"
@@ -93,7 +99,7 @@ func ReadZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	return fwb, nil
 }
 
-func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool, extraAttrs map[string]interface{}) error {
+func WriteSignedZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool, signers []crypto.Signer, extraAttrsUser map[string]interface{}) error {
 	zw := zip.NewWriter(buf)
 	// When compressing, use best compression.
 	zw.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
@@ -118,6 +124,28 @@ func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool
 	if err != nil {
 		return errors.Annotatef(err, "error marshaling manifest")
 	}
+	manifestDigest := sha256.Sum256(manifestData)
+	glog.V(1).Infof("Manifest:\n%s", string(manifestData))
+	glog.V(1).Infof("Manifest digest: %s", hex.EncodeToString(manifestDigest[:]))
+	extraAttrs := make(map[string]interface{})
+	for k, v := range extraAttrsUser {
+		extraAttrs[k] = v
+	}
+	for si, s := range signers {
+		if s != nil {
+			sig, err := s.Sign(rand.Reader, manifestDigest[:], nil)
+			if err != nil {
+				return errors.Annotatef(err, "error signing with %d", si)
+			}
+			sigBase64 := base64.StdEncoding.EncodeToString(sig)
+			key := "sig"
+			if si > 0 {
+				key = fmt.Sprintf("sig%d", si)
+			}
+			extraAttrs[key] = sigBase64
+			glog.V(1).Infof("Signature %d: %s", si, sigBase64)
+		}
+	}
 	extraData := bytes.NewBuffer(nil)
 	if len(extraAttrs) > 0 {
 		extraAttrData, err := json.Marshal(extraAttrs)
@@ -128,7 +156,6 @@ func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool
 		binary.Write(extraData, binary.LittleEndian, uint16(len(extraAttrData)))
 		extraData.Write(extraAttrData)
 	}
-	glog.V(1).Infof("Manifest:\n%s", string(manifestData))
 	zfh := &zip.FileHeader{
 		Name:  ManifestFileName,
 		Extra: extraData.Bytes(),
@@ -165,10 +192,18 @@ func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool
 	return nil
 }
 
-func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool, extraAttrs map[string]interface{}) error {
+func WriteZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compress bool, extraAttrs map[string]interface{}) error {
+	return WriteSignedZipFirmwareBytes(fwb, buf, compress, nil, extraAttrs)
+}
+
+func WriteSignedZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool, signers []crypto.Signer, extraAttrs map[string]interface{}) error {
 	buf := new(bytes.Buffer)
-	if err := WriteZipFirmwareBytes(fwb, buf, compress, extraAttrs); err != nil {
+	if err := WriteSignedZipFirmwareBytes(fwb, buf, compress, signers, extraAttrs); err != nil {
 		return err
 	}
 	return ioutil.WriteFile(fname, buf.Bytes(), 0644)
+}
+
+func WriteZipFirmwareBundle(fwb *FirmwareBundle, fname string, compress bool, extraAttrs map[string]interface{}) error {
+	return WriteSignedZipFirmwareBundle(fwb, fname, compress, nil, extraAttrs)
 }
