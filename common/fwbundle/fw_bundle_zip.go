@@ -138,10 +138,7 @@ func WriteSignedZipFirmwareBytes(fwb *FirmwareBundle, buf *bytes.Buffer, compres
 				return errors.Annotatef(err, "error signing with %d", si)
 			}
 			sigBase64 := base64.StdEncoding.EncodeToString(sig)
-			key := "sig"
-			if si > 0 {
-				key = fmt.Sprintf("sig%d", si)
-			}
+			key := fmt.Sprintf("sig%d", si)
 			extraAttrs[key] = sigBase64
 			glog.V(1).Infof("Signature %d: %s", si, sigBase64)
 		}
