@@ -91,7 +91,7 @@ Clone the mos repostory:
 
 ```
 $ git clone https://github.com/mongoose-os/mos
-$ cd mos
+$ cd mos/fwbuild
 ```
 
 Run build server:
