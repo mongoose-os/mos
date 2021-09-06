@@ -78,3 +78,34 @@ $ make
 ```
 
 It will produce `mos` (or `mos.exe` on Windows).
+
+## Setup private build server ( Ubuntu )
+
+Make sure you have docker installes on machien you want the server to run:
+
+```
+$ sudo apt-get install docker
+```
+
+Clone the mos repostory:
+
+```
+$ git clone https://github.com/mongoose-os/mos
+$ cd mos
+```
+
+Run build server:
+
+```
+$ sudo docker-compose up
+```
+
+If you are running any firewall on your network or using EC2 instance - remember to add an exception to allow incmong conenction to the server on port 8000
+
+Run the buil from your loca machine:
+
+```
+$ mos build --platfrom <YOUR PLATFORM HERE> --server http://IP:8000
+```
+if you receive an error that files is too big - remove you local deps folder and launch build again. By default your machien will try to send to buidl server all teh files with libraries togetehr with the source code what makes the file pretty big. If you remove the local deps folder it will only send your soruce files and pull all necessery libraries remotely.
+Once the build is complete your newly built firmware will be send bak to your ./build/fw directory and is ready to be flash to your local device.
