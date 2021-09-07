@@ -85,6 +85,7 @@ Make sure you have Docker installed on machine you want the server to run:
 
 ```
 $ sudo apt-get install docker
+$ sudo apt-get install docker-compose
 ```
 
 Clone the mos repostory:
