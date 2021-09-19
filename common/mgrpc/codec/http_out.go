@@ -19,20 +19,34 @@ package codec
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
+	"regexp"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/juju/errors"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 	glog "k8s.io/klog/v2"
 )
 
+type OutboundHTTPCodecOptions struct {
+	GetCredsCallback func() (username, passwd string, err error)
+}
+
 type outboundHttpCodec struct {
-	sync.Mutex
+	mu            sync.Mutex
+	tlsConfig     *tls.Config
+	opts          OutboundHTTPCodecOptions
 	closeNotifier chan struct{}
 	closeOnce     sync.Once
 	url           string
@@ -43,14 +57,20 @@ type outboundHttpCodec struct {
 
 // OutboundHTTP sends outbound frames in HTTP POST requests and
 // returns replies with Recv.
-func OutboundHTTP(url string, tlsConfig *tls.Config) Codec {
-	r := &outboundHttpCodec{
+func OutboundHTTP(url string, tlsConfig *tls.Config, opts OutboundHTTPCodecOptions) Codec {
+	c := &outboundHttpCodec{
+		tlsConfig:     tlsConfig,
+		opts:          opts,
 		closeNotifier: make(chan struct{}),
 		url:           url,
-		client:        &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}},
 	}
-	r.cond = sync.NewCond(r)
-	return r
+	c.cond = sync.NewCond(&c.mu)
+	c.createClient()
+	return c
+}
+
+func (c *outboundHttpCodec) createClient() {
+	c.client = &http.Client{Transport: &http.Transport{TLSClientConfig: c.tlsConfig}}
 }
 
 func (c *outboundHttpCodec) String() string {
@@ -67,14 +87,71 @@ func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	return c.sendHTTPRequest(ctx, "", b)
+}
+
+func (c *outboundHttpCodec) sendHTTPRequest(ctx context.Context, authHeader string, b []byte) error {
 	glog.V(2).Infof("Sending to %q over HTTP POST: %q", c.url, string(b))
-	// TODO(imax): use http.Client to set the timeout.
-	resp, err := c.client.Post(c.url, "application/json", bytes.NewReader(b))
+	if d, ok := ctx.Deadline(); ok {
+		c.client.Timeout = time.Until(d)
+	}
+	req, err := http.NewRequest("POST", c.url, bytes.NewReader(b))
+	if err != nil {
+		return errors.Annotatef(err, "failed to create request")
+	}
+	req.Header.Add("Content-Type", "application/json")
+	if authHeader != "" {
+		glog.V(2).Infof("Authorization: %s", authHeader)
+		req.Header.Add("Authorization", authHeader)
+	}
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized:
+		if authHeader != "" {
+			return errors.New("authentication failed")
+		}
+		ah := resp.Header.Get("WWW-Authenticate")
+		if len(ah) == 0 {
+			return errors.New("no www-authentiocate header")
+		}
+		authMethod := regexp.MustCompile(`^(\S+)`).FindString(ah)
+		if strings.ToLower(authMethod) != "digest" {
+			return fmt.Errorf("invalid auth method %q", authMethod)
+		}
+		pp := make(map[string]string)
+		for _, m := range regexp.MustCompile(`(\w+)="([^"]*?)"|(\w+)=([^\s"]+)`).FindAllStringSubmatch(ah, -1) {
+			pp[strings.ToLower(m[1])] = m[2]
+			pp[strings.ToLower(m[3])] = m[4]
+		}
+		glog.Infof("%+v", pp)
+		if c.opts.GetCredsCallback == nil {
+			return errors.New("authorization required but no credentials callback provided")
+		}
+		username, passwd, err := c.opts.GetCredsCallback()
+		if err != nil {
+			return errors.Annotatef(err, "error getting credentials")
+		}
+		authAlgo := pp["algorithm"]
+		if authAlgo == "" {
+			authAlgo = "MD5"
+		}
+		nonce := pp["nonce"]
+		cnonce, authResp, err := MkDigestResp("POST", req.URL.Path, username, pp["realm"], passwd, pp["algorithm"], nonce, "00000001", pp["qop"])
+		authHeader = fmt.Sprintf(
+			`%s username="%s", realm="%s", uri="%s", algorithm=%s, nonce="%s", nc=%08x, cnonce="%d", qop=%s, response="%s"`,
+			authMethod, username, pp["realm"], req.URL.Path, authAlgo, nonce, 1, cnonce, pp["qop"], authResp,
+		)
+		if pp["opaque"] != "" {
+			authHeader = fmt.Sprintf(`%s, opaque="%s"`, authHeader, pp["opaque"])
+		}
+		c.createClient()
+		return c.sendHTTPRequest(ctx, authHeader, b)
+	default:
 		return fmt.Errorf("server returned an error: %v", resp)
 	}
 	var rfs *frame.Frame
@@ -82,9 +159,9 @@ func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 		// Return it from Recv?
 		return errors.Trace(err)
 	}
-	c.Lock()
+	c.mu.Lock()
 	c.queue = append(c.queue, rfs)
-	c.Unlock()
+	c.mu.Unlock()
 	c.cond.Signal()
 	return nil
 }
@@ -92,19 +169,19 @@ func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 func (c *outboundHttpCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 	// Check if there's anything left in the queue.
 	var r *frame.Frame
-	c.Lock()
+	c.mu.Lock()
 	if len(c.queue) > 0 {
 		r, c.queue = c.queue[0], c.queue[1:]
 	}
-	c.Unlock()
+	c.mu.Unlock()
 	if r != nil {
 		return r, nil
 	}
 	// Wait for stuff to arrive.
 	ch := make(chan *frame.Frame, 1)
 	go func(ctx context.Context) {
-		c.Lock()
-		defer c.Unlock()
+		c.mu.Lock()
+		defer c.mu.Unlock()
 		for len(c.queue) == 0 {
 			select {
 			case <-ctx.Done():
@@ -143,4 +220,38 @@ func (c *outboundHttpCodec) Info() ConnectionInfo {
 
 func (c *outboundHttpCodec) SetOptions(opts *Options) error {
 	return errors.NotImplementedf("SetOptions")
+}
+
+func MkDigestResp(method, uri, username, realm, passwd, algorithm, nonce, nc, qop string) (int, string, error) {
+	var hashFunc func(data []byte) []byte
+	switch algorithm {
+	case "":
+		fallthrough
+	case "MD5":
+		hashFunc = func(data []byte) []byte {
+			s := md5.Sum(data)
+			return s[:]
+		}
+	case "SHA-256":
+		hashFunc = func(data []byte) []byte {
+			s := sha256.Sum256(data)
+			return s[:]
+		}
+	default:
+		return 0, "", fmt.Errorf("unknown digest algorithm %q", algorithm)
+	}
+
+	cnonceBig, err := rand.Int(rand.Reader, big.NewInt(0xffffffff))
+	if err != nil {
+		return 0, "", errors.Annotatef(err, "generating cnonce")
+	}
+	cnonce := int(cnonceBig.Int64())
+
+	ha1 := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s:%s", username, realm, passwd))))
+
+	ha2 := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s", method, uri))))
+
+	resp := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s:%s:%d:%s:%s", ha1, nonce, nc, cnonce, qop, ha2))))
+
+	return cnonce, resp, nil
 }

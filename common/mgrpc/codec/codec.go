@@ -49,6 +49,7 @@ type Codec interface {
 type Options struct {
 	AzureDM AzureDMCodecOptions
 	GCP     GCPCodecOptions
+	HTTPOut OutboundHTTPCodecOptions
 	MQTT    MQTTCodecOptions
 	Serial  SerialCodecOptions
 	UDP     UDPCodecOptions

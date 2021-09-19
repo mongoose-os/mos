@@ -18,16 +18,12 @@ package mgrpc
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/tls"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -80,7 +76,6 @@ type req struct {
 type authErrorMsg struct {
 	AuthType  string `json:"auth_type"`
 	Nonce     int    `json:"nonce"`
-	NC        int    `json:"nc"`
 	Realm     string `json:"realm"`
 	Algorithm string `json:"algorithm,omitempty"`
 	Opaque    string `json:"opaque,omitempty"`
@@ -242,7 +237,10 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 	switch r.opts.proto {
 
 	case tHTTP_POST:
-		r.codec = codec.OutboundHTTP(r.opts.connectAddress, r.opts.tlsConfig)
+		r.codec = codec.OutboundHTTP(
+			r.opts.connectAddress,
+			r.opts.tlsConfig,
+			r.opts.codecOptions.HTTPOut)
 	case tWebSocket:
 		r.codec = codec.NewReconnectWrapperCodec(
 			r.opts.connectAddress,
@@ -419,18 +417,10 @@ func (r *mgRPCImpl) Call(
 						return nil, errors.Trace(err)
 					}
 
-					// Generate cnonce
-					cnonceBig, err := rand.Int(rand.Reader, big.NewInt(0xffffffff))
-					if err != nil {
-						return nil, errors.Annotatef(err, "generating cnonce")
-					}
-
-					cnonce := int(cnonceBig.Int64())
-
 					// Compute resp
-					resp, err := mkDigestResp(
+					cnonce, resp, err := codec.MkDigestResp(
 						"dummy_method", "dummy_uri", username, authMsg.Realm, passwd,
-						authMsg.Algorithm, authMsg.Nonce, authMsg.NC, cnonce, "auth",
+						authMsg.Algorithm, strconv.Itoa(authMsg.Nonce), "1", "auth",
 					)
 					if err != nil {
 						return nil, errors.Trace(err)
@@ -485,31 +475,4 @@ func (r *mgRPCImpl) IsConnected() bool {
 
 func (r *mgRPCImpl) SetCodecOptions(opts *codec.Options) error {
 	return r.codec.SetOptions(opts)
-}
-
-func mkDigestResp(method, uri, username, realm, passwd, algorithm string, nonce, nc, cnonce int, qop string) (string, error) {
-
-	hashFunc := func(data []byte) []byte {
-		s := md5.Sum(data)
-		return s[:]
-	}
-	switch algorithm {
-	case "":
-	case "MD5":
-	case "SHA-256":
-		hashFunc = func(data []byte) []byte {
-			s := sha256.Sum256(data)
-			return s[:]
-		}
-	default:
-		return "", fmt.Errorf("unknown digest algorithm %q", algorithm)
-	}
-
-	ha1 := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s:%s", username, realm, passwd))))
-
-	ha2 := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%s", method, uri))))
-
-	resp := hex.EncodeToString(hashFunc([]byte(fmt.Sprintf("%s:%d:%d:%d:%s:%s", ha1, nonce, nc, cnonce, qop, ha2))))
-
-	return resp, nil
 }

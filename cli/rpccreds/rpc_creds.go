@@ -35,7 +35,6 @@ func GetRPCCreds() (username, passwd string, err error) {
 		if err != nil {
 			return "", "", errors.Annotatef(err, "reading RPC creds file %s", filename)
 		}
-
 		return getRPCCredsFromString(strings.TrimSpace(string(data)))
 	} else {
 		return getRPCCredsFromString(*rpcCreds)
@@ -43,13 +42,15 @@ func GetRPCCreds() (username, passwd string, err error) {
 }
 
 func getRPCCredsFromString(s string) (username, passwd string, err error) {
+	if len(s) == 0 {
+		return "", "", errors.New("credentials required but none provided (use --rpc-creds)")
+	}
 	parts := strings.Split(s, ":")
 	if len(parts) == 2 {
 		return parts[0], parts[1], nil
 	} else {
 		// TODO(dfrank): handle the case with nothing or only username provided,
 		// and prompt the user for the missing parts.
-
-		return "", "", errors.Errorf("Failed to get username and password: wrong RPC creds spec")
+		return "", "", errors.Errorf("wrong RPC creds spec format")
 	}
 }

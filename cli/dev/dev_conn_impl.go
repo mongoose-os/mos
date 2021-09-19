@@ -23,12 +23,13 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	flag "github.com/spf13/pflag"
+	glog "k8s.io/klog/v2"
+
 	"github.com/mongoose-os/mos/cli/rpccreds"
 	"github.com/mongoose-os/mos/common/mgrpc"
 	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
-	flag "github.com/spf13/pflag"
-	glog "k8s.io/klog/v2"
 )
 
 const (
