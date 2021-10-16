@@ -17,7 +17,6 @@
 package paths
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/juju/errors"
-	flag "github.com/spf13/pflag"
 
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/version"
@@ -33,15 +31,7 @@ import (
 
 var (
 	dirTplMosVersion = "${mos.version}"
-
-	AppsDirTpl = fmt.Sprintf("~/.mos/apps-%s", dirTplMosVersion)
-
-	AppsDir = ""
 )
-
-func init() {
-	flag.StringVar(&AppsDir, "apps-dir", AppsDirTpl, "Directory to store apps into")
-}
 
 // Init() should be called after all flags are parsed
 func Init() error {
@@ -57,11 +47,6 @@ func Init() error {
 		if err != nil {
 			return errors.Trace(err)
 		}
-	}
-
-	AppsDir, err = NormalizePath(AppsDir, version.GetMosVersion())
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	*flags.ModulesDir, err = NormalizePath(*flags.ModulesDir, version.GetMosVersion())

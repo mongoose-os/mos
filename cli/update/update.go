@@ -17,7 +17,6 @@
 package update
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -26,27 +25,18 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/juju/errors"
 	"github.com/kardianos/osext"
 	goversion "github.com/mcuadros/go-version"
 	flag "github.com/spf13/pflag"
-	glog "k8s.io/klog/v2"
 
-	"github.com/mongoose-os/mos/cli/build"
 	moscommon "github.com/mongoose-os/mos/cli/common"
-	"github.com/mongoose-os/mos/cli/common/paths"
 	"github.com/mongoose-os/mos/cli/common/state"
 	"github.com/mongoose-os/mos/cli/dev"
-	"github.com/mongoose-os/mos/cli/mosgit"
 	"github.com/mongoose-os/mos/cli/ourutil"
-	"github.com/mongoose-os/mos/common/ourgit"
-	"github.com/mongoose-os/mos/common/ourio"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -313,25 +303,6 @@ func migrateData() error {
 
 		ourutil.Reportf("First run of the version %s, initializing...", mosVersion)
 
-		// Get sorted list of all versions available
-		versions := []string{}
-		for k, _ := range state.GetState().Versions {
-			versions = append(versions, k)
-		}
-		goversion.Sort(versions)
-
-		if len(versions) > 0 {
-			// There are some versions available, so we'll pick the latest one
-			// and copy data from it to the current version
-			latestVersion := versions[len(versions)-1]
-
-			if err := migrateProjects(paths.AppsDirTpl, latestVersion, mosVersion); err != nil {
-				return errors.Trace(err)
-			}
-		} else {
-			// No other versions available, so nothing to do
-		}
-
 		stateVer = &state.StateVersion{}
 		state.SetStateForVersion(mosVersion, stateVer)
 
@@ -343,150 +314,4 @@ func migrateData() error {
 	}
 
 	return nil
-}
-
-// migrateProjects migrates all projects from the given oldVer to newVer,
-// in the directory determined by the given template dirTpl (like ~/.mos/libs-${mos.version})
-// All projects are migrated in parallel
-func migrateProjects(dirTpl, oldVer, newVer string) error {
-	oldDir, err := paths.NormalizePath(dirTpl, oldVer)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	newDir, err := paths.NormalizePath(dirTpl, newVer)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if _, err := os.Stat(newDir); err == nil {
-		// Target dir already exists, do nothing
-		return nil
-	}
-
-	entries, err := ioutil.ReadDir(oldDir)
-	if err != nil {
-		// Ignore errors; the dir might just not exist, and we don't care much
-		return nil
-	}
-
-	// We migrate all dirs in parallel, and we just print errors, because we
-	// don't care much about them
-	wg := &sync.WaitGroup{}
-	for _, entry := range entries {
-		wg.Add(1)
-		go migrateProj(
-			filepath.Join(oldDir, entry.Name()),
-			filepath.Join(newDir, entry.Name()),
-			oldVer,
-			wg,
-		)
-	}
-	wg.Wait()
-
-	return nil
-}
-
-// migrateProj migrates a single project from oldDir to newDir; from the
-// given version oldVer to the current mos version.
-func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	gitinst := mosgit.NewOurGit(nil)
-
-	glog.Infof("Copying %s as %s...", oldDir, newDir)
-	if err := ourio.CopyDir(oldDir, newDir, nil); err != nil {
-		ourutil.Reportf("Error copying %s as %s: %s", oldDir, newDir, err)
-	}
-
-	projBase := filepath.Base(newDir)
-	projDir := filepath.Dir(newDir)
-
-	basename, projectVersion, _ := parseProjectDirname(projBase)
-
-	if projectVersion == oldVer {
-		originURL, err := gitinst.GetOriginURL(newDir)
-		if err != nil {
-			ourutil.Reportf("Failed to get git origin for %s", newDir)
-			return
-		}
-
-		oldNewDir := newDir
-		newDir = filepath.Join(
-			projDir,
-			fmt.Sprint(basename, moscommon.GetVersionSuffix(version.GetMosVersion())),
-		)
-		os.Rename(oldNewDir, newDir)
-
-		logWriter := bytes.Buffer{}
-
-		swmod := build.SWModule{
-			Location: originURL,
-			Version:  version.GetMosVersion(),
-		}
-
-		glog.Infof("Checking out %s at the version %s...", basename, version.GetMosVersion())
-		_, err = swmod.PrepareLocalDir(filepath.Dir(newDir), &logWriter, true, "", time.Duration(0), 0)
-		if err != nil {
-			ourutil.Reportf("Error preparing local dir for %s: %s", newDir, err)
-		}
-
-		ourutil.Reportf("Imported %s", projBase)
-
-	} else {
-		glog.Infof("Leaving %s intact because the version %s is not equal to %s", basename, projectVersion, oldVer)
-	}
-}
-
-// parseProjectDirname takes the dir name like "foo-bar-1.12" and tries to
-// guess the actual project name, corresponding mos version and library
-// version. E.g. for "foo-bar-1.12" it will return "foo-bar", "1.12", "1.12".
-//
-// It checks the suffix and figures whether it looks like a version name or not.
-// Valid versions are strings like "1.12", "latest", "release", and git SHA
-// if it matches the actual current SHA.
-//
-// dirVersion might differ from projectVersion if only the suffix is a valid
-// git SHA, in which case dirVersion will be "latest".
-func parseProjectDirname(projectDir string) (basename, projectVersion, dirVersion string) {
-	gitinst := mosgit.NewOurGit(nil)
-
-	projectDirBase := filepath.Base(projectDir)
-	parts := strings.Split(projectDirBase, "-")
-
-	if len(parts) == 1 {
-		// No suffix, assume "latest"
-		basename = parts[0]
-		projectVersion = "latest"
-		dirVersion = projectVersion
-	} else {
-		// Initially assume the last part is the version; we'll check below if
-		// it's really the case
-		projectVersion = parts[len(parts)-1]
-		dirVersion = projectVersion
-		basename = strings.Join(parts[:len(parts)-1], "-")
-
-		if !version.LooksLikeVersionNumber(projectVersion) && projectVersion != "latest" && projectVersion != "release" {
-			// Suffix does not look like a version, but let's check if it's a SHA
-			sha, err := gitinst.GetCurrentHash(projectDir)
-			if err == nil {
-				if ourgit.HashesEqual(projectVersion, sha) {
-					// Yes it's a SHA. We don't really know in which dir to put it,
-					// so we'll put in latest
-					dirVersion = "latest"
-				} else {
-					// No, it's not a SHA either, so assume "latest"
-					basename = projectDirBase
-					projectVersion = "latest"
-					dirVersion = projectVersion
-				}
-			} else {
-				basename = projectDirBase
-				projectVersion = "latest"
-				dirVersion = projectVersion
-			}
-		}
-	}
-
-	return
 }
