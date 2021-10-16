@@ -22,7 +22,8 @@ source=(git+https://github.com/mongoose-os/mos.git#branch=master)
 md5sums=('SKIP')
 
 pkgver() {
-  make -C "$srcdir/mos" clean-version get-version
+  make -C "$srcdir/mos" clean-version version/version.json > /dev/null
+  make -s -C "$srcdir/mos" get-version
 }
 
 build() {
