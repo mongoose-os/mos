@@ -20,6 +20,7 @@ package xds110
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -135,9 +136,14 @@ func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respP
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to send command")
 	}
-	xc.inEndp.Timeout = timeout
+	ctx := context.TODO()
+	if timeout != 0 {
+		ctx2, done := context.WithTimeout(ctx, timeout)
+		ctx = ctx2
+		defer done()
+	}
 	resp := make([]byte, maxPacketLen)
-	n, err := xc.inEndp.Read(resp)
+	n, err := xc.inEndp.ReadContext(ctx, resp)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to read response")
 	}
