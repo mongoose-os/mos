@@ -65,7 +65,7 @@ func buildRemote(bParams *build.BuildParams) error {
 
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
-	appStagingDir, err := ioutil.TempDir(paths.TmpDir, "tmp_mos_src_")
+	appStagingDir, err := paths.GetTempDir("tmp_mos_src_")
 	if err != nil {
 		return errors.Trace(err)
 	}

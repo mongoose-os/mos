@@ -101,8 +101,15 @@ var (
 	ExtraAttr = flag.StringArray("extra-attr", nil, "manifest extra attribute info to be added to ZIP")
 	SignKeys  = flag.StringArray("sign-key", nil, "Signing private key file name. Can be used multiple times for multipl signatures.")
 
+	StateFile = flag.String("state-file", "~/.mos/state.json", "Where to store internal mos state")
+	AuthFile  = flag.String("auth-file", "~/.mos/auth.json", "Where to store license server auth key")
+
 	// Build flags.
 	BuildParams = flag.String("build-params", "", "build params file")
+	TempDir     = flag.String("temp-dir", "~/.mos/tmp", "Directory to store temporary files")
+	DepsDir     = flag.String("deps-dir", "", "Directory to fetch libs, modules into")
+	LibsDir     = flag.StringSlice("libs-dir", []string{}, "Directory to find libs in. Can be used multiple times.")
+	ModulesDir  = flag.String("modules-dir", "", "Directory to store modules into")
 
 	Local              = flag.Bool("local", false, "Local build.")
 	Clean              = flag.Bool("clean", false, "Perform a clean build, wipe the previous build state")

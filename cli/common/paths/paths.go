@@ -18,6 +18,7 @@ package paths
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,6 +27,7 @@ import (
 	"github.com/juju/errors"
 	flag "github.com/spf13/pflag"
 
+	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/version"
 )
 
@@ -34,42 +36,24 @@ var (
 
 	AppsDirTpl = fmt.Sprintf("~/.mos/apps-%s", dirTplMosVersion)
 
-	TmpDir         = ""
-	depsDirFlag    = ""
-	LibsDirFlag    = []string{}
-	AppsDir        = ""
-	modulesDirFlag = ""
-
-	StateFilepath = ""
-	AuthFilepath  = ""
+	AppsDir = ""
 )
 
 func init() {
-	flag.StringVar(&TmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
-	flag.StringVar(&depsDirFlag, "deps-dir", "", "Directory to fetch libs, modules into")
-	flag.StringSliceVar(&LibsDirFlag, "libs-dir", []string{}, "Directory to find libs in. Can be used multiple times.")
 	flag.StringVar(&AppsDir, "apps-dir", AppsDirTpl, "Directory to store apps into")
-	flag.StringVar(&modulesDirFlag, "modules-dir", "", "Directory to store modules into")
-
-	flag.StringVar(&StateFilepath, "state-file", "~/.mos/state.json", "Where to store internal mos state")
-	flag.StringVar(&AuthFilepath, "auth-file", "~/.mos/auth.json", "Where to store license server auth key")
 }
 
 // Init() should be called after all flags are parsed
 func Init() error {
 	var err error
-	TmpDir, err = NormalizePath(TmpDir, version.GetMosVersion())
+
+	*flags.DepsDir, err = NormalizePath(*flags.DepsDir, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	depsDirFlag, err = NormalizePath(depsDirFlag, version.GetMosVersion())
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	for i, s := range LibsDirFlag {
-		LibsDirFlag[i], err = NormalizePath(s, version.GetMosVersion())
+	for i, s := range *flags.LibsDir {
+		(*flags.LibsDir)[i], err = NormalizePath(s, version.GetMosVersion())
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -80,22 +64,18 @@ func Init() error {
 		return errors.Trace(err)
 	}
 
-	modulesDirFlag, err = NormalizePath(modulesDirFlag, version.GetMosVersion())
+	*flags.ModulesDir, err = NormalizePath(*flags.ModulesDir, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	StateFilepath, err = NormalizePath(StateFilepath, version.GetMosVersion())
+	*flags.StateFile, err = NormalizePath(*flags.StateFile, version.GetMosVersion())
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	AuthFilepath, err = NormalizePath(AuthFilepath, version.GetMosVersion())
+	*flags.AuthFile, err = NormalizePath(*flags.AuthFile, version.GetMosVersion())
 	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if err := os.MkdirAll(TmpDir, 0777); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -133,16 +113,33 @@ func NormalizePath(p, version string) (string, error) {
 }
 
 func GetDepsDir(projectDir string) string {
-	if depsDirFlag != "" {
-		return depsDirFlag
+	if *flags.DepsDir != "" {
+		return *flags.DepsDir
 	} else {
 		return filepath.Join(projectDir, "deps")
 	}
 }
 
+func GetTempDir(subdir string) (string, error) {
+	dir, err := NormalizePath(*flags.TempDir, version.GetMosVersion())
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+	if err = os.MkdirAll(dir, 0777); err != nil {
+		return "", errors.Trace(err)
+	}
+	if subdir != "" {
+		dir, err = ioutil.TempDir(dir, subdir)
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+	}
+	return dir, nil
+}
+
 func GetModulesDir(projectDir string) string {
-	if modulesDirFlag != "" {
-		return modulesDirFlag
+	if *flags.ModulesDir != "" {
+		return *flags.ModulesDir
 	} else {
 		return filepath.Join(GetDepsDir(projectDir), "modules")
 	}

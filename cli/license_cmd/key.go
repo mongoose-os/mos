@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/cli/common/paths"
 	"github.com/mongoose-os/mos/cli/dev"
 	"github.com/mongoose-os/mos/cli/flags"
 	"github.com/mongoose-os/mos/cli/ourutil"
@@ -41,7 +40,7 @@ type authFile struct {
 
 func readKey(server string) string {
 	var auth authFile
-	data, err := ioutil.ReadFile(paths.AuthFilepath)
+	data, err := ioutil.ReadFile(*flags.AuthFile)
 	if err == nil {
 		json.Unmarshal(data, &auth)
 	}
@@ -66,7 +65,7 @@ License server key not found.
 
 func saveKey(server, key string) error {
 	var auth authFile
-	data, err := ioutil.ReadFile(paths.AuthFilepath)
+	data, err := ioutil.ReadFile(*flags.AuthFile)
 	if err == nil {
 		json.Unmarshal(data, &auth)
 	}
@@ -84,8 +83,8 @@ func saveKey(server, key string) error {
 		})
 	}
 	data, _ = json.MarshalIndent(auth, "", "  ")
-	if err = ioutil.WriteFile(paths.AuthFilepath, data, 0600); err == nil {
-		ourutil.Reportf("Saved key for %s to %s", server, paths.AuthFilepath)
+	if err = ioutil.WriteFile(*flags.AuthFile, data, 0600); err == nil {
+		ourutil.Reportf("Saved key for %s to %s", server, *flags.AuthFile)
 	}
 	return err
 }

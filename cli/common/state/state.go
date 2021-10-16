@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/mongoose-os/mos/cli/common/paths"
+	"github.com/mongoose-os/mos/cli/flags"
 
 	"github.com/juju/errors"
 )
@@ -40,7 +40,7 @@ var (
 func Init() error {
 	// Try to read state from file, and if it succeeds, unmarshal json from it;
 	// otherwise just leave state empty
-	if data, err := ioutil.ReadFile(paths.StateFilepath); err == nil {
+	if data, err := ioutil.ReadFile(*flags.StateFile); err == nil {
 		if err := json.Unmarshal(data, &mosState); err != nil {
 			return errors.Trace(err)
 		}
@@ -71,7 +71,7 @@ func SaveState() error {
 		return errors.Trace(err)
 	}
 
-	if err := ioutil.WriteFile(paths.StateFilepath, data, 0644); err != nil {
+	if err := ioutil.WriteFile(*flags.StateFile, data, 0644); err != nil {
 		return errors.Trace(err)
 	}
 

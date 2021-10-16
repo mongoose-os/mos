@@ -517,9 +517,9 @@ func (lpr *compProviderReal) GetLibLocalPath(
 	}
 
 	// Check --libs-dir.
-	if !ok && len(paths.LibsDirFlag) > 0 {
+	if !ok && len(*flags.LibsDir) > 0 {
 		name2, _ := m.GetName2()
-		for _, libsDir := range paths.LibsDirFlag {
+		for _, libsDir := range *flags.LibsDir {
 			libDir := filepath.Join(libsDir, name2)
 			glog.V(2).Infof("%s (%s): Trying %s...", name, name2, libDir)
 			if fi, err := os.Stat(libDir); err == nil && fi.IsDir() {
