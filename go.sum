@@ -131,8 +131,6 @@ github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd/go.mod h1:2oa8n
 github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b/go.mod h1:obH5gd0BsqsP2LwDJ9aOkm/6J86V6lyAXCoQWGw3K50=
 github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0/go.mod h1:D/8v3kj0zr8ZAKg1AQ6crr+5VwKN5eIywRkfhyM/+dE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
-github.com/cesanta/go-serial v0.0.0-20170105152649-4dff7aff019e h1:C++Ag/pucyWyaAN0ZVi1TQoVPLDXP8XElP0GR4DPDRY=
-github.com/cesanta/go-serial v0.0.0-20170105152649-4dff7aff019e/go.mod h1:8NcZR8jUd1YKVUMGAzeu2cVpWHQAxeb1oVLFBapFwmQ=
 github.com/cesanta/hid v0.0.0-20190304122332-79d86877855b h1:sis04aP3W+T6iw+rr1PtowTyzGk2C/uW4Yt5kxJGtoU=
 github.com/cesanta/hid v0.0.0-20190304122332-79d86877855b/go.mod h1:TyHSqYNeVEvfBfk5Sg9kTkH7sH+yZSpnbhk+KOlqyS0=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
@@ -602,6 +600,8 @@ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJ
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
+github.com/mongoose-os/go-serial v0.0.0-20211022230256-bb7bd0b47c67 h1:jQ1TgzH8eS3e4F42kCE9NdCqRrbidJq+qTa5gVFM6E0=
+github.com/mongoose-os/go-serial v0.0.0-20211022230256-bb7bd0b47c67/go.mod h1:HZ7dmippnLpPxYlKfmEyOhXr6eqwu/UtOcYICIE5SH0=
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
 github.com/mrunalp/fileutils v0.5.0/go.mod h1:M1WthSahJixYnrXQl/DFQuteStB1weuxD2QJNHXfbSQ=

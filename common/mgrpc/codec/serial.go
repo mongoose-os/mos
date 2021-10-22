@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cesanta/go-serial/serial"
 	"github.com/juju/errors"
+	"github.com/mongoose-os/go-serial/serial"
 	glog "k8s.io/klog/v2"
 )
 

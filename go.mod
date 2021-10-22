@@ -10,7 +10,6 @@ require (
 	github.com/Microsoft/hcsshim v0.9.0 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210920160938-87db9fbc61c7 // indirect
 	github.com/aws/aws-sdk-go v1.41.4
-	github.com/cesanta/go-serial v0.0.0-20170105152649-4dff7aff019e
 	github.com/cesanta/hid v0.0.0-20190304122332-79d86877855b
 	github.com/containerd/cgroups v1.0.2 // indirect
 	github.com/docker/docker v20.10.9+incompatible // indirect
@@ -32,6 +31,7 @@ require (
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-shellwords v1.0.6
 	github.com/mcuadros/go-version v0.0.0-20180611085657-6d5863ca60fa
+	github.com/mongoose-os/go-serial v0.0.0-20211022230256-bb7bd0b47c67
 	github.com/sergi/go-diff v1.2.0
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/smartystreets/goconvey v1.6.4 // indirect

@@ -26,13 +26,14 @@ import (
 	"math"
 	"time"
 
-	"github.com/cesanta/go-serial/serial"
 	"github.com/juju/errors"
+	"github.com/mongoose-os/go-serial/serial"
+	glog "k8s.io/klog/v2"
+
 	"github.com/mongoose-os/mos/cli/flash/common"
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
-	glog "k8s.io/klog/v2"
 )
 
 const (
@@ -199,6 +200,7 @@ func (rc *ROMClient) sendCommand(cmd romCmd, arg []byte, csum uint8) error {
 	binary.Write(cmdBuf, binary.LittleEndian, uint32(csum)) // Yes, uint8 -> uint32
 	cmdBuf.Write(arg)
 	_, err := rc.srw.Write(cmdBuf.Bytes())
+	rc.sd.Flush()
 	return err
 }
 
@@ -278,6 +280,7 @@ func (rc *ROMClient) trySync() error {
 	if err := rc.sendCommand(cmdSync, argBuf.Bytes(), 0); err != nil {
 		return errors.Trace(err)
 	}
+	rc.sd.Flush()
 	for i := 1; i <= 8; i++ {
 		var r *romResponse
 		for {
@@ -305,7 +308,7 @@ func (rc *ROMClient) trySync() error {
 func (rc *ROMClient) sync() error {
 	var err error
 	// Usually there is no response to the first command, and the second is successful.
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 5; i++ {
 		err = rc.trySync()
 		if err == nil {
 			return nil
