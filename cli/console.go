@@ -42,8 +42,8 @@ import (
 	"github.com/mongoose-os/mos/common/mgrpc/codec"
 	"github.com/mongoose-os/mos/common/mgrpc/frame"
 
+	"github.com/cesanta/go-serial/serial"
 	"github.com/juju/errors"
-	"github.com/mongoose-os/go-serial/serial"
 	flag "github.com/spf13/pflag"
 )
 
