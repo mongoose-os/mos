@@ -406,7 +406,7 @@ func (fc *FlasherClient) Read(addr uint32, data []byte) error {
 		}
 		if err != nil {
 			err = errors.Annotatef(err, "flash read failed @ 0x%x (try %d of %d)", numRead, attempt, flashReadAttempts)
-			if attempt > flashReadAttempts {
+			if attempt >= flashReadAttempts {
 				return err
 			}
 			glog.Warningf("%v", err)
