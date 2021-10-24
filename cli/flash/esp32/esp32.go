@@ -13,7 +13,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
+//go:generate go-bindata -pkg esp32 -nocompress -modtime 1 -mode 420 stub/stub.json
+
 package esp32
 
 import (

@@ -82,7 +82,7 @@ func web_rootCssBootstrapMinCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/bootstrap.min.css", size: 140891, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/css/bootstrap.min.css", size: 140891, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -110,7 +110,7 @@ func web_rootCssStyleCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/style.css", size: 919, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/css/style.css", size: 919, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -127,7 +127,7 @@ func web_rootFontsMetropolisBoldOtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/fonts/Metropolis-Bold.otf", size: 24340, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/fonts/Metropolis-Bold.otf", size: 24340, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -144,7 +144,7 @@ func web_rootFontsMetropolisRegularOtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/fonts/Metropolis-Regular.otf", size: 23852, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/fonts/Metropolis-Regular.otf", size: 23852, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -161,7 +161,7 @@ func web_rootImagesLogoPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/images/logo.png", size: 15173, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/images/logo.png", size: 15173, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -199,7 +199,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 571, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 571, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -224,7 +224,7 @@ func web_rootJsAxiosMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/axios.min.js", size: 13604, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/js/axios.min.js", size: 13604, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -852,7 +852,7 @@ func web_rootJsMainJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/main.js", size: 20537, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/js/main.js", size: 20537, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -870,7 +870,7 @@ func web_rootJsPolyfillMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/polyfill.min.js", size: 3137, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/js/polyfill.min.js", size: 3137, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -888,7 +888,7 @@ func web_rootJsPreactMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/preact.min.js", size: 8338, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/js/preact.min.js", size: 8338, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -977,7 +977,7 @@ func web_rootJsUtilJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/util.js", size: 2007, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "web_root/js/util.js", size: 2007, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

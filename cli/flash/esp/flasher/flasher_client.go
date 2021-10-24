@@ -91,9 +91,9 @@ func (fc *FlasherClient) connect(romBaudRate, baudRate uint) error {
 	var stubJSON []byte
 	switch fc.ct {
 	case esp.ChipESP8266:
-		stubJSON = esp8266.MustAsset("data/stub_flasher.json")
+		stubJSON = esp8266.MustAsset("stub/stub.json")
 	case esp.ChipESP32:
-		stubJSON = esp32.MustAsset("data/stub_flasher.json")
+		stubJSON = esp32.MustAsset("stub/stub.json")
 	default:
 		return errors.Errorf("unknown chip type %d", fc.ct)
 	}
