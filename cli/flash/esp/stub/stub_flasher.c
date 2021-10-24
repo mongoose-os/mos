@@ -340,27 +340,25 @@ out:
   return ret;
 }
 
-int do_flash_read(uint32_t addr, uint32_t len, uint32_t block_size,
-                  uint32_t max_in_flight) {
-  uint8_t buf[FLASH_SECTOR_SIZE];
+int do_flash_read(uint32_t addr, uint32_t len, uint32_t read_size) {
+  uint32_t buf[FLASH_SECTOR_SIZE / 4];
   uint8_t digest[16];
   struct MD5Context ctx;
-  uint32_t num_sent = 0, num_acked = 0;
-  if (block_size > sizeof(buf)) return 0x52;
+  uint32_t num_sent = 0;
+  if (read_size > sizeof(buf)) return 0x52;
   MD5Init(&ctx);
-  while (num_acked < len) {
-    while (num_sent < len && num_sent - num_acked < max_in_flight) {
-      uint32_t n = len - num_sent;
-      if (n > block_size) n = block_size;
-      if (esp_rom_spiflash_read(addr, (uint32_t *) buf, n) != 0) return 0x53;
-      send_packet(buf, n);
-      MD5Update(&ctx, buf, n);
-      addr += n;
-      num_sent += n;
+  while (num_sent < len) {
+    uint32_t n = len - num_sent;
+    if (n > read_size) n = read_size;
+    if (esp_rom_spiflash_read(addr + num_sent, buf, n) != 0) {
+      return 0x53;
     }
-    {
-      if (SLIP_recv(&num_acked, sizeof(num_acked)) != 4) return 0x54;
-      if (num_acked > num_sent) return 0x55;
+    send_packet((uint8_t *) buf, n);
+    uint32_t num_acked = 0;
+    if (SLIP_recv(&num_acked, sizeof(num_acked)) != 4) return 0x54;
+    if (num_acked > num_sent) {
+      MD5Update(&ctx, (uint8_t *) buf, num_acked - num_sent);
+      num_sent = num_acked;
     }
   }
   MD5Final(digest, &ctx);
@@ -431,10 +429,9 @@ uint8_t cmd_loop(void) {
       }
       case CMD_FLASH_READ: {
         len = SLIP_recv(args, sizeof(args));
-        if (len == 16) {
+        if (len == 12) {
           resp = do_flash_read(args[0] /* addr */, args[1], /* len */
-                               args[2] /* block_size */,
-                               args[3] /* max_in_flight */);
+                               args[2] /* read_size */);
         } else {
           resp = 0x51;
         }

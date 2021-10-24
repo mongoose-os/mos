@@ -30,12 +30,13 @@ import (
 
 	"github.com/cesanta/go-serial/serial"
 	"github.com/juju/errors"
+	glog "k8s.io/klog/v2"
+
 	"github.com/mongoose-os/mos/cli/flash/common"
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp/rom_client"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
-	glog "k8s.io/klog/v2"
 )
 
 const (
@@ -50,7 +51,8 @@ const (
 	chipEraseTimeout  = 25 * time.Second
 	blockEraseTimeout = 5 * time.Second
 	// This is made small to workaround slow Mac driver
-	flashReadSize = 256
+	flashReadSize     = 1024
+	flashReadAttempts = 5
 )
 
 /* Decls from stub_flasher.h */
@@ -384,25 +386,34 @@ func (fc *FlasherClient) Read(addr uint32, data []byte) error {
 	if !fc.connected {
 		return errors.New("not connected")
 	}
-	err := fc.sendCommand(cmdFlashRead, []uint32{
-		addr, uint32(len(data)), flashReadSize, flashReadSize})
+	err := fc.sendCommand(cmdFlashRead, []uint32{addr, uint32(len(data)), flashReadSize})
 	if err != nil {
 		return errors.Trace(err)
 	}
-	numRead := 0
+	numRead, attempt := 0, 1
 	for numRead < len(data) {
 		buf := data[numRead:]
 		if len(buf) > flashReadSize {
 			buf = buf[:flashReadSize]
 		}
 		n, err := fc.srw.Read(buf)
+		switch {
+		case err != nil:
+		case n == len(buf):
+			numRead += len(buf)
+		default:
+			err = fmt.Errorf("unexpected result packet length %d (want %d)", n, flashReadSize)
+		}
 		if err != nil {
-			return errors.Annotatef(err, "flash read failed @ 0x%x", numRead)
+			err = errors.Annotatef(err, "flash read failed @ 0x%x (try %d of %d)", numRead, attempt, flashReadAttempts)
+			if attempt > flashReadAttempts {
+				return err
+			}
+			glog.Warningf("%v", err)
+			attempt++
+		} else {
+			attempt = 1
 		}
-		if n != len(buf) {
-			return errors.Errorf("unexpected result packet length %d", n)
-		}
-		numRead += len(buf)
 		nrb := bytes.NewBuffer(nil)
 		binary.Write(nrb, binary.LittleEndian, uint32(numRead))
 		fc.srw.Write(nrb.Bytes())
