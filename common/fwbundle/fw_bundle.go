@@ -26,8 +26,9 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/mongoose-os/mos/cli/ourutil"
 	glog "k8s.io/klog/v2"
+
+	"github.com/mongoose-os/mos/cli/ourutil"
 )
 
 const (
@@ -64,6 +65,14 @@ func (fwb *FirmwareBundle) AddPart(p *FirmwarePart) error {
 		fwb.FirmwareManifest.Parts = make(map[string]*FirmwarePart)
 	}
 	fwb.FirmwareManifest.Parts[p.Name] = p
+	return nil
+}
+
+func (fwb *FirmwareBundle) RemovePart(name string) error {
+	if _, ok := fwb.FirmwareManifest.Parts[name]; !ok {
+		return errors.New("not found")
+	}
+	delete(fwb.FirmwareManifest.Parts, name)
 	return nil
 }
 

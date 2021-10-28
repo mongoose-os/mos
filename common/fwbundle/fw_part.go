@@ -65,10 +65,13 @@ type firmwarePart struct {
 
 type DataProvider func(name, src string) ([]byte, error)
 
-func PartFromString(ps string) (*FirmwarePart, error) {
+func PartFromString(ps string) (string, *FirmwarePart, error) {
 	np := strings.SplitN(ps, ":", 2)
 	if len(np) < 2 {
-		return nil, errors.Errorf("invalid part spec '%s', must be 'name:prop=value,...'", ps)
+		return "", nil, errors.Errorf("invalid part spec '%s', must be 'name:prop=value,...'", ps)
+	}
+	if np[1] == "-" {
+		return np[0], nil, nil
 	}
 	// Create attrs JSON and re-parse it.
 	m := make(map[string]interface{})
@@ -78,7 +81,7 @@ func PartFromString(ps string) (*FirmwarePart, error) {
 		}
 		kv := strings.SplitN(prop, "=", 2)
 		if len(kv) < 2 {
-			return nil, errors.Errorf("invalid property spec '%s', must be 'prop=value'", prop)
+			return "", nil, errors.Errorf("invalid property spec '%s', must be 'prop=value'", prop)
 		}
 		k := kv[0]
 		v := kv[1]
@@ -104,10 +107,10 @@ func PartFromString(ps string) (*FirmwarePart, error) {
 	mb, _ := json.Marshal(&m)
 	var p FirmwarePart
 	if err := json.Unmarshal(mb, &p); err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	p.Name = np[0]
-	return &p, nil
+	return p.Name, &p, nil
 }
 
 func computeSHA1(data []byte) string {

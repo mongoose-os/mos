@@ -31,6 +31,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/youmark/pkcs8"
 	"golang.org/x/crypto/ssh/terminal"
+	glog "k8s.io/klog/v2"
 
 	moscommon "github.com/mongoose-os/mos/cli/common"
 	"github.com/mongoose-os/mos/cli/dev"
@@ -88,11 +89,14 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 	}
 	if len(flag.Args()) > 1 {
 		for _, ps := range flag.Args()[1:] {
-			p, err := fwbundle.PartFromString(ps)
-			if err != nil {
+			pn, p, err := fwbundle.PartFromString(ps)
+			switch {
+			case err != nil:
 				return errors.Annotatef(err, "%s", ps)
-			}
-			if strings.HasSuffix(p.Src, ".hex") {
+			case p == nil:
+				err = fwb.RemovePart(pn)
+				glog.Infof("Removing partition %s: %v", pn, err)
+			case strings.HasSuffix(p.Src, ".hex"):
 				hpp, err := fwbundle.PartsFromHexFile(p.Src, p.Name, 255, 512)
 				if err != nil {
 					return errors.Annotatef(err, "%s", ps)
@@ -111,7 +115,7 @@ func CreateFWBundle(ctx context.Context, devConn dev.DevConn) error {
 					p1.SetData(data)
 					fwb.AddPart(&p1)
 				}
-			} else {
+			default:
 				p.SetDataProvider(func(name, src string) ([]byte, error) {
 					srcAbs := src
 					if !filepath.IsAbs(src) && *flags.SrcDir != "" {
