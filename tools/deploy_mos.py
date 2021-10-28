@@ -176,7 +176,14 @@ if __name__ == "__main__":
     # make sure we can run docker (and if not, fail early)
     print("Making sure Docker works...")
     RunSubprocess(["docker", "run", "--rm", "hello-world"], quiet=True)
-    print("Ok, Docker works")
+    print("Ok, Docker works. Making sure we can build and push images...")
+    RunSubprocess(["docker", "build", "--no-cache",
+                   "--tag=docker.io/mgos/mos:_push_test_do_not_use",
+                   "tools/docker/push_test"])
+    RunSubprocess(["docker", "push", "docker.io/mgos/mos:_push_test_do_not_use"])
+    # TODO: Delete the temporary image. It's not a standard Docker operation
+    # and is therefore a bit tricky.
+    print("Ok, we can build and push images.")
 
     # Check ssh access to site. If agent is used, this will unlock the key.
     print("Checking SSH access to the site...")
