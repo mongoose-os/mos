@@ -181,7 +181,8 @@ if __name__ == "__main__":
                    "--tag=docker.io/mgos/mos:_push_test_do_not_use",
                    "tools/docker/push_test"])
     RunSubprocess(["docker", "push", "docker.io/mgos/mos:_push_test_do_not_use"])
-    # TODO: Delete the temporary image. It's not a standard Docker operation
+    RunSubprocess(["docker", "rmi", "docker.io/mgos/mos:_push_test_do_not_use"], quiet=True)
+    # TODO: Delete the temporary image on the remote side. It's not a standard Docker operation
     # and is therefore a bit tricky.
     print("Ok, we can build and push images.")
 
