@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-//go:generate go-bindata-assetfs -pkg main -nocompress -mode 420 web_root/...
+//go:generate go-bindata-assetfs -pkg main -nocompress -modtime 1 -mode 420 web_root/...
 
 package main
 

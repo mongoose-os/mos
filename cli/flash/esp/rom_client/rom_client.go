@@ -305,7 +305,7 @@ func (rc *ROMClient) trySync() error {
 func (rc *ROMClient) sync() error {
 	var err error
 	// Usually there is no response to the first command, and the second is successful.
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 5; i++ {
 		err = rc.trySync()
 		if err == nil {
 			return nil

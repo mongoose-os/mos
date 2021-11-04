@@ -139,7 +139,7 @@ func dataMgos_deps_initCTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/mgos_deps_init.c.tmpl", size: 1916, mode: os.FileMode(420), modTime: time.Unix(1619577448, 0)}
+	info := bindataFileInfo{name: "data/mgos_deps_init.c.tmpl", size: 1916, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -167,7 +167,7 @@ func dataRoot_manifestYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/root_manifest.yml", size: 197, mode: os.FileMode(420), modTime: time.Unix(1618438554, 0)}
+	info := bindataFileInfo{name: "data/root_manifest.yml", size: 197, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -18,10 +18,11 @@ package fwbundle
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/juju/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPartFromString(t *testing.T) {
@@ -33,6 +34,7 @@ func TestPartFromString(t *testing.T) {
 	}{
 		{s: ``, fail: true},
 		{s: `foo:`, p: &FirmwarePart{Name: "foo"}},
+		{s: `foo:-`, p: nil},
 		{s: `foo:type`, fail: true},
 		{s: `foo:type=bar`, p: &FirmwarePart{Name: "foo", Type: "bar"}},
 		{s: `foo:type="bar"`, p: &FirmwarePart{Name: "foo", Type: "bar"}},
@@ -49,17 +51,16 @@ func TestPartFromString(t *testing.T) {
 				attrs: map[string]interface{}{"update": false},
 			}},
 	}
-	for i, c := range cases {
-		p, err := PartFromString(c.s)
+	for _, c := range cases {
+		pn, p, err := PartFromString(c.s)
 		if c.fail {
-			if err == nil {
-				t.Fatalf("%d: %s: expected failure, got %#v", i, c.s, p)
-			}
+			assert.Errorf(t, err, "case %s, ret %+v", c.s, p)
+			assert.Nilf(t, p, "case %s", c.s)
 		} else {
-			if err != nil {
-				t.Fatalf("%d: %s: got error %s", i, c.s, err)
-			} else if !reflect.DeepEqual(p, c.p) {
-				t.Fatalf("%d: %s: expected \n%#v\n, got\n%#v", i, c.s, c.p, p)
+			require.NoError(t, err, "case %s, ret %+v", c.s, p)
+			assert.Equalf(t, c.p, p, "case %s", c.s)
+			if c.p != nil {
+				assert.Equalf(t, p.Name, pn, "case %s", c.s)
 			}
 		}
 	}

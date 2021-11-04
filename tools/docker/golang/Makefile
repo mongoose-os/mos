@@ -1,6 +1,6 @@
 all: build-all
 
-UBUNTU_DISTRS := xenial bionic focal groovy hirsute
+UBUNTU_DISTRS := xenial bionic focal hirsute impish
 
 build-all: $(foreach u,$(UBUNTU_DISTRS),docker-build-ubuntu-golang-$(u)) docker-build-ubuntu32-golang-bionic docker-build-golang-mingw
 

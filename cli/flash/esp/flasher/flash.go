@@ -92,18 +92,32 @@ func Flash(ct esp.ChipType, fw *fwbundle.FirmwareBundle, opts *esp.FlashOpts) er
 		if p.Type == fwbundle.FSPartType && opts.KeepFS {
 			continue
 		}
-		data, err := fw.GetPartData(p.Name)
-		if err != nil {
-			return errors.Annotatef(err, "%s: failed to get data", p.Name)
-		}
 		// For ESP32, resolve partition name to address
 		if p.ESP32PartitionName != "" {
 			pti, err := esp32.GetPartitionInfo(fw, p.ESP32PartitionName)
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to get respolve partition %q", p.Name, p.ESP32PartitionName)
 			}
-			glog.V(1).Infof("%s -> %s -> 0x%x", p.Name, p.ESP32PartitionName, pti.Pos.Offset)
-			p.Addr = pti.Pos.Offset
+			// If partition is specified, addr can be optionally used to specify offset within the partition.
+			// The exception is app partition - these had both set fro compatibility since Feb 2018
+			// (https://github.com/cesanta/mongoose-os/commit/b8960587f4d564542c903f854e4fe1cef7bbde33)
+			// It's been removed in Oct 2021
+			// (https://github.com/cesanta/mongoose-os/commit/8d9a53f76898d736dcac96594bd4eae0cb6b83a0)
+			newAddr, newSize := p.Addr, p.Size
+			if p.Type != "app" {
+				newAddr = pti.Pos.Offset + p.Addr
+			} else {
+				newAddr = pti.Pos.Offset
+			}
+			if p.Size == 0 { // size = 0 -> until the end of the partition.
+				newSize = pti.Pos.Offset + pti.Pos.Size - newAddr
+			}
+			glog.V(1).Infof("%s: %s 0x%x %d -> 0x%x %d", p.Name, p.ESP32PartitionName, p.Addr, p.Size, newAddr, newSize)
+			p.Addr, p.Size = newAddr, newSize
+		}
+		data, err := fw.GetPartData(p.Name)
+		if err != nil {
+			return errors.Annotatef(err, "%s: failed to get data", p.Name)
 		}
 		im := &image{
 			Name:         p.Name,

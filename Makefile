@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := mos
-.PHONY: all build clean clean-tools clean-version deploy-fwbuild deploy-mos-binary deps downloads fwbuild-instance fwbuild-manager generate install linux mac mos version win
+.PHONY: all build clean clean-tools clean-version deploy-fwbuild deploy-mos-binary deps downloads fwbuild-instance fwbuild-manager generate genstubs install linux mac mos stubs version win
 
 TAG ?= latest
 
@@ -56,6 +56,15 @@ vendor/modules.txt:
 	$(GO) mod vendor
 
 deps: vendor/modules.txt
+
+genstubs:
+	cli/flash/esp32/stub/genstub.sh
+	cli/flash/esp8266/stub/genstub.sh
+
+# Build the flasher stubs
+# E.g.:
+#   make stubs mos && ./mos flash-read --platform esp8266 --esp-baud-rate=1500000 test.bin --v 4 --logtostderr
+stubs: genstubs generate
 
 generate: $(GOBIN)/go-bindata $(GOBIN)/go-bindata-assetfs
 	$(GO) generate \
