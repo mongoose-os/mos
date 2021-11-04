@@ -62,7 +62,10 @@ You will need:
 Commands to install all the build dependencies:
  * Ubuntu Linux: `sudo apt-get install build-essential git golang-go python3 libftdi-dev libusb-1.0-0-dev pkg-config`
  * Mac OS X (via [Homebrew](https://brew.sh/)): `brew install coreutils libftdi libusb-compat pkg-config`
- * Windows 10: `TODO`
+ * Windows 10:
+   * Install [MSYS2](https://www.msys2.org/)
+   * `pacman -S --needed base-devel mingw-w64-x86_64-toolchain git mingw-w64-x86_64-go python mingw-w64-x86_64-libftdi mingw-w64-x86_64-libusb pkgconf`
+   * Use a MSYS MinGW 64-bit shell
 
 Clone the repo (note: doesn't have to be in `GOPATH`):
 
