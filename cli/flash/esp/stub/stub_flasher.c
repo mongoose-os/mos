@@ -33,6 +33,12 @@
 #include "soc/uart_reg.h"
 
 #include "led.h"
+#elif defined(ESP32C3)
+#include "esp32c3/rom/efuse.h"
+#include "esp32c3/rom/miniz.h"
+#include "esp32c3/rom/spi_flash.h"
+#include "soc/spi_mem_reg.h"
+#include "soc/uart_reg.h"
 #endif
 
 #include "slip.h"
@@ -68,6 +74,18 @@ extern uint32_t _bss_start, _bss_end;
 #define SPI_USER_REG(i) (REG_SPI_BASE(i) + 0x1C)
 
 #define SPI_W0_REG(i) (REG_SPI_BASE(i) + 0x40)
+#elif defined(ESP32C3)
+#define SPI_CMD_REG(i) SPI_MEM_CMD_REG(i)
+#define SPI_FLASH_WREN SPI_MEM_FLASH_WREN
+#define SPI_FLASH_RDID SPI_MEM_FLASH_RDID
+#define SPI_FLASH_SE SPI_MEM_FLASH_SE
+#define SPI_FLASH_BE SPI_MEM_FLASH_BE
+
+#define SPI_ADDR_REG(i) SPI_MEM_ADDR_REG(i)
+
+#define SPI_USER_REG(i) SPI_MEM_USER_REG(i)
+
+#define SPI_W0_REG(i) SPI_MEM_W0_REG(i)
 #endif
 
 enum read_state {
@@ -95,7 +113,11 @@ struct uart_buf {
 
 static inline uint32_t ccount(void) {
   uint32_t r;
+#if defined(ESP32C3)
+  __asm volatile ("csrr %0, 0x7e2" : "=r"(r));
+#else
   __asm volatile("rsr.ccount %0" : "=a"(r));
+#endif
   return r;
 }
 
@@ -231,6 +253,19 @@ esp_rom_spiflash_result_t esp_rom_spiflash_erase_start(uint32_t addr,
   WRITE_PERI_REG(PERIPHS_SPI_FLASH_CMD, cmd);
 
   return ESP_ROM_SPIFLASH_RESULT_OK;
+}
+#elif defined(ESP32C3)
+esp_rom_spiflash_result_t esp_rom_spiflash_erase_start(uint32_t addr,
+                                                       uint32_t cmd) {
+  uint32_t length = 0;
+  
+  if (cmd == SPI_FLASH_BE) {
+    length = FLASH_BLOCK_SIZE;
+  } else if (cmd == SPI_FLASH_SE) {
+    length = FLASH_SECTOR_SIZE;
+  }
+  
+  return esp_rom_spiflash_erase_area(addr, length);
 }
 #endif
 
@@ -570,10 +605,18 @@ uint32_t _stack[3072];
 void stub_main(void) {
   memset(&_bss_start, 0, (&_bss_end - &_bss_start));
   uint32_t *stack_end = &_stack[3071];
+#if defined(ESP32C3)
+  __asm volatile("mv sp, %0\n"
+                 :                 // output
+                 : "r"(stack_end)  // input
+                 :                 // scratch
+  );
+#else
   __asm volatile("mov a1, %0\n"
                  :                 // output
                  : "a"(stack_end)  // input
                  :                 // scratch
   );
+#endif
   stub_main1();
 }
