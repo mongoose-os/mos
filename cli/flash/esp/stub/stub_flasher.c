@@ -31,6 +31,7 @@
 #include "esp32/rom/miniz.h"
 #include "esp32/rom/spi_flash.h"
 #include "soc/uart_reg.h"
+
 #include "led.h"
 #endif
 
@@ -564,13 +565,15 @@ void stub_main1(void) {
 }
 
 /* miniz requires at least 12K of stack */
-uint32_t stack[3071];
-uint32_t stack_end;
+uint32_t _stack[3072];
 
 void stub_main(void) {
   memset(&_bss_start, 0, (&_bss_end - &_bss_start));
-  __asm volatile("movi a1, stack_end\n");
+  uint32_t *stack_end = &_stack[3071];
+  __asm volatile("mov a1, %0\n"
+                 :                 // output
+                 : "a"(stack_end)  // input
+                 :                 // scratch
+  );
   stub_main1();
-  // Keep the stack vars alive.
-  stack[0] = stack_end = 0xff;
 }
