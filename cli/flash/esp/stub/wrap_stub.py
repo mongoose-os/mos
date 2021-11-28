@@ -78,7 +78,7 @@ class ELFFile(object):
 
         if ident[0] != 0x7f or ident[1:4] != b'ELF':
             raise FatalError("%s has invalid ELF magic header %s" % (self.name, ident))
-        if machine != 0x5e:
+        if machine != 0x5e and machine != 0xf3:
             raise FatalError("%s does not appear to be an Xtensa ELF file. e_machine=%04x" % (self.name, machine))
         self._read_sections(f, shoff, shstrndx)
 
