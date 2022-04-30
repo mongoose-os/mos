@@ -179,19 +179,37 @@ Shortly after upload the package should be queued for building [here](https://la
     * Go packages that do not use any external dependencies that are not packaged for the distro can be built magically with [dh-golang](https://pkg-go.alioth.debian.org/packaging.html). Unfortunately, `mos` does have external dependencies, so we perform [an elaborate dance](https://github.com/cesanta/mongoose-os/blob/deb-latest/debian/rules#L11) to prepare `GOPATH` for the build.
       * We basically construct a `$GOPATH/src` with a single `cesanta.com` package (fortunately, a symlink is enough). `cesanta.com` package will have a `vendor` dir with all the dependencies (synced while building the source package).
 
-# If you don't have mac
+## Adding and removing a Ubuntu package
 
-Here's how you can use mac in the office:
+Build a Golang docker image:
 
-```bash
-$ ssh -A -p 1234 mos@dub.cesanta.com
-$ tmux
-$ d # start docker machine
+```
+$ OLD_RELEASE=hirsute RELEASE=jammy
+$ make -C tools/docker/golang docker-{build,push}-ubuntu-golang-$RELEASE
 ```
 
-And the dev repo is here:
+Recipe:
 
-```bash
-$ cd go/src/cesanta.com
+```
+$ cd tools/ubuntu/
+$ git mv mos-$OLD_RELEASE.recipe mos-$RELEASE.recipe
+$ git mv mos-latest-$OLD_RELEASE.recipe mos-latest-$RELEASE.recipe
+# Edit the name of the package, replace $OLD_RELEASE with $RELEASE
+$ vi -o mos-$RELEASE.recipe mos-latest-$RELEASE.recipe
 ```
 
+Update list of releases:
+
+```
+$ vi tools/docker/golang/Makefile  # UBUNTU_DISTRS
+$ vi version/version_util.go       # ubuntuDistrNames
+$ vi tools/deploy_mos.py           # UBUNTU_VERSIONS
+```
+
+Try building:
+
+```
+$ tools/ubuntu/build-deb.sh mos-latest $RELEASE
+```
+
+Example commit: [here](https://github.com/mongoose-os/mos/commit/3b29fac0c948a08ddfccf4be3bc946a9368d61f8).
