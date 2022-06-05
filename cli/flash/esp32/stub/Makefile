@@ -5,7 +5,7 @@
 
 STUB ?= stub.json
 COMMON_STUB_DIR = ../../esp/stub
-SDK ?= docker.io/mgos/esp32-build:4.2-r4
+SDK ?= docker.io/mgos/esp32-build:4.4.1-r1
 LIBS ?=
 
 SRCS = $(LIBS) $(COMMON_STUB_DIR)/stub_flasher.c $(COMMON_STUB_DIR)/slip.c
@@ -25,8 +25,8 @@ $(STUB): $(SRCS) $(COMMON_STUB_DIR)/wrap_stub.py
          -I/opt/Espressif/esp-idf/components/esp32/include \
          -I/opt/Espressif/esp-idf/components/esp_common/include \
          -I/opt/Espressif/esp-idf/components/esp_rom/include \
-         -I/opt/Espressif/esp-idf/components/soc/soc/include \
-         -I/opt/Espressif/esp-idf/components/soc/soc/esp32/include \
+         -I/opt/Espressif/esp-idf/components/soc/include \
+         -I/opt/Espressif/esp-idf/components/soc/esp32/include \
          -I/opt/Espressif/esp-idf/components/xtensa/include \
          -L/opt/Espressif/esp-idf \
          -ffunction-sections -Wl,-static -Wl,--gc-sections \

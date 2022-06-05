@@ -5,7 +5,7 @@
 
 STUB ?= stub.json
 COMMON_STUB_DIR = ../../esp/stub
-SDK ?= docker.io/mgos/esp8266-build:3.0.5_b57142b8-r1
+SDK ?= docker.io/mgos/esp8266-build:3.0.6_1391d154-r1
 LIBS ?=
 
 SRCS = $(LIBS) $(COMMON_STUB_DIR)/stub_flasher.c $(COMMON_STUB_DIR)/slip.c
