@@ -37,6 +37,7 @@ import (
 	"github.com/mongoose-os/mos/cli/flash/esp/rom_client"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
 	"github.com/mongoose-os/mos/cli/flash/esp32c3"
+	"github.com/mongoose-os/mos/cli/flash/esp32s3"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
 )
 
@@ -97,6 +98,8 @@ func (fc *FlasherClient) connect(romBaudRate, baudRate uint) error {
 	switch fc.ct {
 	case esp.ChipESP32:
 		stubJSON = esp32.MustAsset("stub/stub.json")
+	case esp.ChipESP32S3:
+		stubJSON = esp32s3.MustAsset("stub/stub.json")
 	case esp.ChipESP32C3:
 		stubJSON = esp32c3.MustAsset("stub/stub.json")
 	case esp.ChipESP8266:

@@ -61,6 +61,8 @@ func getFlashSizeId(ct esp.ChipType, s string) int {
 	case esp.ChipESP32:
 		fallthrough
 	case esp.ChipESP32C3:
+		fallthrough
+	case esp.ChipESP32S3:
 		return esp32.FlashSizeToId[s] - 1
 	}
 	return -1
@@ -71,6 +73,8 @@ func getFlashSize(ct esp.ChipType, sizeId int) int {
 	case esp.ChipESP32:
 		fallthrough
 	case esp.ChipESP32C3:
+		fallthrough
+	case esp.ChipESP32S3:
 		return esp32.FlashSizes[sizeId]
 	case esp.ChipESP8266:
 		return esp8266.FlashSizes[sizeId]
@@ -169,6 +173,8 @@ func (fp *flashParams) SetSize(size int) error {
 	case esp.ChipESP32:
 		fallthrough
 	case esp.ChipESP32C3:
+		fallthrough
+	case esp.ChipESP32S3:
 		flashSizes = esp32.FlashSizes
 	case esp.ChipESP8266:
 		flashSizes = esp8266.FlashSizes
@@ -209,6 +215,8 @@ func (fp flashParams) String() string {
 	case esp.ChipESP32:
 		fallthrough
 	case esp.ChipESP32C3:
+		fallthrough
+	case esp.ChipESP32S3:
 		flashSizeToId = esp32.FlashSizeToId
 	case esp.ChipESP8266:
 		flashSizeToId = esp8266.FlashSizeToId
