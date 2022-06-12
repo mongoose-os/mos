@@ -10,6 +10,7 @@
 #include "esp32/rom/spi_flash.h"
 #include "esp32/rom/uart.h"
 
+#include "soc/efuse_reg.h"
 #include "soc/spi_reg.h"
 #include "soc/uart_reg.h"
 
@@ -39,3 +40,5 @@ static inline uint32_t stub_get_ccount(void) {
 #define SPI_MEM_USR_ADDR_BITLEN SPI_USR_ADDR_BITLEN
 #define SPI_MEM_USR_ADDR_BITLEN_S SPI_USR_ADDR_BITLEN_S
 #define SPI_MEM_USR_ADDR_BITLEN_V SPI_USR_ADDR_BITLEN_V
+
+uint32_t stub_read_flash_id(void);

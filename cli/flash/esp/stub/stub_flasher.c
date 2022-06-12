@@ -375,12 +375,15 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
   return 0;
 }
 
-int do_flash_read_chip_id(void) {
-  uint32_t chip_id = 0;
+uint32_t stub_read_flash_id(void) {
   WRITE_PERI_REG(PERIPHS_SPI_FLASH_CMD, SPI_MEM_FLASH_RDID);
   while (READ_PERI_REG(PERIPHS_SPI_FLASH_CMD) & SPI_MEM_FLASH_RDID) {
   }
-  chip_id = READ_PERI_REG(PERIPHS_SPI_FLASH_C0) & 0xFFFFFF;
+  return (READ_PERI_REG(PERIPHS_SPI_FLASH_C0) & 0xFFFFFF);
+}
+
+int do_flash_read_chip_id(void) {
+  uint32_t chip_id = stub_read_flash_id();
   send_packet((uint8_t *) &chip_id, sizeof(chip_id));
   return 0;
 }

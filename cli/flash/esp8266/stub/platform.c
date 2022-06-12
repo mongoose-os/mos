@@ -20,5 +20,8 @@
 void stub_platform_init(void) {
   SelectSpiFunction();
   spi_flash_attach();
-  SET_PERI_REG_MASK(0x3FF00014, 1); /* Switch to 160 MHz */
+  // Switch CPU to 160 MHz
+  SET_PERI_REG_MASK(0x3ff00014, 1);
+  // Increase SPI flash frequency
+  WRITE_PERI_REG(SPI_CLOCK_REG(0), 0x00001001);
 }

@@ -27,4 +27,7 @@ void stub_platform_init(void) {
   __asm volatile("csrwi 0x7e1, 1");  // MPCMR
 
   esp_rom_spiflash_attach(ets_efuse_get_spiconfig(), 0 /* legacy */);
+
+  // Run SPI1 at SYSCLK (40 MHz).
+  SET_PERI_REG_MASK(SPI_MEM_CLOCK_REG(1), SPI_MEM_CLK_EQU_SYSCLK);
 }
