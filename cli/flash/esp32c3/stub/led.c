@@ -15,30 +15,18 @@
  * limitations under the License.
  */
 
-#include "soc/gpio_reg.h"
+#include "platform.h"
 
 void led_setup(int io) {
-  if (io < 32) {
-    WRITE_PERI_REG(GPIO_ENABLE_W1TS_REG, 1 << io);
-  } else {
-    WRITE_PERI_REG(GPIO_ENABLE1_W1TS_REG, 1 << (io - 32));
-  }
+  WRITE_PERI_REG(GPIO_ENABLE_W1TS_REG, 1 << io);
 }
 
 void led_on(int io) {
-  if (io < 32) {
-    WRITE_PERI_REG(GPIO_OUT_W1TS_REG, 1 << io);
-  } else {
-    WRITE_PERI_REG(GPIO_OUT1_W1TS_REG, 1 << (io - 32));
-  }
+  WRITE_PERI_REG(GPIO_OUT_W1TS_REG, 1 << io);
 }
 
 void led_off(int io) {
-  if (io < 32) {
-    WRITE_PERI_REG(GPIO_OUT_W1TC_REG, 1 << io);
-  } else {
-    WRITE_PERI_REG(GPIO_OUT1_W1TC_REG, 1 << (io - 32));
-  }
+  WRITE_PERI_REG(GPIO_OUT_W1TC_REG, 1 << io);
 }
 
 void led_toggle(int io) {

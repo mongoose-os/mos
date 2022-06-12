@@ -59,6 +59,8 @@ func getFlashSizeId(ct esp.ChipType, s string) int {
 	case esp.ChipESP8266:
 		return esp8266.FlashSizeToId[s] - 1
 	case esp.ChipESP32:
+		fallthrough
+	case esp.ChipESP32C3:
 		return esp32.FlashSizeToId[s] - 1
 	}
 	return -1
@@ -66,10 +68,12 @@ func getFlashSizeId(ct esp.ChipType, s string) int {
 
 func getFlashSize(ct esp.ChipType, sizeId int) int {
 	switch ct {
+	case esp.ChipESP32:
+		fallthrough
+	case esp.ChipESP32C3:
+		return esp32.FlashSizes[sizeId]
 	case esp.ChipESP8266:
 		return esp8266.FlashSizes[sizeId]
-	case esp.ChipESP32:
-		return esp32.FlashSizes[sizeId]
 	}
 	return 0
 }
@@ -162,10 +166,14 @@ func (fp *flashParams) Size() int {
 func (fp *flashParams) SetSize(size int) error {
 	var flashSizes map[int]int
 	switch fp.ct {
+	case esp.ChipESP32:
+		fallthrough
+	case esp.ChipESP32C3:
+		flashSizes = esp32.FlashSizes
 	case esp.ChipESP8266:
 		flashSizes = esp8266.FlashSizes
-	case esp.ChipESP32:
-		flashSizes = esp32.FlashSizes
+	default:
+		return errors.Errorf("unsupported chip type %s", fp.ct)
 	}
 	for sizeId, s := range flashSizes {
 		if s == size {
@@ -198,10 +206,12 @@ func (fp flashParams) String() string {
 	sizeStr := ""
 	var flashSizeToId map[string]int
 	switch fp.ct {
+	case esp.ChipESP32:
+		fallthrough
+	case esp.ChipESP32C3:
+		flashSizeToId = esp32.FlashSizeToId
 	case esp.ChipESP8266:
 		flashSizeToId = esp8266.FlashSizeToId
-	case esp.ChipESP32:
-		flashSizeToId = esp32.FlashSizeToId
 	}
 	for k, v := range flashSizeToId {
 		if v-1 == fp.sizeId {

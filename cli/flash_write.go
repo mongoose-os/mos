@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//go:build !noflash
 // +build !noflash
 
 package main
@@ -70,6 +71,9 @@ func flashWrite(ctx context.Context, devConn dev.DevConn) error {
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		err = espFlasher.WriteFlash(esp.ChipESP32, uint32(addr), data, &espFlashOpts)
+	case "esp32c3":
+		espFlashOpts.ControlPort = port
+		err = espFlasher.WriteFlash(esp.ChipESP32C3, uint32(addr), data, &espFlashOpts)
 	case "esp8266":
 		espFlashOpts.ControlPort = port
 		err = espFlasher.WriteFlash(esp.ChipESP8266, uint32(addr), data, &espFlashOpts)

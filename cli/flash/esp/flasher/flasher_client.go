@@ -36,6 +36,7 @@ import (
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp/rom_client"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
+	"github.com/mongoose-os/mos/cli/flash/esp32c3"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
 )
 
@@ -92,10 +93,12 @@ func NewFlasherClient(ct esp.ChipType, rc *rom_client.ROMClient, romBaudRate uin
 func (fc *FlasherClient) connect(romBaudRate, baudRate uint) error {
 	var stubJSON []byte
 	switch fc.ct {
-	case esp.ChipESP8266:
-		stubJSON = esp8266.MustAsset("stub/stub.json")
 	case esp.ChipESP32:
 		stubJSON = esp32.MustAsset("stub/stub.json")
+	case esp.ChipESP32C3:
+		stubJSON = esp32c3.MustAsset("stub/stub.json")
+	case esp.ChipESP8266:
+		stubJSON = esp8266.MustAsset("stub/stub.json")
 	default:
 		return errors.Errorf("unknown chip type %d", fc.ct)
 	}
@@ -117,7 +120,7 @@ func (fc *FlasherClient) connect(romBaudRate, baudRate uint) error {
 		var oldUARTDiv uint32
 		if binary.Read(bytes.NewBuffer(buf), binary.LittleEndian, &oldUARTDiv) == nil {
 			oldUARTdivF := float64(oldUARTDiv)
-			if fc.ct == esp.ChipESP32 {
+			if fc.ct == esp.ChipESP32 || fc.ct == esp.ChipESP32C3 {
 				oldUARTdivF /= 16.0
 			}
 			masterCLK := uint32(romBaudRate) * uint32(oldUARTdivF)

@@ -46,7 +46,7 @@ var (
 	}
 )
 
-func GetChipDescr(rrw esp.RegReaderWriter) (string, error) {
+func GetChipDescr(rrw esp.RegReader) (string, error) {
 	efuse0, err := rrw.ReadReg(0x3ff00050)
 	if err != nil {
 		return "", errors.Annotatef(err, "failed to read eFuse")

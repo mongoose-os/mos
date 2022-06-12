@@ -14,9 +14,9 @@
 #include "sdkconfig.h"
 #include "esp32c3/rom/spi_flash.h"
 #include "soc/spi_periph.h"
-#include "spi_flash_defs.h"
+#include "spi_flash/spi_flash_defs.h"
 
-#define SPI_IDX   1
+#define SPI_IDX 1
 
 esp_rom_spiflash_result_t esp_rom_spiflash_write_disable(void)
 {

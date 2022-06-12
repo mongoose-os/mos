@@ -23,6 +23,7 @@ type ChipType int
 const (
 	ChipESP8266 ChipType = iota
 	ChipESP32
+	ChipESP32C3
 )
 
 type FlashOpts struct {
@@ -41,18 +42,24 @@ type FlashOpts struct {
 	KeepFS                 bool
 }
 
-type RegReaderWriter interface {
+type RegReader interface {
 	ReadReg(reg uint32) (uint32, error)
+}
+
+type RegReaderWriter interface {
+	RegReader
 	WriteReg(reg, value uint32) error
 	Disconnect()
 }
 
 func (ct ChipType) String() string {
 	switch ct {
-	case ChipESP8266:
-		return "ESP8266"
 	case ChipESP32:
 		return "ESP32"
+	case ChipESP32C3:
+		return "ESP32-C3"
+	case ChipESP8266:
+		return "ESP8266"
 	default:
 		return fmt.Sprintf("???(%d)", ct)
 	}

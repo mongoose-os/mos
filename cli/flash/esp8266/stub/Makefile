@@ -22,6 +22,7 @@ $(STUB): $(SRCS) $(COMMON_STUB_DIR)/wrap_stub.py
          -DESP8266 -DMINIZ_NO_TIME -DMINIZ_NO_STDIO \
          -mtext-section-literals -mlongcalls -nostdlib -fno-builtin \
          -I/src/esp8266/stub \
+         -I/src/esp/stub \
          -I/opt/Espressif/ESP8266_NONOS_SDK/include \
          -I/opt/Espressif/ESP8266_NONOS_SDK/driver_lib/include/driver \
          -ffunction-sections -Wl,-static -Wl,--gc-sections \

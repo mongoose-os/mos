@@ -20,6 +20,9 @@
 #include <inttypes.h>
 
 #include "c_types.h"
+#include "eagle_soc.h"
+#include "ets_sys.h"
+#include "miniz.h"
 #include "spi_flash.h"
 
 int uart_rx_one_char(uint8_t *ch);
@@ -103,3 +106,39 @@ struct MD5Context {
 void MD5Init(struct MD5Context *ctx);
 void MD5Update(struct MD5Context *ctx, void *buf, uint32_t len);
 void MD5Final(uint8_t digest[16], struct MD5Context *ctx);
+
+#define CPU_FREQ_MHZ 160
+
+void stub_platform_init(void);
+
+static inline void stub_spi_flash_wait_idle(void) {
+  Wait_SPI_Idle(flashchip);
+}
+
+static inline uint32_t stub_get_ccount(void) {
+  uint32_t r;
+  __asm volatile("rsr.ccount %0" : "=a"(r));
+  return r;
+}
+
+#define REG_SPI_BASE(i) (0x60000200 - i * 0x100)
+#define PERIPHS_SPI_FLASH_ADDR (REG_SPI_BASE(0) + 0x4)
+#define PERIPHS_SPI_FLASH_CMD (REG_SPI_BASE(0) + 0x0)
+#define PERIPHS_SPI_FLASH_C0 (REG_SPI_BASE(0) + 0x40)
+#define SPI_MEM_FLASH_RDSR (BIT(27))
+#define SPI_MEM_FLASH_WREN (BIT(30))
+#define SPI_MEM_FLASH_RDID (BIT(28))
+#define SPI_MEM_FLASH_SE (BIT(24))
+#define SPI_MEM_FLASH_BE (BIT(23))
+
+#define GPIO_OUT_REG (PERIPHS_GPIO_BASEADDR + GPIO_OUT_ADDRESS)
+#define GPIO_ENABLE_W1TS_REG (PERIPHS_GPIO_BASEADDR + GPIO_ENABLE_W1TS_ADDRESS)
+#define GPIO_OUT_W1TC_REG (PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS)
+#define GPIO_OUT_W1TS_REG (PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS)
+
+#define UART_RXFIFO_CNT_S 0
+#define UART_RXFIFO_CNT_V 0xff
+
+#define REG_GET_FIELD(_r, _f) ((READ_PERI_REG(_r) >> (_f##_S)) & (_f##_V))
+
+#define LED_GPIO 5

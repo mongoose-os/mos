@@ -20,27 +20,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "rom_functions.h"
-
-#if defined(ESP8266)
-#include "eagle_soc.h"
-#include "ets_sys.h"
-#include "miniz.h"
-#elif defined(ESP32)
-#include "esp32/rom/efuse.h"
-#include "esp32/rom/miniz.h"
-#include "esp32/rom/spi_flash.h"
-#include "soc/uart_reg.h"
-
 #include "led.h"
-#elif defined(ESP32C3)
-#include "esp32c3/rom/efuse.h"
-#include "esp32c3/rom/miniz.h"
-#include "esp32c3/rom/spi_flash.h"
-#include "soc/spi_mem_reg.h"
-#include "soc/uart_reg.h"
-#endif
-
+#include "platform.h"
 #include "slip.h"
 #include "uart.h"
 
@@ -60,33 +41,7 @@ uint32_t params[2] __attribute__((section(".params")));
 
 extern uint32_t _bss_start, _bss_end;
 
-#ifdef ESP8266
-#define REG_SPI_BASE(i) (0x60000200 - i * 0x100)
-
-#define SPI_CMD_REG(i) (REG_SPI_BASE(i) + 0x0)
-#define SPI_FLASH_WREN (BIT(30))
-#define SPI_FLASH_RDID (BIT(28))
-#define SPI_FLASH_SE (BIT(24))
-#define SPI_FLASH_BE (BIT(23))
-
-#define SPI_ADDR_REG(i) (REG_SPI_BASE(i) + 0x4)
-
-#define SPI_USER_REG(i) (REG_SPI_BASE(i) + 0x1C)
-
-#define SPI_W0_REG(i) (REG_SPI_BASE(i) + 0x40)
-#elif defined(ESP32C3)
-#define SPI_CMD_REG(i) SPI_MEM_CMD_REG(i)
-#define SPI_FLASH_WREN SPI_MEM_FLASH_WREN
-#define SPI_FLASH_RDID SPI_MEM_FLASH_RDID
-#define SPI_FLASH_SE SPI_MEM_FLASH_SE
-#define SPI_FLASH_BE SPI_MEM_FLASH_BE
-
-#define SPI_ADDR_REG(i) SPI_MEM_ADDR_REG(i)
-
-#define SPI_USER_REG(i) SPI_MEM_USER_REG(i)
-
-#define SPI_W0_REG(i) SPI_MEM_W0_REG(i)
-#endif
+#define MS_TO_CCOUNT(ms) ((ms) *CPU_FREQ_MHZ * 1000)
 
 enum read_state {
   READ_WAIT_START = 0,
@@ -110,16 +65,6 @@ struct uart_buf {
   uint32_t bri, bwi;
   uint32_t ps;
 };
-
-static inline uint32_t ccount(void) {
-  uint32_t r;
-#if defined(ESP32C3)
-  __asm volatile ("csrr %0, 0x7e2" : "=r"(r));
-#else
-  __asm volatile("rsr.ccount %0" : "=a"(r));
-#endif
-  return r;
-}
 
 struct write_progress {
   uint32_t num_written;
@@ -156,9 +101,9 @@ static void add_byte(uint8_t byte) {
 
 void uart_isr(void *arg) {
   uint32_t int_st = READ_PERI_REG(UART_INT_ST_REG(0));
-  uint8_t fifo_len, i;
-  while ((fifo_len = READ_PERI_REG(UART_STATUS_REG(0))) > 0) {
-    for (i = 0; i < fifo_len; i++) {
+  uint32_t fifo_len;
+  while ((fifo_len = REG_GET_FIELD(UART_STATUS_REG(0), UART_RXFIFO_CNT)) > 0) {
+    for (uint32_t i = 0; i < fifo_len; i++) {
       uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0));
       switch (ub.state) {
         case READ_WAIT_START: {
@@ -178,7 +123,7 @@ void uart_isr(void *arg) {
             if (ub.ps == 0) {
               /* Empty packet, sender aborted. */
               ub.state = READ_ERROR;
-              SET_PERI_REG_MASK(UART_INT_ENA_REG(0), 0);
+              WRITE_PERI_REG(UART_INT_ENA_REG(0), 0);
               goto out;
             } else {
               ub.state = READ_WAIT_START;
@@ -200,7 +145,7 @@ void uart_isr(void *arg) {
             byte = 0xdb;
           } else {
             ub.state = READ_ERROR;
-            SET_PERI_REG_MASK(UART_INT_ENA_REG(0), 0);
+            WRITE_PERI_REG(UART_INT_ENA_REG(0), 0);
             goto out;
           }
           add_byte(byte);
@@ -226,26 +171,21 @@ size_t tinfl_decompress_mem_to_mem(void *pOut_buf, size_t out_buf_len,
 
 #if defined(ESP8266)
 int esp_rom_spiflash_erase_start(uint32_t addr, uint32_t cmd) {
+  stub_spi_flash_wait_idle();
   SPI_write_enable(flashchip);
-  WRITE_PERI_REG(SPI_ADDR_REG(0), addr);
-  WRITE_PERI_REG(SPI_CMD_REG(0), cmd);
-  while (READ_PERI_REG(SPI_CMD_REG(0)) & cmd) {
-  }
+  WRITE_PERI_REG(PERIPHS_SPI_FLASH_ADDR, addr);
+  WRITE_PERI_REG(PERIPHS_SPI_FLASH_CMD, cmd);
   return 0;
 }
-#elif defined(ESP32)
-extern esp_rom_spiflash_chip_t g_rom_spiflash_chip;
-
+#else
 esp_rom_spiflash_result_t esp_rom_spiflash_erase_start(uint32_t addr,
                                                        uint32_t cmd) {
-  esp_rom_spiflash_chip_t *spi = &g_rom_spiflash_chip;
-  esp_rom_spiflash_wait_idle(spi);
-
-  REG_CLR_BIT(PERIPHS_SPI_FLASH_USRREG, SPI_USR_DUMMY);
-  REG_SET_FIELD(PERIPHS_SPI_FLASH_USRREG1, SPI_USR_ADDR_BITLEN,
+  stub_spi_flash_wait_idle();
+  REG_CLR_BIT(PERIPHS_SPI_FLASH_USRREG, SPI_MEM_USR_DUMMY);
+  REG_SET_FIELD(PERIPHS_SPI_FLASH_USRREG1, SPI_MEM_USR_ADDR_BITLEN,
                 ESP_ROM_SPIFLASH_W_SIO_ADDR_BITSLEN);
 
-  WRITE_PERI_REG(PERIPHS_SPI_FLASH_CMD, SPI_FLASH_WREN);
+  WRITE_PERI_REG(PERIPHS_SPI_FLASH_CMD, SPI_MEM_FLASH_WREN);
   while (READ_PERI_REG(PERIPHS_SPI_FLASH_CMD) != 0) {
   }
 
@@ -254,20 +194,15 @@ esp_rom_spiflash_result_t esp_rom_spiflash_erase_start(uint32_t addr,
 
   return ESP_ROM_SPIFLASH_RESULT_OK;
 }
-#elif defined(ESP32C3)
-esp_rom_spiflash_result_t esp_rom_spiflash_erase_start(uint32_t addr,
-                                                       uint32_t cmd) {
-  uint32_t length = 0;
-  
-  if (cmd == SPI_FLASH_BE) {
-    length = FLASH_BLOCK_SIZE;
-  } else if (cmd == SPI_FLASH_SE) {
-    length = FLASH_SECTOR_SIZE;
-  }
-  
-  return esp_rom_spiflash_erase_area(addr, length);
-}
 #endif
+
+static uint32_t get_buf_level(void) {
+  uint32_t buf_level = 0;
+  for (int i = 0; i < NUM_BUFS; i++) {
+    buf_level += ub.bufs[i].len;
+  }
+  return buf_level;
+}
 
 int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
   int ret = 0;
@@ -281,57 +216,57 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
   memset(&ub, 0, sizeof(ub));
   memset(&inflate_buf, 0, sizeof(inflate_buf));
-  ets_isr_attach(ETS_UART0_INUM, uart_isr, &ub);
+  ets_isr_attach(ETS_UART0_INUM, uart_isr, NULL);
   uint32_t saved_conf1 = READ_PERI_REG(UART_CONF1_REG(0));
   /* Reduce frequency of UART interrupts */
   WRITE_PERI_REG(UART_CONF1_REG(0), UART_RX_TOUT_EN |
                                         (20 << UART_RX_TOUT_THRHD_S) |
                                         (100 << UART_RXFIFO_FULL_THRHD_S));
-  SET_PERI_REG_MASK(UART_INT_ENA_REG(0), UART_RX_INTS);
+  WRITE_PERI_REG(UART_INT_ENA_REG(0), UART_RX_INTS);
   ets_isr_unmask(1 << ETS_UART0_INUM);
 
-  struct write_result wr;
-  memset(&wr, 0, sizeof(wr));
-
-  struct write_progress wp = {.num_written = 0, .buf_level = 0};
-  wp.buf_level = (uint32_t) &addr;
+  struct write_result wr = {0};
+  struct write_progress wp = {0};
   SLIP_send(&wp, sizeof(wp));
-  wr.total_time = ccount();
+  wr.total_time = stub_get_ccount();
   while (wp.num_written < len) {
     /* Prepare the space ahead. */
-    uint32_t start_count = ccount();
+    uint32_t start_count = stub_get_ccount();
     while (erase && num_erased < wp.num_written + FLASH_WRITE_SIZE) {
       const uint32_t num_left = (len - num_erased);
       if (num_left >= FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
-        if (esp_rom_spiflash_erase_start(addr, SPI_FLASH_BE) != 0) {
+        if (esp_rom_spiflash_erase_start(addr, SPI_MEM_FLASH_BE) != 0) {
           ret = 0x35;
           goto out;
         }
         num_erased += FLASH_BLOCK_SIZE;
       } else {
         /* len % FLASH_SECTOR_SIZE == 0 is enforced, no further checks needed */
-        if (esp_rom_spiflash_erase_start(addr, SPI_FLASH_SE) != 0) {
+        if (esp_rom_spiflash_erase_start(addr, SPI_MEM_FLASH_SE) != 0) {
           ret = 0x36;
           goto out;
         }
         num_erased += FLASH_SECTOR_SIZE;
       }
     }
-    wr.erase_time += ccount() - start_count;
-    start_count = ccount();
+    wr.erase_time += stub_get_ccount() - start_count;
+    start_count = stub_get_ccount();
+    wp.buf_level = get_buf_level();
     /* Wait for data to arrive. */
-    wp.buf_level = 0;
-    for (int i = 0; i < NUM_BUFS; i++) wp.buf_level += ub.bufs[i].len;
     volatile uint32_t *bwi = &ub.bwi;
     while (*bwi == ub.bri && ub.state != READ_ERROR) {
+      if (stub_get_ccount() - start_count > MS_TO_CCOUNT(3000)) {
+        ret = 0x37;
+        goto out;
+      }
     }
     struct data_buf *buf = &ub.bufs[ub.bri];
     if (ub.state == READ_ERROR) {
-      ret = 0x37;
+      ret = 0x38;
       goto out;
     }
-    wr.wait_time += ccount() - start_count;
-    start_count = ccount();
+    wr.wait_time += stub_get_ccount() - start_count;
+    start_count = stub_get_ccount();
     uint32_t *data = (uint32_t *) buf->data;
     uint32_t write_len = buf->len;
     if (buf->flags & FLAG_COMPRESSED) {
@@ -340,20 +275,24 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
           &inflate_buf[0], sizeof(inflate_buf), buf->data, write_len,
           TINFL_FLAG_PARSE_ZLIB_HEADER);
       if (write_len == TINFL_DECOMPRESS_MEM_TO_MEM_FAILED) {
-        ret = 0x40;
+        ret = 0x39;
         goto out;
       }
     }
-    wr.decomp_time += ccount() - start_count;
+    wr.decomp_time += stub_get_ccount() - start_count;
+
     MD5Update(&ctx, (uint8_t *) data, write_len);
-    start_count = ccount();
-    wr.erase_time += ccount() - start_count;
-    start_count = ccount();
+
+    start_count = stub_get_ccount();
+    stub_spi_flash_wait_idle();
+    wr.erase_time += stub_get_ccount() - start_count;
+
+    start_count = stub_get_ccount();
     if (esp_rom_spiflash_write(addr, data, write_len) != 0) {
-      ret = 0x38;
+      ret = 0x40;
       goto out;
     }
-    wr.write_time += ccount() - start_count;
+    wr.write_time += stub_get_ccount() - start_count;
     buf->len = 0;
     ub.bri++;
     if (ub.bri == NUM_BUFS) ub.bri = 0;
@@ -367,7 +306,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
   MD5Final(wr.digest, &ctx);
 
-  wr.total_time = ccount() - wr.total_time;
+  wr.total_time = stub_get_ccount() - wr.total_time;
   SLIP_send(&wr, sizeof(wr));
 
 out:
@@ -432,10 +371,10 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
 
 int do_flash_read_chip_id(void) {
   uint32_t chip_id = 0;
-  WRITE_PERI_REG(SPI_CMD_REG(0), SPI_FLASH_RDID);
-  while (READ_PERI_REG(SPI_CMD_REG(0)) & SPI_FLASH_RDID) {
+  WRITE_PERI_REG(PERIPHS_SPI_FLASH_CMD, SPI_MEM_FLASH_RDID);
+  while (READ_PERI_REG(PERIPHS_SPI_FLASH_CMD) & SPI_MEM_FLASH_RDID) {
   }
-  chip_id = READ_PERI_REG(SPI_W0_REG(0)) & 0xFFFFFF;
+  chip_id = READ_PERI_REG(PERIPHS_SPI_FLASH_C0) & 0xFFFFFF;
   send_packet((uint8_t *) &chip_id, sizeof(chip_id));
   return 0;
 }
@@ -537,14 +476,7 @@ void stub_main1(void) {
   /* This points at us right now, reset for next boot. */
   ets_set_user_start(0);
 
-/* Selects SPI functions for flash pins. */
-#if defined(ESP8266)
-  SelectSpiFunction();
-  spi_flash_attach();
-  SET_PERI_REG_MASK(0x3FF00014, 1); /* Switch to 160 MHz */
-#elif defined(ESP32)
-  esp_rom_spiflash_attach(ets_efuse_get_spiconfig(), 0 /* legacy */);
-#endif
+  stub_platform_init();
 
   esp_rom_spiflash_config_param(
       0 /* deviceId */, 16 * 1024 * 1024 /* chip_size */, FLASH_BLOCK_SIZE,
@@ -564,7 +496,7 @@ void stub_main1(void) {
     WRITE_PERI_REG(UART_FIFO_REG(0), 0x55);
   }
 #else
-  SLIP_send(&old_div, 4);
+  SLIP_send(&old_div, sizeof(old_div));
 #endif
 
   last_cmd = cmd_loop();
@@ -606,11 +538,19 @@ void stub_main(void) {
   memset(&_bss_start, 0, (&_bss_end - &_bss_start));
   uint32_t *stack_end = &_stack[3071];
 #if defined(ESP32C3)
+// Ideally we want this on C3 as well but simply changing stack pointer
+// like this causes weird issues that I don't fully understand.
+// Fortunately, there does seem to be sufficient stack available on C3
+// at the default location (0x3fcde600-ish) and things seem to work ok.
+// TODO(rojer): Figure out how to switch stack properly.
+#if 0
   __asm volatile("mv sp, %0\n"
                  :                 // output
                  : "r"(stack_end)  // input
                  :                 // scratch
   );
+#endif
+  (void) stack_end;
 #else
   __asm volatile("mov a1, %0\n"
                  :                 // output

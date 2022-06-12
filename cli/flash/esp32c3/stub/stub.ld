@@ -8,15 +8,14 @@
  * Segments are placed before bootloader segments
  */
 MEMORY {
-  iram     : org = 0x403BE000, len = 0x10000
-  dram_bss : org = 0x3FCB6000, len = 0x10000
-  dram     : org = 0x3FCC6000, len = 0x10000
+  iram     : org = 0x40380000, len = 0x10000
+  dram     : org = 0x3FC90000, len = 0x20000
 }
 
 ENTRY(stub_main)
 
 SECTIONS {
-  .params 0x403BE000 : {
+  .params 0x40380000 : {
     _params_start = ABSOLUTE(.);
     *(.params)
     _params_end = ABSOLUTE(.);
@@ -45,9 +44,4 @@ INCLUDE "components/esp_rom/esp32c3/ld/esp32c3.rom.ld"
 
 PROVIDE ( memcpy = 0x40000358 );
 PROVIDE ( memset = 0x40000354 );
-PROVIDE ( MD5Init = 0x40000614 );
-PROVIDE ( MD5Update = 0x40000618 );
-PROVIDE ( MD5Final = 0x4000061c );
-PROVIDE ( ets_isr_mask = 0x40000608 );
-PROVIDE ( ets_isr_unmask = 0x4000060c );
-PROVIDE ( esp_rom_spiflash_erase_area = 0x400001e4 );
+PROVIDE ( esp_rom_spiflash_erase_area = SPIEraseArea );

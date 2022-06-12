@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "rom_functions.h"
+#include "platform.h"
 
 void SLIP_send(uint8_t *pkt, uint32_t size) {
   send_packet(pkt, size);

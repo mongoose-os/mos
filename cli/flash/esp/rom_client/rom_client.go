@@ -31,6 +31,7 @@ import (
 	"github.com/mongoose-os/mos/cli/flash/common"
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
+	"github.com/mongoose-os/mos/cli/flash/esp32c3"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
 	glog "k8s.io/klog/v2"
 )
@@ -184,12 +185,14 @@ func (rc *ROMClient) Disconnect() {
 
 func (rc *ROMClient) GetChipDescr() (string, error) {
 	switch rc.ct {
-	case esp.ChipESP8266:
-		return esp8266.GetChipDescr(rc)
 	case esp.ChipESP32:
 		return esp32.GetChipDescr(rc)
+	case esp.ChipESP32C3:
+		return esp32c3.GetChipDescr(rc)
+	case esp.ChipESP8266:
+		return esp8266.GetChipDescr(rc)
 	}
-	return rc.ct.String(), nil
+	return "", fmt.Errorf("unsupported chip")
 }
 
 func (rc *ROMClient) sendCommand(cmd romCmd, arg []byte, csum uint8) error {
@@ -230,14 +233,14 @@ func (rc *ROMClient) recvResponse() (*romResponse, error) {
 	switch rc.ct {
 	case esp.ChipESP8266:
 		statusLen = 2
-	case esp.ChipESP32:
+	default:
 		statusLen = 4
 	}
 	if bodyLen == statusLen {
 		r.ok = (r.body[0] == 0)
 		r.lastError = r.body[1]
 	}
-	glog.V(3).Infof("<= {cmd:%s value:%d ok:%t lastError:%d body(%d):%q}", r.cmd, r.value, r.ok, r.lastError, len(r.body), common.LimitStr(r.body, 32))
+	glog.V(3).Infof("<= {cmd:%s value:%#x ok:%t lastError:%d body(%d):%q}", r.cmd, r.value, r.ok, r.lastError, len(r.body), common.LimitStr(r.body, 32))
 	return r, nil
 }
 

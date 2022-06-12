@@ -17,7 +17,7 @@
 
 #include "uart.h"
 
-#include "rom_functions.h"
+#include "platform.h"
 
 uint32_t set_baud_rate(uint32_t uart_no, uint32_t old_baud_rate,
                        uint32_t new_baud_rate) {

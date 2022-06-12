@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//go:build !noflash
 // +build !noflash
 
 package main
@@ -74,11 +75,12 @@ func flashRead(ctx context.Context, devConn dev.DevConn) error {
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP32, uint32(addr), int(length), &espFlashOpts)
+	case "esp32c3":
+		espFlashOpts.ControlPort = port
+		data, err = espFlasher.ReadFlash(esp.ChipESP32C3, uint32(addr), int(length), &espFlashOpts)
 	case "esp8266":
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP8266, uint32(addr), int(length), &espFlashOpts)
-	case "stm32":
-		err = errors.NotImplementedf("flash reading for %s", platform)
 	default:
 		err = errors.NotImplementedf("flash reading for %s", platform)
 	}

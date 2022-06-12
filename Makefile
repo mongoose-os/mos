@@ -57,9 +57,10 @@ vendor/modules.txt:
 
 deps: vendor/modules.txt
 
-genstubs:
-	cli/flash/esp32/stub/genstub.sh
-	cli/flash/esp8266/stub/genstub.sh
+genstub-%:
+	cli/flash/$*/stub/genstub.sh
+
+genstubs: genstub-esp32 genstub-esp32c3 genstub-esp8266
 
 # Build the flasher stubs
 # E.g.:

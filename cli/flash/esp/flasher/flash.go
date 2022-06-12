@@ -142,7 +142,7 @@ func writeImages(ct esp.ChipType, cfr *cfResult, images []*image, opts *esp.Flas
 	var esp32EncryptionKey []byte
 	var fusesByName map[string]*esp32.Fuse
 	kcs := esp32.KeyEncodingSchemeNone
-	if ct == esp.ChipESP32 {
+	if ct == esp.ChipESP32 { // TODO(rojer): Flash encryption support for ESP32-C3
 		_, _, fusesByName, err = esp32.ReadFuses(cfr.fc)
 		if err == nil {
 			if fcnt, err := fusesByName[esp32.FlashCryptCntFuseName].Value(true /* withDiffs */); err == nil {
@@ -274,18 +274,28 @@ func writeImages(ct esp.ChipType, cfr *cfResult, images []*image, opts *esp.Flas
 	common.Reportf("Verifying...")
 	for _, im := range images {
 		common.Reportf("  %7d @ 0x%x", len(im.Data), im.Addr)
-		digest, err := cfr.fc.Digest(im.Addr, uint32(len(im.Data)), 0 /* blockSize */)
-		if err != nil {
-			return errors.Annotatef(err, "%s: failed to compute digest %d @ 0x%x", im.Name, len(im.Data), im.Addr)
-		}
-		if len(digest) != 1 || len(digest[0]) != 16 {
-			return errors.Errorf("unexpected digest packetresult %+v", digest)
-		}
-		digestHex := strings.ToLower(hex.EncodeToString(digest[0]))
-		expectedDigest := md5.Sum(im.Data)
-		expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
-		if digestHex != expectedDigestHex {
-			return errors.Errorf("%d @ 0x%x: digest mismatch: expected %s, got %s", len(im.Data), im.Addr, expectedDigestHex, digestHex)
+		addr, done := im.Addr, 0
+		for done < len(im.Data) {
+			size := len(im.Data) - done
+			if size > 0x100000 {
+				size = 0x100000
+			}
+			data := im.Data[done : done+size]
+			digest, err := cfr.fc.Digest(addr, uint32(size), 0 /* blockSize */)
+			if err != nil {
+				return errors.Annotatef(err, "%s: failed to compute digest %d @ 0x%x", im.Name, size, addr)
+			}
+			if len(digest) != 1 || len(digest[0]) != 16 {
+				return errors.Errorf("unexpected digest packetresult %+v", digest)
+			}
+			digestHex := strings.ToLower(hex.EncodeToString(digest[0]))
+			expectedDigest := md5.Sum(data)
+			expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
+			if digestHex != expectedDigestHex {
+				return errors.Errorf("%d @ 0x%x: digest mismatch: expected %s, got %s", size, addr, expectedDigestHex, digestHex)
+			}
+			addr += uint32(size)
+			done += size
 		}
 	}
 	if opts.BootFirmware {

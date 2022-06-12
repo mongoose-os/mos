@@ -111,7 +111,7 @@ func detectFlashSize(fc *FlasherClient) (int, int, error) {
 	mfg := int((chipID >> 16) & 0xff)
 	sizeExp := (chipID & 0xff)
 	glog.V(2).Infof("Flash chip ID: 0x%08x, mfg: 0x%02x, sizeExp: %d", chipID, mfg, sizeExp)
-	if mfg == 0 || sizeExp < 19 || sizeExp > 32 {
+	if mfg == 0 || mfg == 0xff || sizeExp < 19 || sizeExp > 32 {
 		return 0, 0, errors.Errorf("invalid chip id: 0x%08x", chipID)
 	}
 	// Capacity is the power of two.

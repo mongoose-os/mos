@@ -49,3 +49,4 @@ PROVIDE ( MD5Update = 0x4005da9c );
 PROVIDE ( MD5Final = 0x4005db1c );
 PROVIDE ( ets_isr_mask = 0x400067fc );
 PROVIDE ( ets_isr_unmask = 0x40006808 );
+PROVIDE ( g_rom_flashchip = g_rom_spiflash_chip );
