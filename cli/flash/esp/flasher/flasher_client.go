@@ -44,8 +44,10 @@ const (
 	FLASH_BLOCK_SIZE  = 65536
 	FLASH_SECTOR_SIZE = 4096
 	// These consts should be in sync with stub_flasher.c
-	BUF_SIZE      = 4096
-	UART_BUF_SIZE = 4 * BUF_SIZE
+	BUF_SIZE        = 4096
+	UART_BUF_SIZE   = 4 * BUF_SIZE
+	FLAG_EMPTY      = uint8(1 << 0)
+	FLAG_COMPRESSED = uint8(1 << 1)
 )
 
 const (
@@ -316,6 +318,7 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool, compress bo
 		canSend := int(UART_BUF_SIZE - BUF_SIZE - inFlight)
 		glog.V(3).Infof("<= %d %d; %d/%d/%d; %s", numWritten, progress.bufLevel, numSent, inFlight, canSend, digestHex)
 		for numSent < len(data) && canSend > 0 {
+			var flags uint8
 			numToSend := len(data) - numSent
 			if numToSend > canSend {
 				numToSend = canSend
@@ -325,22 +328,36 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool, compress bo
 			}
 			toSend := data[numSent : numSent+numToSend]
 			var compressed bytes.Buffer
-			if compress {
-				// Try compressing, see if it gets smaller
-				w, _ := zlib.NewWriterLevel(&compressed, zlib.BestCompression)
-				w.Write(toSend)
-				w.Close()
-				glog.V(4).Infof("%d -> %d", len(toSend), compressed.Len())
+			// Check if it is an empty block
+			isEmpty := false
+			if numToSend == BUF_SIZE {
+				isEmpty = true
+				for _, b := range toSend {
+					if b != 0xff {
+						isEmpty = false
+						break
+					}
+				}
 			}
-			if compress && compressed.Len() < len(toSend) {
-				toSend2 := make([]byte, 0, compressed.Len()+1)
-				toSend2 = append(toSend2, 0x01)
-				toSend = append(toSend2, compressed.Bytes()...)
+			if isEmpty {
+				flags |= FLAG_EMPTY
+				toSend = nil
 			} else {
-				toSend2 := make([]byte, 0, len(toSend)+1)
-				toSend2 = append(toSend2, 0x00)
-				toSend = append(toSend2, toSend...)
+				if compress {
+					// Try compressing, see if it gets smaller
+					w, _ := zlib.NewWriterLevel(&compressed, zlib.BestCompression)
+					w.Write(toSend)
+					w.Close()
+					glog.V(4).Infof("%d -> %d", len(toSend), compressed.Len())
+					if compressed.Len() < len(toSend) {
+						toSend = compressed.Bytes()
+						flags |= FLAG_COMPRESSED
+					}
+				}
 			}
+			toSend2 := make([]byte, 0, len(toSend)+1)
+			toSend2 = append(toSend2, flags)
+			toSend = append(toSend2, toSend...)
 			ns, err := fc.srw.Write(toSend)
 			if err != nil {
 				return numWritten, errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)

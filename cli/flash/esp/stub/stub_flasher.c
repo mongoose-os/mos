@@ -57,7 +57,8 @@ struct data_buf {
   uint8_t flags;
 };
 
-#define FLAG_COMPRESSED 1
+#define FLAG_EMPTY (1 << 0)
+#define FLAG_COMPRESSED (1 << 1)
 
 struct uart_buf {
   enum read_state state;
@@ -120,7 +121,7 @@ void uart_isr(void *arg) {
             ub.state = READ_UNESCAPE;
           } else if (byte == 0xc0) {
             next_write_buf();
-            if (ub.ps == 0) {
+            if (ub.ps == 0 && !(buf->flags & FLAG_EMPTY)) {
               /* Empty packet, sender aborted. */
               ub.state = READ_ERROR;
               WRITE_PERI_REG(UART_INT_ENA_REG(0), 0);
@@ -269,7 +270,10 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     start_count = stub_get_ccount();
     uint32_t *data = (uint32_t *) buf->data;
     uint32_t write_len = buf->len;
-    if (buf->flags & FLAG_COMPRESSED) {
+    if (buf->flags & FLAG_EMPTY) {
+      memset(data, 0xff, BUF_SIZE);
+      write_len = BUF_SIZE;
+    } else if (buf->flags & FLAG_COMPRESSED) {
       data = inflate_buf;
       write_len = tinfl_decompress_mem_to_mem(
           &inflate_buf[0], sizeof(inflate_buf), buf->data, write_len,
@@ -283,16 +287,18 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
     MD5Update(&ctx, (uint8_t *) data, write_len);
 
-    start_count = stub_get_ccount();
-    stub_spi_flash_wait_idle();
-    wr.erase_time += stub_get_ccount() - start_count;
+    if (!(buf->flags & FLAG_EMPTY)) {
+      start_count = stub_get_ccount();
+      stub_spi_flash_wait_idle();
+      wr.erase_time += stub_get_ccount() - start_count;
 
-    start_count = stub_get_ccount();
-    if (esp_rom_spiflash_write(addr, data, write_len) != 0) {
-      ret = 0x40;
-      goto out;
+      start_count = stub_get_ccount();
+      if (esp_rom_spiflash_write(addr, data, write_len) != 0) {
+        ret = 0x40;
+        goto out;
+      }
+      wr.write_time += stub_get_ccount() - start_count;
     }
-    wr.write_time += stub_get_ccount() - start_count;
     buf->len = 0;
     ub.bri++;
     if (ub.bri == NUM_BUFS) ub.bri = 0;
