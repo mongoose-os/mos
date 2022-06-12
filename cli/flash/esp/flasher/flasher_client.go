@@ -535,6 +535,10 @@ func (cmd flasherCmd) String() string {
 		return fmt.Sprintf("FlashBootFW(%d)", cmd)
 	case cmdEcho:
 		return fmt.Sprintf("Echo(%d)", cmd)
+	case cmdReadReg:
+		return fmt.Sprintf("ReadReg(%d)", cmd)
+	case cmdWriteReg:
+		return fmt.Sprintf("WriteReg(%d)", cmd)
 	default:
 		return fmt.Sprintf("?(%d)", cmd)
 	}
