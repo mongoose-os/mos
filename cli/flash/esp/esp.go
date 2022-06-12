@@ -40,6 +40,7 @@ type FlashOpts struct {
 	ESP32EncryptionKeyFile string
 	ESP32FlashCryptConf    uint32
 	KeepFS                 bool
+	NoVerify               bool
 }
 
 type RegReader interface {

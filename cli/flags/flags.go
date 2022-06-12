@@ -147,6 +147,9 @@ var (
 	)
 	BuildImage       = flag.String("build-image", "", "Override the Docker image used for build.")
 	BuildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
+
+	// Flashing flags
+	NoVerify = flag.Bool("no-verify", false, "Do not verify flashed image")
 )
 
 func Platform() string {

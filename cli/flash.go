@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//go:build !noflash
 // +build !noflash
 
 package main
@@ -172,6 +173,7 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 	}
 
 	espFlashOpts.InvertedControlLines = *flags.InvertedControlLines
+	espFlashOpts.NoVerify = *flags.NoVerify
 
 	switch strings.ToLower(fw.Platform) {
 	case "cc3200":

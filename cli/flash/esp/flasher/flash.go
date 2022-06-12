@@ -271,33 +271,41 @@ func writeImages(ct esp.ChipType, cfr *cfResult, images []*image, opts *esp.Flas
 		common.Reportf("Wrote %d bytes in %.2f seconds (%.2f KBit/sec)", totalBytesWritten, seconds, bytesPerSecond*8/1024)
 	}
 
-	common.Reportf("Verifying...")
-	for _, im := range images {
-		common.Reportf("  %7d @ 0x%x", len(im.Data), im.Addr)
-		addr, done := im.Addr, 0
-		for done < len(im.Data) {
-			size := len(im.Data) - done
-			if size > 0x100000 {
-				size = 0x100000
+	if !opts.NoVerify {
+		common.Reportf("Verifying...")
+		numBytes := 0
+		start := time.Now()
+		for _, im := range images {
+			numBytes += len(im.Data)
+			common.Reportf("  %7d @ 0x%x", len(im.Data), im.Addr)
+			addr, done := im.Addr, 0
+			for done < len(im.Data) {
+				size := len(im.Data) - done
+				if size > 0x100000 {
+					size = 0x100000
+				}
+				data := im.Data[done : done+size]
+				digest, err := cfr.fc.Digest(addr, uint32(size), 0 /* blockSize */)
+				if err != nil {
+					return errors.Annotatef(err, "%s: failed to compute digest %d @ 0x%x", im.Name, size, addr)
+				}
+				if len(digest) != 1 || len(digest[0]) != 16 {
+					return errors.Errorf("unexpected digest packetresult %+v", digest)
+				}
+				digestHex := strings.ToLower(hex.EncodeToString(digest[0]))
+				expectedDigest := md5.Sum(data)
+				expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
+				if digestHex != expectedDigestHex {
+					return errors.Errorf("%d @ 0x%x: digest mismatch: expected %s, got %s", size, addr, expectedDigestHex, digestHex)
+				}
+				addr += uint32(size)
+				done += size
 			}
-			data := im.Data[done : done+size]
-			digest, err := cfr.fc.Digest(addr, uint32(size), 0 /* blockSize */)
-			if err != nil {
-				return errors.Annotatef(err, "%s: failed to compute digest %d @ 0x%x", im.Name, size, addr)
-			}
-			if len(digest) != 1 || len(digest[0]) != 16 {
-				return errors.Errorf("unexpected digest packetresult %+v", digest)
-			}
-			digestHex := strings.ToLower(hex.EncodeToString(digest[0]))
-			expectedDigest := md5.Sum(data)
-			expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
-			if digestHex != expectedDigestHex {
-				return errors.Errorf("%d @ 0x%x: digest mismatch: expected %s, got %s", size, addr, expectedDigestHex, digestHex)
-			}
-			addr += uint32(size)
-			done += size
 		}
+		elapsed := time.Since(start)
+		glog.Infof("Verified %d bytes in %s, %.2f Kbit/sec", numBytes, elapsed, float64(numBytes*8)/elapsed.Seconds()/1000)
 	}
+
 	if opts.BootFirmware {
 		common.Reportf("Booting firmware...")
 		if err = cfr.fc.BootFirmware(); err != nil {
