@@ -75,6 +75,9 @@ func flashRead(ctx context.Context, devConn dev.DevConn) error {
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP32, uint32(addr), int(length), &espFlashOpts)
+	case "esp32s3":
+		espFlashOpts.ControlPort = port
+		data, err = espFlasher.ReadFlash(esp.ChipESP32S3, uint32(addr), int(length), &espFlashOpts)
 	case "esp32c3":
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP32C3, uint32(addr), int(length), &espFlashOpts)

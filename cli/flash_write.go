@@ -71,6 +71,9 @@ func flashWrite(ctx context.Context, devConn dev.DevConn) error {
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		err = espFlasher.WriteFlash(esp.ChipESP32, uint32(addr), data, &espFlashOpts)
+	case "esp32s3":
+		espFlashOpts.ControlPort = port
+		err = espFlasher.WriteFlash(esp.ChipESP32S3, uint32(addr), data, &espFlashOpts)
 	case "esp32c3":
 		espFlashOpts.ControlPort = port
 		err = espFlasher.WriteFlash(esp.ChipESP32C3, uint32(addr), data, &espFlashOpts)

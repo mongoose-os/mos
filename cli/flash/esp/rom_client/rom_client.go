@@ -32,6 +32,7 @@ import (
 	"github.com/mongoose-os/mos/cli/flash/esp"
 	"github.com/mongoose-os/mos/cli/flash/esp32"
 	"github.com/mongoose-os/mos/cli/flash/esp32c3"
+	"github.com/mongoose-os/mos/cli/flash/esp32s3"
 	"github.com/mongoose-os/mos/cli/flash/esp8266"
 	glog "k8s.io/klog/v2"
 )
@@ -187,6 +188,8 @@ func (rc *ROMClient) GetChipDescr() (string, error) {
 	switch rc.ct {
 	case esp.ChipESP32:
 		return esp32.GetChipDescr(rc)
+	case esp.ChipESP32S3:
+		return esp32s3.GetChipDescr(rc)
 	case esp.ChipESP32C3:
 		return esp32c3.GetChipDescr(rc)
 	case esp.ChipESP8266:
