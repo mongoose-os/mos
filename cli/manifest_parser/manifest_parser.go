@@ -77,8 +77,6 @@ const (
 
 	coreLibName     = "core"
 	coreLibLocation = "https://github.com/mongoose-os-libs/core"
-
-	supportedPlatforms = "cc3200 cc3220 esp32 esp8266 rs14100 stm32 ubuntu"
 )
 
 var (
@@ -2004,7 +2002,11 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 }
 
 func getAllSupportedPlatforms(mosDir string) ([]string, error) {
-	ret := strings.Split(supportedPlatforms, " ")
+	var ret []string
+	sdkVersionFiles, _ := filepath.Glob(moscommon.GetSdkVersionFile(mosDir, "*"))
+	for _, p := range sdkVersionFiles {
+		ret = append(ret, filepath.Base(filepath.Dir(p)))
+	}
 	sort.Strings(ret)
 	return ret, nil
 }

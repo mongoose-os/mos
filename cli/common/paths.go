@@ -82,7 +82,7 @@ func GetSdkVersionFile(mosDir, platform string) string {
 	// New repo layout introduced on 2019/04/29, current release is 2.13.1.
 	oldPath := filepath.Join(mosDir, "fw", "platforms", platform, "sdk.version")
 	newPath := filepath.Join(mosDir, "platforms", platform, "sdk.version")
-	if _, err := os.Stat(newPath); err == nil {
+	if _, err := os.Stat(newPath); err == nil || platform == "*" {
 		return newPath
 	}
 	return oldPath
