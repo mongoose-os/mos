@@ -160,9 +160,7 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams) (err error) {
 		// Fine
 	case build.ManifestTypeLib:
 		bParams.BuildTarget = moscommon.GetOrigLibArchiveFilePath(buildDir, manifest.Platform)
-		if manifest.Platform == "esp32" {
-			*buildCmdExtra = append(*buildCmdExtra, "MGOS_MAIN_COMPONENT=moslib")
-		}
+		*buildCmdExtra = append(*buildCmdExtra, "MGOS_MAIN_COMPONENT=moslib")
 	default:
 		return errors.Errorf("invalid project type: %q", manifest.Type)
 	}
