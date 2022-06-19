@@ -155,6 +155,21 @@ conds:
       build_vars:
         ESP_IDF_EXTRA_COMPONENTS: ""
         ESP_IDF_SDKCONFIG_OPTS: ""
+  - when: mos.platform == "esp32c3"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
+  - when: mos.platform == "esp32s2"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
+  - when: mos.platform == "esp32s3"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
 `)
 
 func dataRoot_manifestYmlBytes() ([]byte, error) {
@@ -167,7 +182,7 @@ func dataRoot_manifestYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/root_manifest.yml", size: 197, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/root_manifest.yml", size: 608, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

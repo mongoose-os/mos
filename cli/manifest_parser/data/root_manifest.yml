@@ -9,3 +9,18 @@ conds:
       build_vars:
         ESP_IDF_EXTRA_COMPONENTS: ""
         ESP_IDF_SDKCONFIG_OPTS: ""
+  - when: mos.platform == "esp32c3"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
+  - when: mos.platform == "esp32s2"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
+  - when: mos.platform == "esp32s3"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS: ""
+        ESP_IDF_SDKCONFIG_OPTS: ""
