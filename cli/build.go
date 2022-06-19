@@ -468,22 +468,6 @@ func newMosVars() *interpreter.MosVars {
 	return ret
 }
 
-func absPathSlice(slice []string) ([]string, error) {
-	ret := make([]string, len(slice))
-	for i, v := range slice {
-		var err error
-		if !filepath.IsAbs(v) {
-			ret[i], err = filepath.Abs(v)
-			if err != nil {
-				return nil, errors.Trace(err)
-			}
-		} else {
-			ret[i] = v
-		}
-	}
-	return ret, nil
-}
-
 // manifest_parser.ComponentProvider implementation {{{
 type compProviderReal struct {
 	bParams   *build.BuildParams

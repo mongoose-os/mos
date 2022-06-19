@@ -83,6 +83,29 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 	return strings.Join(append(cflags), " ")
 }
 
+func absPathSlice(slice []string, checkExist bool) ([]string, error) {
+	var ret []string
+	for _, v := range slice {
+		var err error
+		if !filepath.IsAbs(v) {
+			v, err = filepath.Abs(v)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+		}
+		add := true
+		if checkExist {
+			if _, err := os.Stat(v); err != nil {
+				add = false
+			}
+		}
+		if add {
+			ret = append(ret, v)
+		}
+	}
+	return ret, nil
+}
+
 func buildLocal2(ctx context.Context, bParams *build.BuildParams) (err error) {
 	gitinst := mosgit.NewOurGit(nil)
 
@@ -206,37 +229,37 @@ func buildLocal2(ctx context.Context, bParams *build.BuildParams) (err error) {
 		}
 	}
 
-	appSources, err := absPathSlice(manifest.Sources)
+	appSources, err := absPathSlice(manifest.Sources, false /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appIncludes, err := absPathSlice(manifest.Includes)
+	appIncludes, err := absPathSlice(manifest.Includes, true /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appFSFiles, err := absPathSlice(manifest.Filesystem)
+	appFSFiles, err := absPathSlice(manifest.Filesystem, false /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appBinLibs, err := absPathSlice(manifest.BinaryLibs)
+	appBinLibs, err := absPathSlice(manifest.BinaryLibs, true /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appSourceDirs, err := absPathSlice(fp.AppSourceDirs)
+	appSourceDirs, err := absPathSlice(fp.AppSourceDirs, true /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appFSDirs, err := absPathSlice(fp.AppFSDirs)
+	appFSDirs, err := absPathSlice(fp.AppFSDirs, true /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appBinLibDirs, err := absPathSlice(fp.AppBinLibDirs)
+	appBinLibDirs, err := absPathSlice(fp.AppBinLibDirs, true /* checkExist */)
 	if err != nil {
 		return errors.Trace(err)
 	}
