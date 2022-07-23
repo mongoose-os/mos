@@ -188,6 +188,10 @@ func flash(ctx context.Context, devConn dev.DevConn) error {
 		espFlashOpts.ControlPort = port
 		espFlashOpts.KeepFS = *flags.KeepFS
 		err = espFlasher.Flash(esp.ChipESP32, fw, &espFlashOpts)
+	case "esp32c3":
+		espFlashOpts.ControlPort = port
+		espFlashOpts.KeepFS = *flags.KeepFS
+		err = espFlasher.Flash(esp.ChipESP32C3, fw, &espFlashOpts)
 	case "esp8266":
 		espFlashOpts.ControlPort = port
 		espFlashOpts.KeepFS = *flags.KeepFS
