@@ -43,6 +43,7 @@ const (
 
 type platformDebugParams struct {
 	image              string
+	gdb                string
 	extraGDBArgs       []string
 	extraServeCoreArgs []string
 }
@@ -65,6 +66,12 @@ var (
 			image:              "docker.io/mgos/esp32-build:3.2-r4",
 			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/rom.elf 0x40000000"},
 			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/rom.bin", "--rom_addr=0x40000000", "--xtensa_addr_fixup=true"},
+		},
+		"esp32c3": platformDebugParams{
+			image:              "docker.io/mgos/esp32-build:4.4.1-r3",
+			gdb:                "/opt/Espressif/riscv32-esp-elf/bin/riscv32-esp-elf-gdb",
+			extraGDBArgs:       []string{"-ex", "add-symbol-file /opt/Espressif/rom/esp32c3_rev3_rom.elf 0x40000000"},
+			extraServeCoreArgs: []string{"--rom=/opt/Espressif/rom/esp32c3_rev3_rom.bin", "--rom_addr=0x40000000"},
 		},
 		"esp8266": platformDebugParams{
 			image:              "docker.io/mgos/esp8266-build:2.2.1-1.5.0-r4",
@@ -246,12 +253,16 @@ func DebugCoreDumpF(cdFile, elfFile string, traceOnly bool) error {
 	cmd = append(cmd, dockerImage)
 	input := os.Stdin
 	var shellCmd []string
+	gdb := dp.gdb
+	if gdb == "" {
+		gdb = "$MGOS_TARGET_GDB" // Defined in the Docker build image.
+	}
 	if cdFile != "" {
 		shellCmd = append(shellCmd, *flags.GDBServerCmd)
 		shellCmd = append(shellCmd, dp.extraServeCoreArgs...)
 		shellCmd = append(shellCmd, "/fw.elf", "/core", "&")
 		shellCmd = append(shellCmd,
-			"$MGOS_TARGET_GDB", // Defined in the Docker build image.
+			gdb,
 			"/fw.elf",
 			"-ex", "'target remote 127.0.0.1:1234'",
 			"-ex", "'set confirm off'",
