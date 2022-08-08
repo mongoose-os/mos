@@ -111,7 +111,7 @@ docker-build-%:
 	  -e HOME=/tmp \
 	  -e GOBIN=/src/go/bin/$* \
 	  -e GOCACHE=/src/go/.cache \
-	  docker.io/mgos/ubuntu-golang:bionic \
+	  docker.io/mgos/ubuntu-golang:jammy \
 	    make -C /src $* OUT=tools/docker/$*/$*
 	  $(MAKE) -C tools/docker/$* docker-build NOBUILD=1 TAG=$(TAG)
 
