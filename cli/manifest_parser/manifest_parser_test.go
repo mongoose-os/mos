@@ -75,7 +75,7 @@ func init() {
 		log.Fatal(err)
 	}
 
-	repoRoot, err = filepath.Abs("../..")
+	repoRoot, err = filepath.Abs("./test_repo_root")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -254,8 +254,13 @@ func (lpt *compProviderTest) GetLibLocalPath(
 func (lpt *compProviderTest) GetModuleLocalPath(
 	m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 ) (string, error) {
-	parts := strings.Split(m.Location, "/")
-	lp := filepath.Join(rootAppDir, "..", "modules", parts[len(parts)-1])
+	var lp string
+	if name, _ := m.GetName(); name == "mongoose-os" {
+		lp = repoRoot
+	} else {
+		parts := strings.Split(m.Location, "/")
+		lp = filepath.Join(rootAppDir, "..", "modules", parts[len(parts)-1])
+	}
 	ri := lpt.descr.RepoInfo[m.Location]
 	if ri != nil {
 		m.SetLocalPathAndRepoVersion(lp, ri.RepoVersion, ri.RepoDirty)
