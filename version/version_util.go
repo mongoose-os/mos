@@ -44,7 +44,7 @@ var (
 	regexpVersionNumber = regexp.MustCompile(`^\d+\.[0-9.]*$`)
 	regexpBuildIdDistr  = regexp.MustCompile(`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>[^\d]+)\d+$`)
 
-	ubuntuDistrNames = []string{"xenial", "bionic", "focal", "impish", "jammy"}
+	ubuntuDistrNames = []string{"xenial", "bionic", "focal", "jammy", "kinetic"}
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
