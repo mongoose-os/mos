@@ -129,6 +129,7 @@ var (
 	LibsExtra          = flag.StringArray("lib-extra", []string{}, "Extra libs to add to the app being built. Value should be a YAML string. Can be used multiple times.")
 	SaveBuildStat      = flag.Bool("save-build-stat", true, "save build statistics")
 	PreferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
+	KeepBuildDir       = flag.Bool("keep-build-dir", false, "do not remove build dir before build, enables incremental remote builds")
 
 	DepsVersions       = flag.String("deps-versions", "", "If specified, this file will be consulted for all libs and modules versions")
 	StrictDepsVersions = flag.Bool("strict-deps-versions", true, "If set, then --deps-versions will be in strict mode: missing deps will be disallowed")
