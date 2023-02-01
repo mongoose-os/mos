@@ -58,11 +58,6 @@ func buildRemote(bParams *build.BuildParams) error {
 
 	buildDir := moscommon.GetBuildDir(projectDir)
 
-	os.RemoveAll(buildDir)
-	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		return errors.Annotatef(err, "failed to create build directory")
-	}
-
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
 	appStagingDir, err := paths.GetTempDir("tmp_mos_src_")
@@ -336,6 +331,11 @@ func buildRemote(bParams *build.BuildParams) error {
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusTeapot:
 		// Build either succeeded or failed
+
+		os.RemoveAll(buildDir)
+		if err := os.MkdirAll(buildDir, 0755); err != nil {
+			return errors.Annotatef(err, "failed to create build directory")
+		}
 
 		// unzip build results
 		r := bytes.NewReader(body.Bytes())
