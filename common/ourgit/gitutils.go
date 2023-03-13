@@ -31,7 +31,8 @@ type CloneOptions struct {
 
 type FetchOptions struct {
 	// How many commits to fetch. Equivalent of the --depth CLI flag.
-	Depth int
+	Depth    int
+	LocalRef string
 }
 
 const (

@@ -226,7 +226,7 @@ func (m *SWModule) PrepareLocalDir(
 		_, _, _, _, repoURL, pathWithinRepo, err := parseGitLocation(m.Location)
 		version := m.getVersionGit(defaultVersion)
 		if repoVersion, isDirty, err = prepareLocalCopyGit(n, repoURL, version, localRepoPath, logWriter, deleteIfFailed, pullInterval, cloneDepth, m.credentials); err != nil {
-			return "", errors.Trace(err)
+			return "", errors.Annotatef(err, "%s: failed to prepare local copy (version %s)", n, version)
 		}
 
 		if pathWithinRepo != "" {
@@ -688,21 +688,29 @@ func prepareLocalCopyGitLocked(
 	} else if tagExists {
 		glog.V(2).Infof("%s: %q is a tag", name, version)
 		refType = ourgit.RefTypeTag
+	} else if looksLikeSHA {
+		glog.V(2).Infof("%s: %q looks like a hash", name, version)
+		refType = ourgit.RefTypeHash
 	} else {
-		// Given version is neither a branch nor a tag, let's see if it looks like
-		// a hash
-		if _, err := hex.DecodeString(version); err == nil {
-			glog.V(2).Infof("%s: %q is neither a branch nor a tag, assume it's a hash", name, version)
-		} else {
-			return "", false, errors.Errorf("given version %q is neither a branch nor a tag", version)
-		}
+		return "", false, errors.Errorf("%q doesn't look like a valid ref", version)
 	}
 
 	// Try to checkout to the requested version
 	freportf(logWriter, "%s: Checking out %s...", name, version)
 	err = gitinst.Checkout(targetDir, version, refType)
 	if err != nil {
-		return "", false, errors.Trace(err)
+		if refType == ourgit.RefTypeHash {
+			// Try fetching this particular hash and retry.
+			localRef := fmt.Sprintf("mos_%s", version)
+			glog.V(2).Infof("%s: trying to fetch %s to %s...", name, version, localRef)
+			if gitinst.Fetch(targetDir, version, ourgit.FetchOptions{Depth: 1, LocalRef: localRef}) == nil {
+				// Checkout should now succeed.
+			}
+			err = gitinst.Checkout(targetDir, version, refType)
+		}
+		if err != nil {
+			return "", false, errors.Annotatef(err, "%s: failed to check out %s", name, version)
+		}
 	}
 
 	newHash, err := gitinst.GetCurrentHash(targetDir)

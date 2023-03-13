@@ -222,10 +222,15 @@ func (m *ourGitGoGit) Fetch(localDir string, what string, opts FetchOptions) err
 		return errors.Annotatef(err, "failed to open repo %s", localDir)
 	}
 
+	localRef := opts.LocalRef
+	if localRef == "" {
+		localRef = what
+	}
+
 	// Try fetching as a branch.
 	err = repo.Fetch(&git.FetchOptions{
 		Auth:     m.auth,
-		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", what, what))},
+		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", what, localRef))},
 		Tags:     git.AllTags,
 		Depth:    opts.Depth,
 	})

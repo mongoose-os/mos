@@ -90,7 +90,12 @@ func (m *ourGitShell) Fetch(localDir string, what string, opts FetchOptions) err
 		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))
 	}
 
-	args = append(args, "origin", fmt.Sprintf("%s:%s", what, what))
+	localRef := opts.LocalRef
+	if localRef == "" {
+		localRef = what
+	}
+
+	args = append(args, "origin", fmt.Sprintf("%s:%s", what, localRef))
 
 	_, err := m.shellGit(localDir, "fetch", args...)
 	if err != nil {
