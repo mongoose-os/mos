@@ -58,7 +58,9 @@ func buildRemote(bParams *build.BuildParams) error {
 
 	buildDir := moscommon.GetBuildDir(projectDir)
 
-	os.RemoveAll(buildDir)
+	if !*flags.KeepBuildDir {
+		os.RemoveAll(buildDir)
+	}
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
 		return errors.Annotatef(err, "failed to create build directory")
 	}
