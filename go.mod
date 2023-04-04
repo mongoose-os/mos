@@ -13,7 +13,7 @@ require (
 	github.com/cesanta/go-serial v0.0.0-20170105152649-4dff7aff019e
 	github.com/cesanta/hid v0.0.0-20190304122332-79d86877855b
 	github.com/containerd/cgroups v1.0.2 // indirect
-	github.com/docker/docker v20.10.9+incompatible // indirect
+	github.com/docker/docker v20.10.24+incompatible // indirect
 	github.com/eclipse/paho.mqtt.golang v1.1.2-0.20181011101702-c95f2f508baf
 	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/fatih/color v1.7.1-0.20181010231311-3f9d52f7176a
