@@ -33,7 +33,7 @@ one, invoke `makepkg` from `mos/tools/archlinux_pkgbuild/mos-latest`.
 
 ## Installing on Mac OS
 
-Using [Homebrew][https://brew.sh/]:
+Using [Homebrew](https://brew.sh/):
 
 ```bash
 $ brew tap cesanta/mos
