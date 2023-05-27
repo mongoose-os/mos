@@ -92,8 +92,17 @@ func fetchGitHubAsset(loc, host, repoPath, tag, assetName, token string) ([]byte
 func fetchAssetFromURL(host, assetName, tag, assetURL, token string) ([]byte, error) {
 	ourutil.Reportf("Fetching %s (%s) from %s...", assetName, tag, assetURL)
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", assetURL, nil)
+	client := &http.Client{
+		Timeout: time.Second * 600,
+	}
+	sock5Proxy := os.Getenv("SOCK5_PROXY")
+        if sock5Proxy != "" {
+                proxyUrl, _ := url.Parse(sock5Proxy)
+                client.Transport = &http.Transport{
+                        Proxy: http.ProxyURL(proxyUrl),
+                }
+        }
+	req, _ := http.NewRequest("GET", assetURL, nil)
 	req.Header.Add("Accept", "application/octet-stream")
 	if token != "" {
 		req.Header.Add("Authorization", fmt.Sprintf("token %s", token)) // GitHub
