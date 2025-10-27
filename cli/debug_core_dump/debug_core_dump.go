@@ -96,7 +96,7 @@ var (
 
 func init() {
 	flag.StringVar(&mosSrcPath, "mos-src-path", "", "Path to mos fw sources")
-	flag.StringVar(&fwELFFile, "fw-elf-file", "", "Path to teh firmware ELF file")
+	flag.StringVar(&fwELFFile, "fw-elf-file", "", "Path to the firmware ELF file")
 }
 
 func getMosSrcPath() string {
