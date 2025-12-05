@@ -29,12 +29,19 @@ $(error Go not found)
 endif
 endif
 
+# Detect Windows OS and set binary extension
+ifeq ($(OS),Windows_NT)
+	BIN_EXT := .exe
+else
+	BIN_EXT :=
+endif
+
 all: mos fwbuild-manager fwbuild-instance
 
 # Our main targets
 
 mos: PKG = github.com/mongoose-os/mos/cli
-mos: OUT ?= mos
+mos: OUT ?= mos$(BIN_EXT)
 mos: build-mos
 
 fwbuild-manager: PKG = github.com/mongoose-os/mos/fwbuild/manager
@@ -137,7 +144,7 @@ deps-mac:
 
 downloads-mac: deps-mac mos
 	mkdir -p downloads/mos/mac
-	mv mos downloads/mos/mac/mos
+	mv mos$(BIN_EXT) downloads/mos/mac/mos$(BIN_EXT)
 
 downloads-win:
 	docker run -i --rm \
